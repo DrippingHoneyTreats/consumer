@@ -22,7 +22,7 @@
   --shadow-float: 0 18px 40px -16px rgba(63, 95, 70, 0.35);
   --radius-card: 24px;
   /* Content + chrome track the device; capped only on very wide desktops */
-  --app-max: 72rem;
+  --app-max: 80rem;
   --tab-h: 84px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
@@ -63,8 +63,9 @@ body {
 body {
   margin: 0;
   background:
-    radial-gradient(120% 80% at 10% -10%, rgba(247, 200, 206, 0.35), transparent 55%),
-    radial-gradient(100% 70% at 100% 0%, rgba(167, 191, 167, 0.28), transparent 50%),
+    radial-gradient(90% 60% at 0% -5%, rgba(240, 183, 192, 0.28), transparent 50%),
+    radial-gradient(80% 50% at 100% 0%, rgba(212, 160, 23, 0.12), transparent 45%),
+    radial-gradient(70% 40% at 80% 100%, rgba(106, 133, 104, 0.12), transparent 50%),
     var(--off-white);
   color: var(--deep);
   font-family: var(--font-montserrat), system-ui, sans-serif;
@@ -166,7 +167,30 @@ body {
   display: none;
 }
 
+button,
+a,
+[role="button"],
+.pressable,
+summary,
+label[for],
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"],
+select {
+  cursor: pointer;
+}
+
+button:disabled,
+a[aria-disabled="true"],
+[role="button"][aria-disabled="true"],
+.pressable:disabled {
+  cursor: not-allowed;
+}
+
 .pressable {
+  cursor: pointer;
   transition:
     transform 160ms ease,
     box-shadow 160ms ease;

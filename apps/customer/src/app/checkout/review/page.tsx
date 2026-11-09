@@ -13,6 +13,7 @@ import { toast } from "@/components/ui/Toast";
 import { CheckoutSteps } from "@/components/layout/CheckoutSteps";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { OfflineState } from "@/components/ui/EmptyState";
+import { PageSkeleton } from "@/components/ui/ColumnLoader";
 import { StickyActions } from "@/components/layout/StickyActions";
 import { ITEM_PLACEHOLDER } from "@/lib/placeholders";
 import Link from "next/link";
@@ -89,10 +90,8 @@ function ReviewForm() {
 
   if (!order) {
     return (
-      <div className="page-pad-no-tab space-y-3">
-        <div className="skeleton h-10 w-2/3" />
-        <div className="skeleton h-40 rounded-[24px]" />
-        <div className="skeleton h-32 rounded-[24px]" />
+      <div className="page-pad-no-tab">
+        <PageSkeleton variant="detail" />
       </div>
     );
   }
@@ -188,7 +187,13 @@ function ReviewForm() {
 
 export default function CheckoutReviewPage() {
   return (
-    <Suspense fallback={<div className="skeleton m-4 h-40" />}>
+    <Suspense
+      fallback={
+        <div className="page-pad-no-tab">
+          <PageSkeleton variant="detail" />
+        </div>
+      }
+    >
       <ReviewForm />
     </Suspense>
   );

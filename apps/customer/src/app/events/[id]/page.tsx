@@ -11,6 +11,7 @@ import type { EventRequest } from "@/lib/types";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { PageSkeleton } from "@/components/ui/ColumnLoader";
 import { toast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
 
@@ -41,10 +42,8 @@ export default function EventDetailPage() {
 
   if (!event) {
     return (
-      <div className="page-pad space-y-3">
-        <div className="skeleton h-36 rounded-[28px]" />
-        <div className="skeleton h-24 rounded-[24px]" />
-        <div className="skeleton h-48 rounded-[24px]" />
+      <div className="page-pad">
+        <PageSkeleton variant="detail" />
       </div>
     );
   }

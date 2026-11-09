@@ -11,6 +11,7 @@ import { OtpInput } from "@/components/auth/OtpInput";
 import { toast } from "@/components/ui/Toast";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
+import { PageSkeleton } from "@/components/ui/ColumnLoader";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Mail, MessageSquareText, Phone, UserRound } from "lucide-react";
 
@@ -231,7 +232,13 @@ function VerifyForm() {
 
 export default function VerifyPage() {
   return (
-    <Suspense fallback={<div className="page-pad skeleton h-40 m-4" />}>
+    <Suspense
+      fallback={
+        <div className="page-pad">
+          <PageSkeleton variant="detail" />
+        </div>
+      }
+    >
       <VerifyForm />
     </Suspense>
   );

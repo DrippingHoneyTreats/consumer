@@ -79,15 +79,26 @@ export default function AccountPage() {
           </span>
         </motion.section>
       ) : (
-        <section className="mb-6 rounded-[30px] bg-white p-5 shadow-[var(--shadow-card)]">
-          <p className="font-display text-xl text-deep">Welcome, guest</p>
-          <p className="mt-1 text-sm text-deep/55">Sign in to place orders and book events.</p>
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 overflow-hidden rounded-[30px] bg-gradient-to-br from-white to-blush-soft p-5 shadow-[var(--shadow-card)]"
+        >
+          <div className="flex items-center gap-4">
+            <span className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-white shadow-sm">
+              <BrandLogo size="md" href={null} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-2xl text-deep">Welcome, Guest</p>
+              <p className="mt-1 text-sm text-deep/55">Browse the menu freely — sign in when you are ready to order.</p>
+            </div>
+          </div>
           <Link href="/verify?returnTo=/account" className="mt-4 block">
             <Button fullWidth variant="dark">
               Sign in
             </Button>
           </Link>
-        </section>
+        </motion.section>
       )}
 
       <div className="mb-6 grid grid-cols-3 gap-2">

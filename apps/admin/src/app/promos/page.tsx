@@ -8,6 +8,7 @@ import { LOGO } from "@/lib/placeholders";
 import { Button } from "@/components/ui/Button";
 import { Input, textareaClass } from "@/components/ui/Input";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
+import { ColumnLoader } from "@/components/ui/ColumnLoader";
 import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
 import { AdminTable } from "@/components/admin/AdminTable";
 import { toast } from "@/components/ui/Toast";
@@ -157,11 +158,7 @@ export default function AdminPromosPage() {
       </div>
 
       {state === "loading" ? (
-        <div className="space-y-2">
-          {[1, 2].map((i) => (
-            <div key={i} className="skeleton h-14 rounded-2xl" />
-          ))}
-        </div>
+        <ColumnLoader columns={1} count={4} aspect="h-14 aspect-auto" />
       ) : banners.length === 0 ? (
         <EmptyState
           compact

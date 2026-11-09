@@ -15,6 +15,7 @@ import { cn } from "@/lib/cn";
 import { CheckoutSteps } from "@/components/layout/CheckoutSteps";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { StickyActions } from "@/components/layout/StickyActions";
+import { PageSkeleton } from "@/components/ui/ColumnLoader";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bike, Briefcase, ChevronRight, Home, MapPin, Search } from "lucide-react";
 
@@ -199,7 +200,13 @@ function AddressForm() {
 
 export default function CheckoutAddressPage() {
   return (
-    <Suspense fallback={<div className="skeleton m-4 h-40" />}>
+    <Suspense
+      fallback={
+        <div className="page-pad-no-tab">
+          <PageSkeleton variant="list" />
+        </div>
+      }
+    >
       <AddressForm />
     </Suspense>
   );

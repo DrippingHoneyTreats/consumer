@@ -5,30 +5,30 @@ import Link from "next/link";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, ArrowUpRight, MessageCircle, PartyPopper, Search, SearchX, UtensilsCrossed, X } from "lucide-react";
-import { apiClient } from "@/lib/api";
-import { asArray } from "@/lib/data";
+import { getCategories, searchItems } from "@/lib/catalogue";
+import type { CatalogueCategory, CatalogueItem } from "@/lib/catalogue-types";
 import { formatNgn, whatsappLink } from "@/lib/format";
 import { categoryImage, ITEM_PLACEHOLDER, LOGO, toneFor } from "@/lib/placeholders";
-import type { Category, Item } from "@/lib/types";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
 import { ColumnLoader } from "@/components/ui/ColumnLoader";
 import { useScrolledPast } from "@/hooks/useAppScroll";
+import { easeGentle } from "@/lib/motion";
 import { cn } from "@/lib/cn";
 
-const ease = [0.22, 1, 0.36, 1] as const;
+const ease = easeGentle;
 
-function FeaturedTile({ cat }: { cat: Category }) {
+function FeaturedTile({ cat }: { cat: CatalogueCategory }) {
   return (
     <motion.li
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 36 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease }}
+      transition={{ duration: 0.7, ease }}
       className="col-span-2 md:col-span-2 lg:col-span-2"
     >
       <Link
         href={`/pastries/${cat.slug}`}
-        className="pressable group relative flex h-[200px] overflow-hidden rounded-[30px] bg-hero p-5 shadow-[var(--shadow-card)] md:h-[240px]"
+        className="pressable group relative flex h-[200px] overflow-hidden rounded-[30px] bg-hero p-5 shadow-[var(--shadow-card)] md:h-[260px] lg:h-[300px]"
       >
         <div className="relative z-10 flex max-w-[52%] flex-col justify-between">
           <div>
@@ -48,13 +48,13 @@ function FeaturedTile({ cat }: { cat: Category }) {
   );
 }
 
-function CategoryCard({ cat, index, wide }: { cat: Category; index: number; wide: boolean }) {
+function CategoryCard({ cat, index, wide }: { cat: CatalogueCategory; index: number; wide: boolean }) {
   return (
     <motion.li
-      initial={{ opacity: 0, scale: 0.94 }}
-      whileInView={{ opacity: 1, scale: 1 }}
-      viewport={{ once: true, amount: 0.25 }}
-      transition={{ duration: 0.4, delay: (index % 4) * 0.05, ease }}
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.15 }}
+      transition={{ duration: 0.7, delay: (index % 4) * 0.06, ease }}
       className={cn(wide && "col-span-2")}
     >
       <Link
@@ -98,10 +98,10 @@ function CategoryCard({ cat, index, wide }: { cat: Category; index: number; wide
 }
 
 export default function PastriesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<CatalogueCategory[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [query, setQuery] = useState("");
-  const [searchHits, setSearchHits] = useState<Item[]>([]);
+  const [searchHits, setSearchHits] = useState<CatalogueItem[]>([]);
   const [searchState, setSearchState] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [searchNonce, setSearchNonce] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -109,10 +109,9 @@ export default function PastriesPage() {
 
   const load = useCallback(() => {
     setState("loading");
-    void apiClient
-      .get<Category[] | { data: Category[] }>("/categories")
-      .then((res) => {
-        setCategories(asArray(res));
+    void getCategories()
+      .then(({ categories: cats }) => {
+        setCategories(cats);
         setState("ready");
       })
       .catch(() => setState("error"));
@@ -132,10 +131,9 @@ export default function PastriesPage() {
     }
     setSearchState("loading");
     const t = window.setTimeout(() => {
-      void apiClient
-        .get<Item[] | { data: Item[] }>("/search", { q })
-        .then((res) => {
-          setSearchHits(asArray(res));
+      void searchItems(q)
+        .then((items) => {
+          setSearchHits(items);
           setSearchState("done");
         })
         .catch(() => setSearchState("error"));
@@ -146,6 +144,7 @@ export default function PastriesPage() {
   const searching = query.trim().length >= 2;
   const [featured, ...rest] = categories;
   const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP ?? "2348000000000";
+  const slugByCategoryId = Object.fromEntries(categories.map((c) => [c.id, c.slug]));
 
   return (
     <div className="page-pad">
@@ -196,7 +195,7 @@ export default function PastriesPage() {
         searchState === "error" ? (
           <OfflineState compact onRetry={() => setSearchNonce((n) => n + 1)} />
         ) : searchState === "loading" ? (
-          <ColumnLoader count={3} columns={1} aspect="h-[72px] aspect-auto" />
+          <ColumnLoader columns={1} count={4} aspect="h-[72px] aspect-auto" />
         ) : searchHits.length === 0 ? (
           <EmptyState
             compact
@@ -217,7 +216,7 @@ export default function PastriesPage() {
                   transition={{ delay: i * 0.03 }}
                 >
                   <Link
-                    href={`/pastries/${item.categoryId}?item=${item.id}`}
+                    href={`/pastries/${slugByCategoryId[item.categoryId] || item.categoryId}?item=${item.id}`}
                     className="pressable flex items-center gap-3 rounded-[20px] bg-white p-2 pr-4 shadow-[var(--shadow-card)]"
                   >
                     <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-blush-soft">
@@ -235,7 +234,7 @@ export default function PastriesPage() {
           </ul>
         )
       ) : state === "loading" ? (
-        <ColumnLoader count={4} columns={2} aspect="aspect-[4/5]" />
+        <ColumnLoader columns={4} count={6} aspect="aspect-[4/5]" />
       ) : state === "error" ? (
         <OfflineState onRetry={load} />
       ) : !featured ? (
@@ -247,14 +246,14 @@ export default function PastriesPage() {
         />
       ) : (
         <>
-          <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+          <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:gap-5">
             <FeaturedTile cat={featured} />
             {rest.map((cat, i) => (
               <CategoryCard key={cat.id} cat={cat} index={i} wide={rest.length % 2 === 1 && i === rest.length - 1} />
             ))}
           </ul>
 
-          <section className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-2 lg:max-w-2xl">
+          <section className="mt-6 grid grid-cols-2 gap-3 md:mt-8 md:grid-cols-2 md:gap-4 lg:max-w-3xl">
             <Link
               href="/events/book"
               className="pressable relative overflow-hidden rounded-[26px] bg-sage-glow p-4 shadow-[var(--shadow-card)]"

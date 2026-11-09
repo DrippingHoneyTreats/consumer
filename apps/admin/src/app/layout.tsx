@@ -11,10 +11,13 @@ export const metadata: Metadata = {
   applicationName: "DHT Admin",
   icons: {
     icon: [
+      { url: "/assets/icons/favicon-64.png", sizes: "64x64", type: "image/png" },
       { url: "/assets/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/assets/icons/favicon-128.png", sizes: "128x128", type: "image/png" },
       { url: "/assets/icons/icon-192.png", sizes: "192x192", type: "image/png" },
     ],
     apple: [{ url: "/assets/icons/apple-touch-icon.png", sizes: "180x180" }],
+    shortcut: "/assets/icons/favicon-64.png",
   },
   appleWebApp: {
     capable: true,
@@ -32,8 +35,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-off-white antialiased">
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-screen bg-off-white antialiased" suppressHydrationWarning>
         <AdminRoot>{children}</AdminRoot>
       </body>
     </html>

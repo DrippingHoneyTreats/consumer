@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { isDevOrLanHost } from "@/lib/is-dev-host";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -19,6 +20,15 @@ function isOrdersSurface(pathname: string) {
   return /^\/orders\/[^/]+$/.test(pathname);
 }
 
+async function clearDevServiceWorkers() {
+  const regs = await navigator.serviceWorker.getRegistrations();
+  await Promise.all(regs.map((r) => r.unregister()));
+  if ("caches" in window) {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => caches.delete(k)));
+  }
+}
+
 /** Registers the SW globally; install banner only on the Orders surface. */
 export function PwaRegister() {
   const pathname = usePathname();
@@ -28,8 +38,16 @@ export function PwaRegister() {
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
+
+    const host = window.location.hostname;
+    // Dev + phone-on-LAN: never let a SW fight Next HMR (causes refresh loops).
+    if (isDevOrLanHost(host) || process.env.NODE_ENV === "development") {
+      void clearDevServiceWorkers();
+      return;
+    }
+
     void navigator.serviceWorker.register("/sw.js").catch(() => {
-      /* HTTPS / localhost required */
+      /* HTTPS required in production */
     });
   }, []);
 

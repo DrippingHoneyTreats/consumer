@@ -6,13 +6,12 @@ import Image from "next/image";
 import { useParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ShoppingBag } from "lucide-react";
-import { apiClient } from "@/lib/api";
-import { asArray } from "@/lib/data";
+import { getCategoryItems } from "@/lib/catalogue";
+import type { CatalogueItem } from "@/lib/catalogue-types";
 import { categoryImage, LOGO } from "@/lib/placeholders";
 import { titleFromSlug } from "@/lib/format";
 import { useScrolledPast } from "@/hooks/useAppScroll";
-import type { Item } from "@/lib/types";
-import { ItemCard } from "@/components/catalogue/ItemCard";
+import { ProductCard } from "@/components/catalogue/ProductCard";
 import { ItemAddSheet } from "@/components/catalogue/ItemAddSheet";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
 import { ColumnLoader } from "@/components/ui/ColumnLoader";
@@ -20,13 +19,14 @@ import { useCartActions } from "@/hooks/useCartActions";
 
 export default function CategoryItemsPage() {
   const { category } = useParams<{ category: string }>();
-  const { addItem, setQty, setGuestQty, qtyInCart, draft, isLoggedIn } = useCartActions();
+  const { addItem } = useCartActions();
 
-  const [items, setItems] = useState<Item[]>([]);
+  const [items, setItems] = useState<CatalogueItem[]>([]);
   const [title, setTitle] = useState(() => titleFromSlug(category));
+  const [tagline, setTagline] = useState<string | null>(null);
   const [image, setImage] = useState<string | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
-  const [selected, setSelected] = useState<Item | null>(null);
+  const [selected, setSelected] = useState<CatalogueItem | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const compact = useScrolledPast(200);
   const loading = state === "loading";
@@ -34,14 +34,12 @@ export default function CategoryItemsPage() {
   const load = useCallback(async () => {
     setState("loading");
     try {
-      const res = await apiClient.get<
-        Item[] | { data: Item[]; category?: { name: string; image?: string | null } }
-      >(`/categories/${category}/items`);
-      const list = asArray<Item>(res);
+      const { category: cat, items: list } = await getCategoryItems(category);
       setItems(list);
-      if (res && typeof res === "object" && "category" in res && res.category?.name) {
-        setTitle(res.category.name);
-        setImage(res.category.image ?? null);
+      if (cat) {
+        setTitle(cat.name);
+        setImage(cat.image ?? null);
+        setTagline(cat.tagline ?? null);
       }
       setState("ready");
       const wanted = new URLSearchParams(window.location.search).get("item");
@@ -59,18 +57,9 @@ export default function CategoryItemsPage() {
     void load();
   }, [load]);
 
-  function openItem(item: Item) {
+  function openItem(item: CatalogueItem) {
     setSelected(item);
     setSheetOpen(true);
-  }
-
-  function onQtyChange(item: Item, qty: number) {
-    if (isLoggedIn && draft) {
-      const line = draft.items.find((i) => i.itemId === item.id);
-      if (line) void setQty(draft.id, line.id, qty);
-    } else {
-      setGuestQty(item.id, undefined, qty);
-    }
   }
 
   return (
@@ -106,7 +95,7 @@ export default function CategoryItemsPage() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        className="relative mb-4 min-h-[230px] overflow-hidden rounded-[30px] bg-hero p-4 shadow-[var(--shadow-card)]"
+        className="relative mb-5 min-h-[220px] overflow-hidden rounded-[30px] bg-hero p-4 shadow-[var(--shadow-card)] md:min-h-[260px]"
       >
         <Link
           href="/pastries"
@@ -116,9 +105,9 @@ export default function CategoryItemsPage() {
           <ChevronLeft size={20} />
         </Link>
         <div className="relative z-10 mt-8 max-w-[55%]">
-          <h1 className="font-display text-[32px] leading-tight text-deep">{title}</h1>
-          <p className="mt-1 text-xs text-deep/60">
-            {loading ? "Loading treats…" : `${items.length} treat${items.length === 1 ? "" : "s"} available`}
+          <h1 className="font-display text-[32px] leading-tight text-deep md:text-[40px]">{title}</h1>
+          <p className="mt-1 text-xs text-deep/60 md:text-sm">
+            {loading ? "Loading treats…" : tagline || `${items.length} treat${items.length === 1 ? "" : "s"} available`}
           </p>
         </div>
         <motion.div
@@ -144,7 +133,7 @@ export default function CategoryItemsPage() {
       {state === "error" ? (
         <OfflineState onRetry={() => void load()} />
       ) : loading ? (
-        <ColumnLoader count={4} columns={2} aspect="aspect-[3/4]" />
+        <ColumnLoader columns={4} count={6} aspect="aspect-[3/4]" />
       ) : items.length === 0 ? (
         <EmptyState
           image={LOGO}
@@ -155,21 +144,16 @@ export default function CategoryItemsPage() {
           icon={<ShoppingBag size={28} />}
         />
       ) : (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-          {items.map((item, i) => {
-            const qty = qtyInCart(item.id);
-            return (
-              <ItemCard
-                key={item.id}
-                item={item}
-                index={i}
-                qty={qty}
-                onOpen={() => openItem(item)}
-                onAdd={() => openItem(item)}
-                onQtyChange={(q) => onQtyChange(item, q)}
-              />
-            );
-          })}
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 md:gap-4">
+          {items.map((item, i) => (
+            <ProductCard
+              key={item.id}
+              item={item}
+              index={i}
+              onOpen={() => openItem(item)}
+              onAdd={() => openItem(item)}
+            />
+          ))}
         </div>
       )}
 

@@ -4,6 +4,9 @@ import { useEffect } from "react";
 import { MotionConfig } from "framer-motion";
 import { ToastHost } from "@/components/ui/Toast";
 import { PwaRegister } from "@/components/pwa/PwaRegister";
+import { AppShell } from "@/components/brand/AppShell";
+import { TabBar } from "@/components/nav/TabBar";
+import { CartBanner } from "@/components/nav/CartBanner";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
 
@@ -25,7 +28,13 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   return (
     <MotionConfig reducedMotion="user">
-      {children}
+      <AppShell>
+        <main id="app-scroll" className="app-scroll">
+          <div className="app-frame">{children}</div>
+        </main>
+        <CartBanner />
+        <TabBar />
+      </AppShell>
       <PwaRegister />
       <ToastHost />
     </MotionConfig>

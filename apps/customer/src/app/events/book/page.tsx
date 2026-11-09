@@ -12,6 +12,7 @@ import type { EventType } from "@/lib/types";
 import { useAuthStore } from "@/store/auth-store";
 import { AuthGateSheet } from "@/components/auth/AuthGateSheet";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
+import { ColumnLoader, PageSkeleton } from "@/components/ui/ColumnLoader";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StickyActions } from "@/components/layout/StickyActions";
 import { Input, textareaClass } from "@/components/ui/Input";
@@ -148,11 +149,7 @@ function BookEventForm() {
           transition={{ duration: 0.25 }}
         >
           {step === 0 && typesState === "loading" ? (
-            <div className="grid grid-cols-2 gap-3">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="skeleton aspect-[4/5] rounded-[24px]" />
-              ))}
-            </div>
+            <ColumnLoader columns={3} count={4} aspect="aspect-[4/5]" />
           ) : step === 0 && typesState === "error" ? (
             <OfflineState onRetry={loadTypes} />
           ) : step === 0 && types.length === 0 ? (
@@ -285,7 +282,13 @@ function BookEventForm() {
 
 export default function BookEventPage() {
   return (
-    <Suspense fallback={<div className="skeleton m-4 h-64" />}>
+    <Suspense
+      fallback={
+        <div className="page-pad">
+          <PageSkeleton variant="grid" />
+        </div>
+      }
+    >
       <BookEventForm />
     </Suspense>
   );

@@ -8,6 +8,7 @@ import { QtyStepper } from "@/components/ui/QtyStepper";
 import { formatNgn } from "@/lib/format";
 import { ITEM_PLACEHOLDER, toneFor } from "@/lib/placeholders";
 import type { Item } from "@/lib/types";
+import { easeGentle } from "@/lib/motion";
 import { cn } from "@/lib/cn";
 
 type Props = {
@@ -36,9 +37,9 @@ export function ItemCard({
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 36 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: Math.min(index, 8) * 0.05, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.65, delay: Math.min(index, 8) * 0.06, ease: easeGentle }}
       className={cn(
         "flex flex-col overflow-hidden rounded-[24px] border border-deep/5 bg-white p-2 shadow-[var(--shadow-card)]",
         soldOut && "opacity-70",

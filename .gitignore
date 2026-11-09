@@ -13,3 +13,8 @@ uploads
 # Pre-monorepo backups (do not commit)
 dhtcustomers-app/
 dhtcustomers-server/
+
+# Local-only mock catalogue (API / Cloudinary in production)
+apps/tempData/
+apps/customer/public/temp/
+apps/admin/public/temp/

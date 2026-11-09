@@ -31,7 +31,7 @@ export function TabBar() {
         aria-hidden
         className="tab-fade pointer-events-none absolute -inset-x-3 -bottom-[calc(10px+var(--safe-bottom))] -z-10 h-[calc(var(--tab-h)+var(--safe-bottom)+28px)]"
       />
-      <ul className="glass grid h-16 grid-cols-5 items-center rounded-[28px] border border-white/70 px-1.5 shadow-[var(--shadow-float)]">
+      <ul className="glass grid h-[68px] grid-cols-5 items-center rounded-full border border-white/80 px-2 shadow-[var(--shadow-float)] md:h-16">
         {tabs.map((tab) => {
           const active =
             tab.href === "/"
@@ -44,8 +44,9 @@ export function TabBar() {
               <li key={tab.href} className="flex justify-center">
                 <Link href={tab.href} aria-label={tab.label} aria-current={active ? "page" : undefined}>
                   <motion.span
+                    whileHover={{ scale: 1.06 }}
                     whileTap={{ scale: 0.9 }}
-                    animate={{ y: active ? -14 : -6, scale: active ? 1 : 0.92 }}
+                    animate={{ y: active ? -12 : -4, scale: active ? 1 : 0.94 }}
                     transition={{ type: "spring", stiffness: 420, damping: 24 }}
                     className={cn(
                       "flex h-14 w-14 items-center justify-center rounded-full border-4 transition-colors duration-300",
@@ -66,21 +67,17 @@ export function TabBar() {
               <Link
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
-                className="relative flex h-12 flex-col items-center justify-center gap-0.5 rounded-[20px] text-[10.5px]"
+                className="relative flex h-12 flex-col items-center justify-center gap-0.5 rounded-full text-[10.5px]"
               >
                 {active ? (
                   <motion.span
                     layoutId="tab-pill"
-                    className="absolute inset-0 rounded-[20px] bg-blush"
+                    className="absolute inset-x-1 inset-y-0.5 rounded-full bg-deep"
                     transition={{ type: "spring", stiffness: 420, damping: 32 }}
                   />
                 ) : null}
                 <motion.span whileTap={{ scale: 0.85 }} className="relative">
-                  <Icon
-                    size={20}
-                    strokeWidth={active ? 2.4 : 1.8}
-                    className={active ? "text-deep" : "text-tea"}
-                  />
+                  <Icon size={20} strokeWidth={active ? 2.4 : 1.8} className={active ? "text-white" : "text-tea"} />
                   <AnimatePresence>
                     {tab.href === "/orders" && count > 0 ? (
                       <motion.span
@@ -96,7 +93,7 @@ export function TabBar() {
                     ) : null}
                   </AnimatePresence>
                 </motion.span>
-                <span className={cn("relative", active ? "font-bold text-deep" : "font-medium text-deep/55")}>
+                <span className={cn("relative", active ? "font-bold text-white" : "font-medium text-deep/55")}>
                   {tab.label}
                 </span>
               </Link>

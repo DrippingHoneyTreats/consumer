@@ -41,31 +41,49 @@ export function useCartActions() {
     }
 
     if (!user) {
-      addGuestItem({
-        itemId: item.id,
-        variantId,
-        qty,
-        note,
-        name: lineName(item, variantId),
-        unitPrice: unitPrice(item, variantId),
-        image: item.images?.[0],
-      });
-      toast("Added to your order");
+      await toast.progress(
+        async () => {
+          // Brief beat so the progress toast can read as loading → done
+          await new Promise((r) => setTimeout(r, 420));
+          addGuestItem({
+            itemId: item.id,
+            variantId,
+            qty,
+            note,
+            name: lineName(item, variantId),
+            unitPrice: unitPrice(item, variantId),
+            image: item.images?.[0],
+          });
+        },
+        {
+          loading: "Adding to your order…",
+          success: "Added to your order",
+          error: "Could not add item. Please try again.",
+        },
+      );
       return;
     }
 
     try {
-      const res = await apiClient.post<Order | { data: Order }>("/orders/draft/items", {
-        itemId: item.id,
-        variantId,
-        qty,
-        note,
-      });
-      const order = unwrapData(res) ?? (res as Order);
-      setDraft(order);
-      toast("Added to your order");
+      await toast.progress(
+        async () => {
+          const res = await apiClient.post<Order | { data: Order }>("/orders/draft/items", {
+            itemId: item.id,
+            variantId,
+            qty,
+            note,
+          });
+          const order = unwrapData(res) ?? (res as Order);
+          setDraft(order);
+        },
+        {
+          loading: "Adding to your order…",
+          success: "Added to your order",
+          error: "Could not add item. Please try again.",
+        },
+      );
     } catch {
-      toast("Could not add item. Please try again.");
+      // Error toast already shown by toast.progress
     }
   }
 

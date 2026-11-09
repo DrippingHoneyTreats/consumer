@@ -1,1 +1,1 @@
-export { ColumnLoader } from "@dht/ui";
+export { ColumnLoader, PageSkeleton } from "@dht/ui";

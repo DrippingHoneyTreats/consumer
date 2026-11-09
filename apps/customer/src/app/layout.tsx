@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Montserrat, Playfair_Display } from "next/font/google";
 import { AppProviders } from "@/components/providers/AppProviders";
-import { TabBar } from "@/components/nav/TabBar";
-import { CartBanner } from "@/components/nav/CartBanner";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -26,10 +24,13 @@ export const metadata: Metadata = {
   applicationName: "Dripping Honey Treats",
   icons: {
     icon: [
+      { url: "/assets/icons/favicon-64.png", sizes: "64x64", type: "image/png" },
       { url: "/assets/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/assets/icons/favicon-128.png", sizes: "128x128", type: "image/png" },
       { url: "/assets/icons/icon-192.png", sizes: "192x192", type: "image/png" },
     ],
     apple: [{ url: "/assets/icons/apple-touch-icon.png", sizes: "180x180" }],
+    shortcut: "/assets/icons/favicon-64.png",
   },
   appleWebApp: {
     capable: true,
@@ -50,17 +51,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-NG">
-      <body className={`${playfair.variable} ${montserrat.variable} antialiased`}>
-        <AppProviders>
-          <div className="app-shell">
-            <main id="app-scroll" className="app-scroll">
-              <div className="app-frame">{children}</div>
-            </main>
-            <CartBanner />
-            <TabBar />
-          </div>
-        </AppProviders>
+    <html lang="en-NG" suppressHydrationWarning>
+      <body className={`${playfair.variable} ${montserrat.variable} antialiased`} suppressHydrationWarning>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

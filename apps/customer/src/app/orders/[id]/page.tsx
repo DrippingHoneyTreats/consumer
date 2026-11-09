@@ -17,6 +17,7 @@ import { QtyStepper } from "@/components/ui/QtyStepper";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
+import { PageSkeleton } from "@/components/ui/ColumnLoader";
 import { useCartActions } from "@/hooks/useCartActions";
 import { useCartStore } from "@/store/cart-store";
 function Row({ label, value, strong, accent }: { label: string; value: string; strong?: boolean; accent?: boolean }) {
@@ -57,11 +58,8 @@ export default function OrderDetailPage() {
 
   if (loading) {
     return (
-      <div className="page-pad space-y-3">
-        <div className="skeleton h-28 rounded-[28px]" />
-        <div className="skeleton h-20 rounded-[24px]" />
-        <div className="skeleton h-20 rounded-[24px]" />
-        <div className="skeleton h-36 rounded-[24px]" />
+      <div className="page-pad">
+        <PageSkeleton variant="detail" />
       </div>
     );
   }

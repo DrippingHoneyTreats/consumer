@@ -1,11 +1,25 @@
 import type { NextConfig } from "next";
+import os from "os";
 import path from "path";
+
+/** Current machine LAN IPs so phone testing via http://192.168… works with HMR. */
+function lanHosts(): string[] {
+  const hosts = new Set<string>();
+  for (const nets of Object.values(os.networkInterfaces())) {
+    for (const net of nets ?? []) {
+      if (net.family === "IPv4" && !net.internal) hosts.add(net.address);
+    }
+  }
+  // Keep a couple of common DHCP leftovers so a short IP change still works mid-session.
+  hosts.add("192.168.0.176");
+  return [...hosts];
+}
 
 const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname, "../.."),
   transpilePackages: ["@dht/ui", "@dht/api-client", "@dht/types"],
-  allowedDevOrigins: ["192.168.0.176"],
+  allowedDevOrigins: lanHosts(),
   async redirects() {
     return [
       { source: "/snacks", destination: "/pastries", permanent: true },

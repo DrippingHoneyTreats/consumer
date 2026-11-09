@@ -6,58 +6,42 @@ import Image from "next/image";
 import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 import {
   ArrowRight,
-  ArrowUpRight,
+  Bell,
   ChevronDown,
   MapPin,
   MessageCircle,
   PartyPopper,
-  Plus,
   Search,
+  SearchX,
   SlidersHorizontal,
-  UtensilsCrossed,
+  X,
 } from "lucide-react";
-import { apiClient } from "@/lib/api";
-import { asArray, unwrapData } from "@/lib/data";
+import { getHomeCatalogue, searchItems } from "@/lib/catalogue";
+import type { Banner, CatalogueCategory, CatalogueItem } from "@/lib/catalogue-types";
 import { formatNgn, greetingForNow, whatsappLink } from "@/lib/format";
-import {
-  BANNER_PLACEHOLDER,
-  EVENTS_BANNER,
-  ITEM_PLACEHOLDER,
-  LOGO,
-  categoryImage,
-  toneFor,
-} from "@/lib/placeholders";
-import type { Banner, Category, HomePayload, Item } from "@/lib/types";
+import { BANNER_PLACEHOLDER, EVENTS_BANNER, LOGO, categoryImage, ITEM_PLACEHOLDER, toneFor } from "@/lib/placeholders";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartActions } from "@/hooks/useCartActions";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { ProductCard } from "@/components/catalogue/ProductCard";
 import { ItemAddSheet } from "@/components/catalogue/ItemAddSheet";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
-import { ColumnLoader } from "@/components/ui/ColumnLoader";
+import { PageSkeleton } from "@/components/ui/ColumnLoader";
+import { easeGentle, fadeUp, springSnappy, stagger } from "@/lib/motion";
 import { cn } from "@/lib/cn";
 
 const SLIDE_MS = 4500;
-const ease = [0.22, 1, 0.36, 1] as const;
+const ease = easeGentle;
 
 function SectionTitle({ title, href, linkLabel = "See all" }: { title: string; href?: string; linkLabel?: string }) {
   return (
-    <div className="mb-3 flex items-end justify-between">
-      <h2 className="font-display text-[21px] leading-none text-deep">{title}</h2>
+    <div className="mb-3 flex items-end justify-between gap-3">
+      <h2 className="font-display text-[22px] leading-none text-deep md:text-[26px]">{title}</h2>
       {href ? (
         <Link href={href} className="flex items-center gap-0.5 text-xs font-semibold text-tea">
           {linkLabel} <ArrowRight size={13} />
         </Link>
       ) : null}
-    </div>
-  );
-}
-
-function HomeSkeleton() {
-  return (
-    <div className="space-y-5">
-      <div className="skeleton aspect-[16/8] w-full rounded-[30px] md:aspect-[21/8]" />
-      <div className="skeleton h-6 w-1/2" />
-      <ColumnLoader count={4} columns={2} aspect="aspect-[5/4]" />
     </div>
   );
 }
@@ -68,101 +52,91 @@ function PromoCarousel({ banners }: { banners: Banner[] }) {
   const [paused, setPaused] = useState(false);
   const dragged = useRef(false);
 
-  const go = useCallback(
-    (step: number) => setPage(([i]) => [(i + step + slides.length) % slides.length, step]),
+  const paginate = useCallback(
+    (d: number) => {
+      if (slides.length < 2) return;
+      setPage(([i]) => [((i + d) % slides.length + slides.length) % slides.length, d]);
+    },
     [slides.length],
   );
 
   useEffect(() => {
-    if (slides.length <= 1 || paused) return;
-    const t = window.setTimeout(() => go(1), SLIDE_MS);
-    return () => clearTimeout(t);
-  }, [idx, paused, slides.length, go]);
+    if (paused || slides.length < 2) return;
+    const t = window.setInterval(() => paginate(1), SLIDE_MS);
+    return () => window.clearInterval(t);
+  }, [paused, paginate, slides.length]);
 
-  function onDragEnd(_: unknown, info: PanInfo) {
-    setPaused(false);
-    if (info.offset.x < -50 || info.velocity.x < -400) go(1);
-    else if (info.offset.x > 50 || info.velocity.x > 400) go(-1);
-  }
-
-  const slide = slides[idx];
-  const href = slide.ctaTarget?.startsWith("/") ? slide.ctaTarget : undefined;
+  if (!slides.length) return null;
+  const banner = slides[idx];
+  const href = banner.ctaTarget || "/pastries";
 
   return (
-    <div className="relative aspect-[16/8] overflow-hidden rounded-[30px] bg-hero shadow-[var(--shadow-card)] md:aspect-[21/8] lg:aspect-[24/8]">
-      <AnimatePresence initial={false} custom={dir}>
+    <div
+      className="relative overflow-hidden rounded-[28px] bg-cream shadow-[var(--shadow-card)] md:rounded-[32px]"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onTouchStart={() => setPaused(true)}
+      onTouchEnd={() => setPaused(false)}
+    >
+      <AnimatePresence initial={false} custom={dir} mode="popLayout">
         <motion.div
-          key={slide.id}
+          key={banner.id}
           custom={dir}
-          variants={{
-            enter: (d: number) => ({ x: d > 0 ? "100%" : "-100%", opacity: 0.6 }),
-            centre: { x: 0, opacity: 1 },
-            exit: (d: number) => ({ x: d > 0 ? "-35%" : "35%", opacity: 0 }),
-          }}
-          initial="enter"
-          animate="centre"
-          exit="exit"
-          transition={{ type: "spring", stiffness: 260, damping: 32 }}
-          drag={slides.length > 1 ? "x" : false}
+          initial={{ opacity: 0, x: dir * 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: dir * -40 }}
+          transition={{ duration: 0.45, ease }}
+          drag="x"
           dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.4}
-          onPointerDown={() => {
-            dragged.current = false;
-          }}
+          dragElastic={0.12}
           onDragStart={() => {
             dragged.current = true;
-            setPaused(true);
           }}
-          onDragEnd={onDragEnd}
-          className="absolute inset-0 cursor-grab active:cursor-grabbing"
+          onDragEnd={(_, info: PanInfo) => {
+            if (info.offset.x < -48) paginate(1);
+            else if (info.offset.x > 48) paginate(-1);
+            window.setTimeout(() => {
+              dragged.current = false;
+            }, 40);
+          }}
+          className="relative aspect-[16/9] w-full md:aspect-[21/8] lg:aspect-[24/7]"
         >
-          {href ? (
+          <Image
+            src={banner.image || BANNER_PLACEHOLDER}
+            alt={banner.title || "Promo"}
+            fill
+            className="object-cover"
+            sizes="100vw"
+            unoptimized
+            priority={idx === 0}
+          />
+          {/* Artwork already carries copy — only CTA on top, no gradient / title overlay. */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 px-4 pb-8 pt-4 md:px-6 md:pb-10 md:pt-6">
             <Link
               href={href}
-              draggable={false}
-              aria-label={slide.title}
-              className="absolute inset-0 z-10"
               onClick={(e) => {
                 if (dragged.current) e.preventDefault();
               }}
-            />
-          ) : null}
-          <Image
-            src={slide.image || BANNER_PLACEHOLDER}
-            alt={slide.title}
-            fill
-            draggable={false}
-            className="pointer-events-none object-cover object-left"
-            sizes="480px"
-            unoptimized
-            priority
-          />
+              className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-honey px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-deep shadow-[var(--shadow-card)] md:px-5 md:py-3 md:text-sm"
+            >
+              {banner.ctaLabel || "Order now"} <ArrowRight size={14} />
+            </Link>
+          </div>
         </motion.div>
       </AnimatePresence>
-
       {slides.length > 1 ? (
-        <div className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 rounded-full bg-white/70 px-2 py-1.5 backdrop-blur">
+        <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
           {slides.map((s, i) => (
             <button
               key={s.id}
               type="button"
-              aria-label={`Show slide ${i + 1}`}
+              aria-label={`Slide ${i + 1}`}
               onClick={() => setPage([i, i > idx ? 1 : -1])}
               className={cn(
-                "relative h-1.5 overflow-hidden rounded-full bg-deep/20 transition-all duration-300",
-                i === idx ? "w-6" : "w-1.5",
+                "h-1.5 rounded-full shadow-sm transition-all",
+                i === idx ? "w-5 bg-white" : "w-1.5 bg-white/70",
               )}
-            >
-              {i === idx && !paused ? (
-                <motion.span
-                  key={idx}
-                  initial={{ width: 0 }}
-                  animate={{ width: "100%" }}
-                  transition={{ duration: SLIDE_MS / 1000, ease: "linear" }}
-                  className="absolute inset-y-0 left-0 rounded-full bg-deep"
-                />
-              ) : null}
-            </button>
+            />
           ))}
         </div>
       ) : null}
@@ -170,147 +144,83 @@ function PromoCarousel({ banners }: { banners: Banner[] }) {
   );
 }
 
-function CategoryTile({ cat, index, wide }: { cat: Category; index: number; wide: boolean }) {
+function CategoryRail({ categories }: { categories: CatalogueCategory[] }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 18, scale: 0.94 }}
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      variants={stagger(0.05)}
+      initial="hidden"
+      whileInView="show"
       viewport={{ once: true, amount: 0.3 }}
-      transition={{ duration: 0.5, delay: index * 0.06, ease }}
-      whileTap={{ scale: 0.97 }}
-      className={cn(wide && "col-span-2")}
+      className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1 pt-0.5 no-scrollbar md:gap-4"
     >
-      <Link
-        href={`/pastries/${cat.slug}`}
-        className={cn(
-          "group relative flex h-full flex-col justify-between overflow-hidden rounded-[26px] p-3.5 shadow-[var(--shadow-card)]",
-          wide ? "bg-deep text-white" : cn(toneFor(index), "text-deep"),
-        )}
-      >
-        <span
-          className={cn(
-            "pointer-events-none absolute -bottom-10 -left-8 h-28 w-28 rounded-full",
-            wide ? "bg-white/10" : "bg-white/45",
-          )}
-        />
-        <p className={cn("relative z-10 max-w-[56%] font-display leading-[1.1]", wide ? "text-[22px]" : "text-[19px]")}>
-          {cat.name}
-        </p>
-        <div
-          className={cn("animate-float pointer-events-none absolute bottom-2 right-2 top-2", wide ? "w-[34%]" : "w-[42%]")}
-          style={{ animationDelay: `${index * 0.6}s`, ["--float-rot" as string]: index % 2 ? "3deg" : "-3deg" }}
-        >
-          <div className="relative h-full w-full overflow-hidden rounded-[20px] shadow-[var(--shadow-float)] ring-[3px] ring-white/70">
-            <Image src={categoryImage(cat)} alt="" fill className="object-cover" sizes="160px" unoptimized />
-          </div>
-          <span
-            className={cn(
-              "absolute -bottom-1 -left-2 flex h-8 w-8 items-center justify-center rounded-full shadow-md transition group-hover:rotate-45",
-              wide ? "bg-blush text-deep" : "bg-white text-deep",
-            )}
+      <motion.div variants={fadeUp}>
+        <Link href="/pastries" className="flex w-[72px] shrink-0 flex-col items-center gap-2 md:w-[84px]">
+          <motion.span
+            whileHover={{ scale: 1.08, y: -3 }}
+            whileTap={{ scale: 0.92 }}
+            transition={springSnappy}
+            className="flex h-[64px] w-[64px] items-center justify-center rounded-[22px] bg-honey text-deep shadow-[var(--shadow-card)] md:h-[76px] md:w-[76px] md:rounded-[26px]"
           >
-            <ArrowUpRight size={15} />
-          </span>
-        </div>
-      </Link>
-    </motion.div>
-  );
-}
-
-function CategoryGrid({ categories }: { categories: Category[] }) {
-  const tiles = categories.slice(0, 5);
-  return (
-    <div className="grid auto-rows-[118px] grid-cols-2 gap-3 md:auto-rows-[140px] md:grid-cols-3 lg:auto-rows-[160px] lg:grid-cols-4">
-      {tiles.map((cat, i) => (
-        <CategoryTile
-          key={cat.id}
-          cat={cat}
-          index={i}
-          wide={i === tiles.length - 1 && tiles.length % 2 === 1}
-        />
+            <span className="font-display text-lg font-bold">All</span>
+          </motion.span>
+          <span className="text-[11px] font-semibold text-deep">All</span>
+        </Link>
+      </motion.div>
+      {categories.map((cat, i) => (
+        <motion.div key={cat.id} variants={fadeUp}>
+          <Link href={`/pastries/${cat.slug}`} className="flex w-[72px] shrink-0 flex-col items-center gap-2 md:w-[84px]">
+            <motion.span
+              whileHover={{ scale: 1.08, y: -3 }}
+              whileTap={{ scale: 0.92 }}
+              transition={springSnappy}
+              className={cn(
+                "relative h-[64px] w-[64px] overflow-hidden rounded-[22px] shadow-[var(--shadow-card)] ring-2 ring-white md:h-[76px] md:w-[76px] md:rounded-[26px]",
+                toneFor(i),
+              )}
+            >
+              <Image src={categoryImage(cat)} alt="" fill className="object-cover" sizes="76px" unoptimized />
+            </motion.span>
+            <span className="line-clamp-1 text-center text-[11px] font-semibold text-deep">{cat.name}</span>
+          </Link>
+        </motion.div>
       ))}
-    </div>
-  );
-}
-
-function PickCard({ item, index, onOpen }: { item: Item; index: number; onOpen: () => void }) {
-  const soldOut = item.status === "sold_out";
-  return (
-    <motion.li
-      initial={{ opacity: 0, x: 24 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.45, delay: Math.min(index, 5) * 0.06, ease }}
-      className="w-[42%] shrink-0 snap-start sm:w-[30%] md:w-[22%] lg:w-[18%]"
-    >
-      <button
-        type="button"
-        onClick={onOpen}
-        className={cn(
-          "pressable flex w-full flex-col rounded-[24px] border border-deep/5 bg-white p-2 text-left shadow-[var(--shadow-card)]",
-          soldOut && "opacity-60",
-        )}
-      >
-        <span className={cn("relative block aspect-square overflow-hidden rounded-[18px]", toneFor(index))}>
-          <Image src={item.images?.[0] || ITEM_PLACEHOLDER} alt="" fill className="object-cover" sizes="200px" unoptimized />
-          {item.status === "few_left" ? (
-            <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-blush-deep">
-              Few left
-            </span>
-          ) : null}
-        </span>
-        <span className="mt-2 line-clamp-1 px-1 text-[13px] font-semibold text-deep">{item.name}</span>
-        <span className="flex items-center justify-between px-1 pb-0.5 pt-1">
-          <span className="font-display text-[15px] font-semibold text-deep">{formatNgn(item.basePrice)}</span>
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-deep text-white">
-            <Plus size={15} />
-          </span>
-        </span>
-      </button>
-    </motion.li>
+    </motion.div>
   );
 }
 
 export default function HomePage() {
   const user = useAuthStore((s) => s.user);
+  const hydrated = useAuthStore((s) => s.hydrated);
   const { addItem } = useCartActions();
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
-  const [home, setHome] = useState<HomePayload>({ banners: [], categories: [] });
-  const [picks, setPicks] = useState<Item[]>([]);
-  const [picksLoading, setPicksLoading] = useState(false);
-  const [greeting, setGreeting] = useState("Welcome");
-  const [selected, setSelected] = useState<Item | null>(null);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [categories, setCategories] = useState<CatalogueCategory[]>([]);
+  const [popular, setPopular] = useState<CatalogueItem[]>([]);
+  const [whatsapp, setWhatsapp] = useState(process.env.NEXT_PUBLIC_WHATSAPP || "2348000000000");
+  const [greeting, setGreeting] = useState("Welcome, Guest");
+  const [selected, setSelected] = useState<CatalogueItem | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [hits, setHits] = useState<CatalogueItem[]>([]);
+  const [searching, setSearching] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setGreeting(greetingForNow(user?.fullName));
-  }, [user?.fullName]);
+    if (!hydrated) return;
+    if (user?.fullName) setGreeting(greetingForNow(user.fullName));
+    else setGreeting("Welcome, Guest");
+  }, [user?.fullName, hydrated]);
 
   const load = useCallback(async () => {
     setState("loading");
-    setPicks([]);
     try {
-      const res = await apiClient.get<HomePayload | { data: HomePayload }>("/home");
-      const payload = unwrapData(res) ?? (res as HomePayload);
-      const categories = asArray<Category>(payload.categories);
-      setHome({ banners: asArray(payload.banners), categories, settings: payload.settings });
+      const home = await getHomeCatalogue();
+      setBanners(home.banners);
+      setCategories(home.categories);
+      setPopular(home.popular);
+      if (home.settings?.whatsappNumber) setWhatsapp(home.settings.whatsappNumber);
       setState("ready");
-
-      if (!categories.length) {
-        setPicksLoading(false);
-        return;
-      }
-      setPicksLoading(true);
-      const lists = await Promise.allSettled(
-        categories.slice(0, 3).map((c) => apiClient.get<Item[] | { data: Item[] }>(`/categories/${c.slug}/items`)),
-      );
-      const items = lists.flatMap((r) => (r.status === "fulfilled" ? asArray<Item>(r.value) : []));
-      setPicks(
-        items.sort((a, b) => Number(a.status === "sold_out") - Number(b.status === "sold_out")).slice(0, 8),
-      );
-      setPicksLoading(false);
     } catch {
-      setPicksLoading(false);
       setState("error");
     }
   }, []);
@@ -319,161 +229,342 @@ export default function HomePage() {
     void load();
   }, [load]);
 
-  const whatsapp = home.settings?.whatsappNumber || process.env.NEXT_PUBLIC_WHATSAPP || "2348000000000";
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) {
+      setHits([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const t = window.setTimeout(() => {
+      void searchItems(q).then((items) => {
+        setHits(items);
+        setSearching(false);
+      });
+    }, 220);
+    return () => window.clearTimeout(t);
+  }, [query]);
+
+  const openItem = (item: CatalogueItem) => {
+    setSelected(item);
+    setSheetOpen(true);
+  };
+
+  const showUser = hydrated && !!user;
+  const heroImage =
+    popular[0]?.images?.[0] || categories[0]?.image || "/temp/images/cake-wholewheat.jpg";
+  const isSearch = query.trim().length >= 2;
 
   return (
-    <div className="page-pad space-y-6">
-      <header className="space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <motion.div
-            initial={{ opacity: 0, x: -12 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4 }}
-            className="min-w-0 flex-1"
-          >
+    <div className="page-pad space-y-6 md:space-y-8 lg:space-y-10">
+      <header className="space-y-4 md:space-y-5">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease }}
+          className="flex items-center justify-between gap-3"
+        >
+          <div className="flex min-w-0 items-center gap-2.5">
+            <motion.span
+              whileHover={{ scale: 1.06, rotate: -4 }}
+              whileTap={{ scale: 0.94 }}
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blush-soft ring-2 ring-white shadow-[var(--shadow-card)] md:h-11 md:w-11"
+            >
+              {showUser ? (
+                <span className="font-display text-base text-deep md:text-lg">
+                  {user!.fullName
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map((p) => p[0]?.toUpperCase())
+                    .join("")}
+                </span>
+              ) : (
+                <BrandLogo size="sm" href={null} />
+              )}
+            </motion.span>
             <Link
               href="/account/addresses"
-              className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-sage-soft px-2.5 py-1 text-[11px] font-semibold text-deep"
+              className="inline-flex min-w-0 items-center gap-1 text-[12px] font-semibold text-deep md:text-sm"
             >
-              <MapPin size={12} className="text-tea" />
-              Delivering in Lagos
-              <ChevronDown size={12} />
+              <MapPin size={14} className="shrink-0 text-tea" />
+              <span className="truncate">Delivering in Lagos</span>
+              <ChevronDown size={14} className="shrink-0 text-deep/40" />
             </Link>
-            <p className="truncate font-display text-[22px] leading-tight text-deep md:text-[26px]">{greeting}</p>
-            <p className="text-sm text-deep/55">Order pastries or book an event.</p>
+          </div>
+          <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.92 }}>
+            <Link
+              href="/account"
+              aria-label="Notifications"
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-deep shadow-[var(--shadow-card)] md:h-11 md:w-11"
+            >
+              <Bell size={18} />
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-blush-deep" />
+            </Link>
           </motion.div>
-          <motion.div
-            initial={{ opacity: 0, x: 12 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4 }}
-            className="shrink-0 pt-0.5"
-          >
-            <BrandLogo size="lg" />
-          </motion.div>
-        </div>
+        </motion.div>
 
-        <Link
-          href="/pastries?focus=1"
-          className="glass pressable flex min-h-13 items-center gap-3 rounded-full border border-white/80 py-1.5 pl-4 pr-1.5 shadow-[var(--shadow-card)]"
+        <motion.div
+          initial={{ opacity: 0, y: 18, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.55, ease, delay: 0.05 }}
+          className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#f7efe6_0%,#fbe3e6_48%,#e8f0e6_100%)] shadow-[var(--shadow-card)] md:rounded-[32px]"
         >
-          <Search size={18} className="shrink-0 text-tea" />
-          <span className="flex-1 truncate text-sm text-deep/45">Search cakes, chinchin, meat pies…</span>
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-deep text-white">
-            <SlidersHorizontal size={16} />
-          </span>
-        </Link>
+          <div className="relative z-10 grid gap-4 p-5 md:grid-cols-[1fr_1.05fr] md:items-center md:gap-8 md:p-7 lg:gap-10 lg:p-8">
+            <div className="max-w-lg">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-tea md:text-[13px]">{greeting}</p>
+              <h1 className="mt-2 font-display text-[30px] leading-[1.08] text-deep md:text-[40px] lg:text-[48px]">
+                Freshly baked{" "}
+                <span className="text-honey">drips</span>
+                <br />
+                delivered to your door.
+              </h1>
+              <p className="mt-3 max-w-sm text-sm leading-relaxed text-deep/60 md:text-[15px]">
+                Fibre-rich pastries and event tables — baked fresh for Lagos.
+              </p>
+              <motion.label
+                whileFocus={{ scale: 1.01 }}
+                className="glass mt-5 flex min-h-12 w-full items-center gap-2.5 rounded-full border border-white/90 py-1.5 pl-4 pr-1.5 shadow-[var(--shadow-card)]"
+              >
+                <Search size={17} className="shrink-0 text-tea" />
+                <input
+                  ref={searchRef}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search cakes, chinchin, meat pies…"
+                  aria-label="Search treats"
+                  className="w-full bg-transparent text-sm text-deep outline-none placeholder:text-deep/40"
+                />
+                {query ? (
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    onClick={() => setQuery("")}
+                    className="mr-1 rounded-full p-1 text-deep/45 hover:bg-deep/5"
+                  >
+                    <X size={15} />
+                  </button>
+                ) : (
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-deep text-white">
+                    <SlidersHorizontal size={14} />
+                  </span>
+                )}
+              </motion.label>
+            </div>
+
+            {/* Desktop only — large free-form treat with continuous motion */}
+            <motion.div
+              initial={{ opacity: 0, y: 28 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.75, ease, delay: 0.12 }}
+              className="relative hidden aspect-square w-full justify-self-end md:block lg:max-w-[420px] xl:max-w-[460px]"
+            >
+              <motion.div
+                aria-hidden
+                className="absolute inset-[-6%] rounded-full bg-honey/30 blur-3xl"
+                animate={{ scale: [1, 1.14, 1], opacity: [0.35, 0.6, 0.35] }}
+                transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
+              />
+              <motion.div
+                aria-hidden
+                className="absolute inset-[18%] rounded-full bg-blush/35 blur-2xl"
+                animate={{ scale: [1.08, 0.95, 1.08], opacity: [0.4, 0.65, 0.4] }}
+                transition={{ duration: 4.2, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
+              />
+              <motion.div
+                className="relative h-full w-full"
+                animate={{
+                  y: [0, -14, 0],
+                  rotate: [0, 2.5, -1.5, 0],
+                  scale: [1, 1.035, 1],
+                }}
+                transition={{ duration: 6.5, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Image
+                  src={heroImage}
+                  alt=""
+                  fill
+                  className="object-contain drop-shadow-[0_28px_48px_rgba(63,95,70,0.28)]"
+                  sizes="(min-width:768px) 420px, 0px"
+                  priority
+                  unoptimized
+                />
+              </motion.div>
+            </motion.div>
+          </div>
+        </motion.div>
       </header>
 
       {state === "loading" ? (
-        <HomeSkeleton />
+        <PageSkeleton variant="home" />
       ) : state === "error" ? (
         <OfflineState onRetry={() => void load()} />
+      ) : isSearch ? (
+        <motion.section initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, ease }}>
+          <SectionTitle title={searching ? "Searching…" : `Results for “${query.trim()}”`} />
+          {searching ? (
+            <PageSkeleton variant="grid" />
+          ) : hits.length === 0 ? (
+            <EmptyState
+              compact
+              image={LOGO}
+              icon={<SearchX size={22} />}
+              title="No matches yet"
+              message={`Nothing found for “${query.trim()}”. Try chinchin, cake, or donut.`}
+            />
+          ) : (
+            <ul className="space-y-2 md:grid md:grid-cols-2 md:gap-3 md:space-y-0 lg:grid-cols-3">
+              <AnimatePresence initial={false}>
+                {hits.map((item, i) => (
+                  <motion.li
+                    key={item.id}
+                    initial={{ opacity: 0, y: 28 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ delay: i * 0.05, duration: 0.55, ease }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => openItem(item)}
+                      className="pressable flex w-full items-center gap-3 rounded-[22px] bg-white p-2 pr-4 text-left shadow-[var(--shadow-card)]"
+                    >
+                      <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-blush-soft">
+                        <Image src={item.images?.[0] || ITEM_PLACEHOLDER} alt="" fill className="object-cover" sizes="64px" unoptimized />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-semibold text-deep">{item.name}</span>
+                        <span className="text-xs text-deep/55">{formatNgn(item.basePrice)}</span>
+                      </span>
+                      <ArrowRight size={16} className="text-tea" />
+                    </button>
+                  </motion.li>
+                ))}
+              </AnimatePresence>
+            </ul>
+          )}
+        </motion.section>
       ) : (
         <>
-          <motion.section initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.45, ease }}>
-            {home.banners.length ? (
-              <PromoCarousel banners={home.banners} />
+          <motion.section
+            initial={{ opacity: 0, y: 36 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.12 }}
+            transition={{ duration: 0.7, ease }}
+          >
+            <CategoryRail categories={categories} />
+          </motion.section>
+
+          <motion.section
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.12 }}
+            transition={{ duration: 0.75, ease }}
+          >
+            <SectionTitle title="Popular this week" href="/pastries" />
+            {popular.length ? (
+              <>
+                <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2 no-scrollbar md:gap-4 lg:hidden">
+                  {popular.map((item, i) => (
+                    <ProductCard
+                      key={item.id}
+                      item={item}
+                      index={i}
+                      layout="rail"
+                      onOpen={() => openItem(item)}
+                      onAdd={() => void addItem({ item })}
+                    />
+                  ))}
+                </div>
+                <div className="hidden grid-cols-3 gap-4 lg:grid xl:grid-cols-4">
+                  {popular.slice(0, 8).map((item, i) => (
+                    <ProductCard
+                      key={item.id}
+                      item={item}
+                      index={i}
+                      layout="grid"
+                      onOpen={() => openItem(item)}
+                      onAdd={() => void addItem({ item })}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <EmptyState
+                compact
+                className="min-h-[120px] rounded-[24px]"
+                image={LOGO}
+                title="Menu warming up"
+                message="Popular picks will show here once the kitchen publishes them."
+              />
+            )}
+          </motion.section>
+
+          <motion.section
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.15 }}
+            transition={{ duration: 0.75, ease }}
+          >
+            {banners.length ? (
+              <PromoCarousel banners={banners} />
             ) : (
               <EmptyState
                 compact
                 className="min-h-[140px] rounded-[30px]"
                 image={LOGO}
                 title="No promos yet"
-                message="Offers and seasonal banners will show here when the kitchen posts them."
+                message="Offers show here when the kitchen posts them."
               />
             )}
           </motion.section>
-
-          <section>
-            <SectionTitle title="What are you craving?" href={home.categories.length ? "/pastries" : undefined} />
-            {home.categories.length ? (
-              <CategoryGrid categories={home.categories} />
-            ) : (
-              <EmptyState
-                compact
-                image={LOGO}
-                icon={<UtensilsCrossed size={22} />}
-                title="Menu coming soon"
-                message="No pastries uploaded yet. Check back shortly."
-              />
-            )}
-          </section>
-
-          {home.categories.length ? (
-            <section>
-              <SectionTitle title="Fresh picks for you" href="/pastries" />
-              {picksLoading ? (
-                <ColumnLoader count={4} columns={2} aspect="aspect-square" />
-              ) : picks.length ? (
-                <ul className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2">
-                  {picks.map((item, i) => (
-                    <PickCard
-                      key={item.id}
-                      item={item}
-                      index={i}
-                      onOpen={() => {
-                        setSelected(item);
-                        setSheetOpen(true);
-                      }}
-                    />
-                  ))}
-                </ul>
-              ) : (
-                <EmptyState
-                  compact
-                  image={LOGO}
-                  title="No products yet"
-                  message="Products will appear here once the kitchen uploads them."
-                />
-              )}
-            </section>
-          ) : null}
 
           <motion.section
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.4 }}
-            transition={{ duration: 0.5, ease }}
+            viewport={{ once: true, amount: 0.15 }}
+            transition={{ duration: 0.75, ease }}
+            className="grid gap-3 md:grid-cols-2"
           >
-            <Link
-              href="/events"
-              className="pressable relative flex min-h-[150px] overflow-hidden rounded-[30px] bg-deep p-5 text-white shadow-[var(--shadow-float)]"
-            >
-              <span className="absolute -right-10 -top-12 h-44 w-44 rounded-full bg-white/10" />
-              <span className="absolute -bottom-16 right-16 h-32 w-32 rounded-full bg-blush/20" />
-              <div className="relative z-10 flex max-w-[60%] flex-col justify-between gap-3">
-                <div>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
-                    <PartyPopper size={11} /> Events
+            <motion.div whileHover={{ y: -4, scale: 1.01 }} whileTap={{ scale: 0.98 }} transition={springSnappy}>
+              <Link
+                href="/events"
+                className="relative flex h-full overflow-hidden rounded-[28px] bg-deep p-5 text-white shadow-[var(--shadow-card)]"
+              >
+                <div className="relative z-10 max-w-[70%]">
+                  <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-blush">
+                    <PartyPopper size={14} /> Events
+                  </p>
+                  <p className="mt-2 font-display text-2xl leading-tight">Book a sweet table</p>
+                  <p className="mt-1 text-sm text-white/70">Birthdays, boardrooms & big Lagos days.</p>
+                  <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-honey">
+                    Explore events <ArrowRight size={13} />
                   </span>
-                  <p className="mt-2 font-display text-[22px] leading-[1.15]">Planning a celebration?</p>
-                  <p className="mt-1 text-xs text-white/70">Birthdays, hangouts and owambe. We cater it all.</p>
                 </div>
-                <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-blush px-4 py-2 text-xs font-semibold text-deep">
-                  Book us now <ArrowRight size={14} />
-                </span>
-              </div>
-              <div className="absolute -right-10 bottom-3 top-3 w-[44%] overflow-hidden rounded-[24px] ring-4 ring-white/15">
-                <Image src={EVENTS_BANNER} alt="" fill className="object-cover object-right" sizes="220px" unoptimized />
-              </div>
-            </Link>
-          </motion.section>
+                <div className="absolute -right-2 bottom-0 top-4 w-[42%]">
+                  <Image src={EVENTS_BANNER} alt="" fill className="object-contain object-bottom" sizes="200px" unoptimized />
+                </div>
+              </Link>
+            </motion.div>
 
-          <a
-            href={whatsappLink(whatsapp, "Hi DHT, I have a question about an order")}
-            target="_blank"
-            rel="noreferrer"
-            className="pressable flex items-center gap-3 rounded-[24px] bg-blush-soft p-3.5"
-          >
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-deep">
-              <MessageCircle size={19} />
-            </span>
-            <span className="flex-1">
-              <span className="block text-sm font-semibold text-deep">Need help?</span>
-              <span className="block text-xs text-deep/55">Chat with us on WhatsApp</span>
-            </span>
-            <ArrowUpRight size={18} className="text-deep/50" />
-          </a>
+            <motion.a
+              href={whatsappLink(whatsapp, "Hi DHT! I want to place an order.")}
+              target="_blank"
+              rel="noreferrer"
+              whileHover={{ y: -4, scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              transition={springSnappy}
+              className="flex items-center gap-4 rounded-[28px] bg-white p-5 shadow-[var(--shadow-card)]"
+            >
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-sage-soft text-deep">
+                <MessageCircle size={22} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-xl text-deep">Chat on WhatsApp</p>
+                <p className="text-sm text-deep/55">Questions, custom cakes, quick orders.</p>
+              </div>
+              <ArrowRight size={18} className="text-tea" />
+            </motion.a>
+          </motion.section>
         </>
       )}
 
@@ -481,8 +572,9 @@ export default function HomePage() {
         item={selected}
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        onConfirm={(opts) => {
-          if (selected) void addItem({ item: selected, ...opts });
+        onConfirm={({ variantId, qty, note }) => {
+          if (!selected) return;
+          void addItem({ item: selected, variantId, qty, note });
         }}
       />
     </div>

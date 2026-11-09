@@ -7,6 +7,7 @@ import { fetchAdminOrder, orderCustomerLabel } from "@/lib/admin-orders";
 import type { AdminListResponse, AdminOrderRow, Order } from "@/lib/types";
 import { formatNgn } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
+import { ColumnLoader } from "@/components/ui/ColumnLoader";
 import { cn } from "@/lib/cn";
 import { OrderDetailPanel } from "@/components/admin/OrderDetailPanel";
 import { toast } from "@/components/ui/Toast";
@@ -131,11 +132,7 @@ export default function AdminLiveOrdersPage() {
       <div className="flex gap-6">
         <div className="min-w-0 flex-1">
           {loading && !orders.length ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="skeleton h-20" />
-              ))}
-            </div>
+            <ColumnLoader columns={1} count={6} aspect="h-20 aspect-auto" className="sm:grid-cols-2 xl:grid-cols-3" />
           ) : view === "list" || statusFilter !== "all" ? (
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{filtered.map(card)}</div>
           ) : (

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ColumnLoader } from "@/components/ui/ColumnLoader";
 import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
 import { AdminCardList } from "@/components/admin/AdminTable";
 import { toast } from "@/components/ui/Toast";
@@ -144,10 +145,8 @@ export default function AdminCataloguePage() {
         <section className="rounded-2xl border border-deep/10 bg-white p-4">
           <h2 className="font-semibold">Categories</h2>
           {loading ? (
-            <div className="mt-3 space-y-2">
-              {[1, 2].map((i) => (
-                <div key={i} className="skeleton h-12 rounded-xl" />
-              ))}
+            <div className="mt-3">
+              <ColumnLoader columns={1} count={3} aspect="h-12 aspect-auto" cellClassName="rounded-xl" />
             </div>
           ) : categories.length === 0 ? (
             <EmptyState
@@ -254,11 +253,7 @@ export default function AdminCataloguePage() {
       <section className="mt-6">
         <h2 className="mb-3 font-semibold">Products</h2>
         {loading ? (
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="skeleton h-16 rounded-2xl" />
-            ))}
-          </div>
+          <ColumnLoader columns={1} count={4} aspect="h-16 aspect-auto" className="md:grid-cols-2" />
         ) : items.length === 0 ? (
           <EmptyState
             compact

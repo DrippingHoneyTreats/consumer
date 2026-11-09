@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
+import { PageSkeleton } from "@/components/ui/ColumnLoader";
 import { statusLabel } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { AnimatePresence, motion } from "framer-motion";
@@ -119,7 +120,13 @@ function CallbackInner() {
 
 export default function PaymentCallbackPage() {
   return (
-    <Suspense fallback={<div className="skeleton m-4 h-40" />}>
+    <Suspense
+      fallback={
+        <div className="page-pad">
+          <PageSkeleton variant="detail" />
+        </div>
+      }
+    >
       <CallbackInner />
     </Suspense>
   );
