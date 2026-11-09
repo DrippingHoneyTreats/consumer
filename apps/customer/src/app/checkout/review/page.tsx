@@ -7,7 +7,7 @@ import { unwrapData } from "@/lib/data";
 import { formatNgn } from "@/lib/format";
 import type { Order } from "@/lib/types";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Input } from "@/components/ui/Input";
+import { Input, textareaClass } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { toast } from "@/components/ui/Toast";
 import { CheckoutSteps } from "@/components/layout/CheckoutSteps";
@@ -16,6 +16,7 @@ import { OfflineState } from "@/components/ui/EmptyState";
 import { PageSkeleton } from "@/components/ui/ColumnLoader";
 import { StickyActions } from "@/components/layout/StickyActions";
 import { ITEM_PLACEHOLDER } from "@/lib/placeholders";
+import { useCartStore } from "@/store/cart-store";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
@@ -26,6 +27,8 @@ function ReviewForm() {
   const orderId = params.get("orderId");
   const router = useRouter();
   useRequireAuth();
+  const orderNote = useCartStore((s) => s.orderNote);
+  const setOrderNote = useCartStore((s) => s.setOrderNote);
   const [order, setOrder] = useState<Order | null>(null);
   const [promo, setPromo] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,8 +41,13 @@ function ReviewForm() {
     setFailed(false);
     void apiClient
       .get<Order | { data: Order }>(`/orders/${orderId}`)
-      .then((res) => setOrder(unwrapData(res) ?? (res as Order)))
+      .then((res) => {
+        const o = unwrapData(res) ?? (res as Order);
+        setOrder(o);
+        if (o.notes && !orderNote) setOrderNote(o.notes);
+      })
       .catch(() => setFailed(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, nonce]);
 
   async function applyPromo() {
@@ -59,6 +67,13 @@ function ReviewForm() {
     if (!orderId) return;
     setLoading(true);
     try {
+      if (orderNote.trim()) {
+        try {
+          await apiClient.patch(`/orders/${orderId}`, { notes: orderNote.trim() });
+        } catch {
+          /* continue to payment */
+        }
+      }
       const res = await apiClient.post<{ authorizationUrl?: string; url?: string; reference?: string }>(
         "/payments/initiate",
         { orderId },
@@ -138,6 +153,17 @@ function ReviewForm() {
           </motion.li>
         ))}
       </ul>
+
+      <label className="mb-4 block">
+        <span className="mb-1.5 block pl-1 text-sm font-semibold text-deep">Note for rider or baker</span>
+        <textarea
+          value={orderNote}
+          onChange={(e) => setOrderNote(e.target.value)}
+          rows={2}
+          placeholder="e.g. Write Happy Birthday · call on arrival"
+          className={textareaClass}
+        />
+      </label>
 
       <div className="mb-4 flex items-end gap-2">
         <Input

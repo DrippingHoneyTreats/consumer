@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -16,23 +17,39 @@ export function PageHeader({
   title: string;
   subtitle?: string;
   eyebrow?: string;
+  /** Fallback when there is no browser history (e.g. opened via deep link). */
   backHref?: string;
   right?: ReactNode;
   /** Show DHT mark in the header (default on for brand presence). */
   showBrand?: boolean;
 }) {
+  const router = useRouter();
+
+  function goBack() {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    if (backHref) {
+      router.push(backHref);
+      return;
+    }
+    router.push("/");
+  }
+
   return (
     <header className="mb-4 pt-2">
       {showBrand || backHref || right ? (
         <div className="mb-3 flex items-center justify-between gap-3">
           {backHref ? (
-            <Link
-              href={backHref}
+            <button
+              type="button"
+              onClick={goBack}
               className="glass pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/80 text-deep shadow-[var(--shadow-card)]"
               aria-label="Go back"
             >
               <ChevronLeft size={20} />
-            </Link>
+            </button>
           ) : (
             <span className="min-w-0 flex-1" />
           )}

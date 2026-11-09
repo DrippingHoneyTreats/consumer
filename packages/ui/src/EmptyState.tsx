@@ -54,7 +54,6 @@ export function EmptyState({
       )}
     >
       <div className="relative mb-2">
-        <span className="absolute -inset-4 rounded-full bg-blush-soft blur-xl" />
         {image ? (
           <motion.div
             animate={{ y: [0, -6, 0] }}
@@ -67,12 +66,9 @@ export function EmptyState({
           <motion.div
             animate={{ y: [0, -6, 0] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className={cn(
-              "relative flex items-center justify-center bg-gradient-to-br from-blush-soft to-blush text-deep shadow-[var(--shadow-card)]",
-              compact ? "h-16 w-16 rounded-[22px]" : "h-20 w-20 rounded-[28px]",
-            )}
+            className="relative flex items-center justify-center text-deep/45"
           >
-            {icon ?? <Plus size={compact ? 24 : 30} />}
+            {icon ?? <Plus size={compact ? 40 : 56} strokeWidth={1.4} />}
           </motion.div>
         )}
       </div>

@@ -1,319 +1,274 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, ChevronRight, History, MapPin, PartyPopper, RotateCcw, ShoppingBag } from "lucide-react";
+import { Inbox } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { asArray } from "@/lib/data";
-import { formatNgn, statusLabel } from "@/lib/format";
-import { EVENT_PLACEHOLDER, ITEM_PLACEHOLDER, LOGO } from "@/lib/placeholders";
+import { splitOrders } from "@/lib/order-status";
 import type { Order } from "@/lib/types";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
+import { useCartActions } from "@/hooks/useCartActions";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
-import { Badge } from "@/components/ui/Badge";
 import { ColumnLoader } from "@/components/ui/ColumnLoader";
-import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { AuthGateSheet } from "@/components/auth/AuthGateSheet";
 import { toast } from "@/components/ui/Toast";
-import { cn } from "@/lib/cn";
+import { CurrentCheckoutPanel } from "@/components/orders/CurrentCheckoutPanel";
+import { OrderListCard } from "@/components/orders/OrderListCard";
+import { UnderlineTabs } from "@/components/orders/UnderlineTabs";
 
-type Tab = "ongoing" | "completed" | "cancelled";
+type Tab = "current" | "ongoing" | "completed";
 
 const tabs: { key: Tab; label: string }[] = [
+  { key: "current", label: "Current" },
   { key: "ongoing", label: "Ongoing" },
   { key: "completed", label: "Completed" },
-  { key: "cancelled", label: "Cancelled" },
 ];
 
-const empty: Record<Tab, { title: string; description: string; action?: boolean }> = {
-  ongoing: { title: "No ongoing order", description: "Hungry? Your next treat is a tap away.", action: true },
-  completed: { title: "No completed orders yet", description: "Delivered orders will show up here." },
-  cancelled: { title: "No cancelled orders", description: "Nothing cancelled. Sweet!" },
-};
-
-function formatDate(iso: string) {
-  try {
-    return new Date(iso).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
-  } catch {
-    return "";
-  }
-}
-
-function statusTone(status: string) {
-  if (status === "delivered" || status === "completed") return "bg-sage-soft text-deep";
-  if (status === "cancelled" || status === "payment_failed") return "bg-blush-soft text-blush-deep";
-  if (status === "preparing" || status === "accepted" || status === "out_for_delivery") return "bg-honey-soft text-deep";
-  return "bg-off-white text-deep/70";
-}
-
-function OrderCard({ order, tab, index, onReorder }: { order: Order; tab: Tab; index: number; onReorder: () => void }) {
-  const thumbs = order.items.slice(0, 4);
-  const extra = order.items.length - thumbs.length;
-  const paid = order.status !== "draft" && order.status !== "pending_payment";
-  const place =
-    typeof order.addressSnapshot?.formattedAddress === "string"
-      ? order.addressSnapshot.formattedAddress
-      : typeof order.addressSnapshot?.city === "string"
-        ? order.addressSnapshot.city
-        : "Lagos";
-
-  return (
-    <motion.li
-      initial={{ opacity: 0, y: 36 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.65, delay: index * 0.06, ease: [0.33, 0, 0.2, 1] }}
-      className="overflow-hidden rounded-[28px] bg-white shadow-[var(--shadow-card)] ring-1 ring-deep/5"
-    >
-      <Link href={`/orders/${order.id}`} className="pressable block p-4 md:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate font-display text-lg text-deep md:text-xl">#{order.orderNo}</p>
-            <p className="mt-0.5 text-xs text-deep/45">{formatDate(order.createdAt)}</p>
-          </div>
-          <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold", statusTone(order.status))}>
-            {statusLabel(order.status)}
-          </span>
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-deep/40">Total</p>
-            <p className="font-display text-2xl font-semibold text-deep">{formatNgn(order.total)}</p>
-          </div>
-          <p className="flex max-w-[55%] items-center gap-1 truncate text-xs text-deep/55">
-            <MapPin size={12} className="shrink-0 text-tea" />
-            <span className="truncate">{place}</span>
-          </p>
-        </div>
-
-        <div className="mt-4 flex gap-2 overflow-x-auto no-scrollbar">
-          {thumbs.map((line) => (
-            <span
-              key={line.id}
-              className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[16px] bg-cream ring-2 ring-white md:h-16 md:w-16 md:rounded-[18px]"
-            >
-              <Image
-                src={line.item?.images?.[0] || ITEM_PLACEHOLDER}
-                alt=""
-                fill
-                className="object-cover"
-                sizes="64px"
-                unoptimized
-              />
-            </span>
-          ))}
-          {extra > 0 ? (
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[16px] bg-sage-soft text-xs font-bold text-deep ring-2 ring-white md:h-16 md:w-16">
-              +{extra}
-            </span>
-          ) : null}
-        </div>
-      </Link>
-
-      {(tab === "ongoing" && paid) || tab === "completed" ? (
-        <div className="flex gap-2 border-t border-deep/5 bg-off-white/70 px-4 py-3 md:px-5">
-          {tab === "ongoing" ? (
-            <Link
-              href={`/orders/${order.id}`}
-              className="pressable flex flex-1 items-center justify-center gap-2 rounded-full bg-deep py-3 text-xs font-semibold text-white"
-            >
-              <MapPin size={14} /> Track order
-            </Link>
-          ) : (
-            <button
-              type="button"
-              onClick={onReorder}
-              className="pressable flex flex-1 items-center justify-center gap-2 rounded-full bg-honey py-3 text-xs font-semibold text-deep"
-            >
-              <RotateCcw size={14} /> Reorder
-            </button>
-          )}
-          <Link
-            href={`/orders/${order.id}`}
-            className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-white text-deep shadow-sm"
-            aria-label="Order details"
-          >
-            <ChevronRight size={18} />
-          </Link>
-        </div>
-      ) : null}
-    </motion.li>
-  );
-}
-
-function GuestCartCard() {
-  const guestItems = useCartStore((s) => s.guestItems);
-  const count = guestItems.reduce((s, i) => s + i.qty, 0);
-  const total = guestItems.reduce((s, i) => s + i.unitPrice * i.qty, 0);
-  const thumbs = guestItems.slice(0, 4);
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}>
-      <Link
-        href="/orders/cart"
-        className="pressable block overflow-hidden rounded-[28px] bg-white p-4 shadow-[var(--shadow-card)] ring-1 ring-deep/5 md:p-5"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="font-display text-lg text-deep md:text-xl">Draft cart</p>
-            <p className="mt-0.5 text-xs text-deep/45">
-              {count} item{count === 1 ? "" : "s"} · not checked out yet
-            </p>
-          </div>
-          <span className="rounded-full bg-honey-soft px-2.5 py-1 text-[11px] font-bold text-deep">In cart</span>
-        </div>
-        <p className="mt-3 font-display text-2xl font-semibold text-deep">{formatNgn(total)}</p>
-        <div className="mt-4 flex gap-2">
-          {thumbs.map((line) => (
-            <span
-              key={`${line.itemId}-${line.variantId ?? ""}`}
-              className="relative h-14 w-14 overflow-hidden rounded-[16px] bg-cream ring-2 ring-white"
-            >
-              <Image src={line.image || ITEM_PLACEHOLDER} alt="" fill className="object-cover" sizes="56px" unoptimized />
-            </span>
-          ))}
-        </div>
-        <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-tea">
-          Review cart <ArrowRight size={13} />
-        </span>
-      </Link>
-    </motion.div>
-  );
-}
-
 export default function OrdersPage() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const guestCount = useCartStore((s) => s.guestItems.length);
-  const [tab, setTab] = useState<Tab>("ongoing");
+  const guestItems = useCartStore((s) => s.guestItems);
+  const updateGuestQty = useCartStore((s) => s.updateGuestQty);
+  const draft = useCartStore((s) => s.draft);
+  const refreshDraft = useCartStore((s) => s.refreshDraft);
+  const mergeGuest = useCartStore((s) => s.mergeGuest);
+  const orderNote = useCartStore((s) => s.orderNote);
+  const { setQty } = useCartActions();
+  const [tab, setTab] = useState<Tab>("current");
   const [orders, setOrders] = useState<Order[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [nonce, setNonce] = useState(0);
-  const loading = state === "loading";
+  const [authOpen, setAuthOpen] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setOrders([]);
+      setState("ready");
+      return;
+    }
     setState("loading");
-    void apiClient
-      .get<Order[] | { data: Order[] }>("/orders", { tab })
-      .then((res) => {
-        setOrders(asArray(res));
+    void Promise.all([
+      apiClient.get<Order[] | { data: Order[] }>("/orders", { tab: "ongoing" }),
+      apiClient.get<Order[] | { data: Order[] }>("/orders", { tab: "completed" }),
+      apiClient.get<Order[] | { data: Order[] }>("/orders", { tab: "cancelled" }),
+    ])
+      .then(([ongoing, completed, cancelled]) => {
+        const merged: Order[] = [
+          ...asArray<Order>(ongoing),
+          ...asArray<Order>(completed),
+          ...asArray<Order>(cancelled),
+        ];
+        const byId = new Map<string, Order>();
+        for (const o of merged) byId.set(o.id, o);
+        setOrders([...byId.values()]);
         setState("ready");
       })
       .catch(() => setState("error"));
-  }, [user, tab, nonce]);
+  }, [user, nonce]);
+
+  // After onboarding, continue into checkout when ?checkout=1
+  useEffect(() => {
+    if (!user) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout") !== "1") return;
+    router.replace("/orders");
+    void startCheckout();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const buckets = useMemo(() => splitOrders(orders), [orders]);
+
+  const guestTotal = guestItems.reduce((s, i) => s + i.unitPrice * i.qty, 0);
+  const showGuestCart = guestItems.length > 0;
+  const showDraftOrder =
+    !showGuestCart &&
+    !!draft &&
+    (draft.status === "draft" || draft.status === "pending_payment") &&
+    (draft.items?.length ?? 0) > 0;
+  const draftFromApi = buckets.draft.find((o) => (o.items?.length ?? 0) > 0) ?? null;
+  const activeDraft = showDraftOrder ? draft! : draftFromApi;
+
+  const hasCurrent = showGuestCart || !!activeDraft;
+  const loading = state === "loading";
+  const checkoutTotal = showGuestCart ? guestTotal : (activeDraft?.total ?? 0);
 
   async function reorder(id: string) {
     try {
       const order = await apiClient.post<Order>(`/orders/${id}/reorder`);
       toast("Added to your draft order.");
+      setTab("current");
       window.location.href = `/orders/${order.id}`;
     } catch {
       toast("Could not reorder.");
     }
   }
 
-  if (!user) {
-    return (
-      <div className="page-pad space-y-5 md:space-y-7">
-        <PageHeader eyebrow="Your treats" title="Orders" subtitle="Everything you've ordered, in one place." />
-        {guestCount ? (
-          <section>
-            <p className="mb-3 pl-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-deep/45">Ongoing</p>
-            <GuestCartCard />
-          </section>
-        ) : (
-          <EmptyState
-            image={LOGO}
-            title={empty.ongoing.title}
-            description={empty.ongoing.description}
-            actionHref="/pastries"
-            actionLabel="Order now"
-            icon={<ShoppingBag size={28} />}
-          />
-        )}
-        <Link
-          href="/verify?returnTo=/orders"
-          className="pressable flex items-center gap-3 rounded-[28px] bg-sage-soft p-4 md:p-5"
-        >
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-tea shadow-sm">
-            <History size={20} />
-          </span>
-          <span className="flex-1">
-            <span className="block text-sm font-semibold text-deep md:text-base">Ordered with us before?</span>
-            <span className="block text-xs text-deep/55 md:text-sm">Log in to see past orders and track deliveries</span>
-          </span>
-          <ChevronRight size={18} className="text-deep/30" />
-        </Link>
-        <EventsNudge />
-      </div>
-    );
+  function onGuestQty(key: string, qty: number) {
+    const line = guestItems.find((l) => `${l.itemId}-${l.variantId ?? ""}` === key);
+    if (!line) return;
+    updateGuestQty(line.itemId, line.variantId, qty);
   }
 
-  const copy = empty[tab];
+  async function onDraftQty(lineId: string, qty: number) {
+    if (!activeDraft) return;
+    await setQty(activeDraft.id, lineId, qty);
+    await refreshDraft();
+    setNonce((n) => n + 1);
+  }
+
+  async function startCheckout() {
+    if (!user) {
+      setAuthOpen(true);
+      return;
+    }
+
+    setPaying(true);
+    try {
+      let orderId = activeDraft?.id;
+
+      if (guestItems.length) {
+        const ok = await mergeGuest();
+        orderId = useCartStore.getState().draft?.id;
+        if (!ok || !orderId) {
+          toast("We couldn't save your order. Try again.");
+          return;
+        }
+        if (orderNote.trim()) {
+          try {
+            await apiClient.patch(`/orders/${orderId}`, { notes: orderNote.trim() });
+          } catch {
+            /* continue */
+          }
+        }
+      }
+
+      if (!orderId) {
+        toast("No draft order to pay for.");
+        return;
+      }
+
+      // Address + user details → final review page calls the payment gateway
+      router.push(`/checkout/address?orderId=${orderId}`);
+    } finally {
+      setPaying(false);
+    }
+  }
+
+  const currentLines = showGuestCart
+    ? guestItems.map((l) => ({
+        key: `${l.itemId}-${l.variantId ?? ""}`,
+        name: l.name,
+        qty: l.qty,
+        unitPrice: l.unitPrice,
+        image: l.image,
+      }))
+    : activeDraft
+      ? activeDraft.items.map((l) => ({
+          key: l.id,
+          name: l.nameSnapshot,
+          qty: l.qty,
+          unitPrice: l.unitPrice,
+          image: l.item?.images?.[0],
+        }))
+      : [];
 
   return (
-    <div className="page-pad">
-      <PageHeader eyebrow="Your treats" title="Orders" subtitle="Track, pay and reorder your favourites." />
-      <SegmentedTabs id="orders" tabs={tabs} value={tab} onChange={setTab} className="mb-5 md:mb-6" />
+    <div className="page-pad pb-[calc(var(--tab-h)+var(--safe-bottom)+24px)]">
+      <PageHeader eyebrow="Your treats" title="My orders" subtitle="Current cart, live tracking, and past deliveries." />
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={tab + state}
-          initial={{ opacity: 0, x: 12 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -12 }}
-          transition={{ duration: 0.2 }}
-        >
-          {state === "error" ? (
-            <OfflineState onRetry={() => setNonce((n) => n + 1)} />
-          ) : loading ? (
-            <ColumnLoader columns={1} count={4} aspect="h-28 aspect-auto" />
-          ) : orders.length === 0 ? (
-            <EmptyState
-              image={LOGO}
-              title={copy.title}
-              description={copy.description}
-              actionHref={copy.action ? "/pastries" : undefined}
-              actionLabel={copy.action ? "Order now" : undefined}
-              icon={<ShoppingBag size={28} />}
-            />
-          ) : (
-            <ul className="grid gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-2">
-              {orders.map((order, i) => (
-                <OrderCard key={order.id} order={order} tab={tab} index={i} onReorder={() => void reorder(order.id)} />
-              ))}
-            </ul>
-          )}
-        </motion.div>
-      </AnimatePresence>
+      <UnderlineTabs id="orders-hub" tabs={tabs} value={tab} onChange={setTab} className="mb-6 md:mb-8" />
 
-      <div className="mt-6 md:mt-8">
-        <EventsNudge />
-      </div>
+      {state === "error" && user ? (
+        <OfflineState onRetry={() => setNonce((n) => n + 1)} />
+      ) : (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={tab + state + String(hasCurrent)}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18 }}
+            className="min-h-[40vh]"
+          >
+            {tab === "current" ? (
+              loading && user && !hasCurrent ? (
+                <ColumnLoader columns={1} count={1} aspect="h-56 aspect-auto" />
+              ) : hasCurrent ? (
+                <CurrentCheckoutPanel
+                  title="Checkout"
+                  lines={currentLines}
+                  total={checkoutTotal}
+                  onQtyChange={showGuestCart ? onGuestQty : (key, qty) => void onDraftQty(key, qty)}
+                  onPayNow={() => void startCheckout()}
+                  paying={paying}
+                  userHint={user?.fullName || user?.phone || user?.email || null}
+                />
+              ) : (
+                <TabEmpty actionHref="/pastries" actionLabel="Order now" />
+              )
+            ) : null}
+
+            {tab === "ongoing" ? (
+              loading && user ? (
+                <ColumnLoader columns={1} count={2} aspect="h-40 aspect-auto" />
+              ) : buckets.ongoing.length === 0 ? (
+                <TabEmpty actionHref="/pastries" actionLabel="Browse pastries" />
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2 md:gap-4">
+                  {buckets.ongoing.map((order, i) => (
+                    <OrderListCard key={order.id} order={order} mode="ongoing" index={i} />
+                  ))}
+                </div>
+              )
+            ) : null}
+
+            {tab === "completed" ? (
+              loading && user ? (
+                <ColumnLoader columns={1} count={3} aspect="h-36 aspect-auto" />
+              ) : buckets.recent.length === 0 ? (
+                <TabEmpty actionHref="/pastries" actionLabel="Order now" />
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2 md:gap-4">
+                  {buckets.recent.map((order, i) => (
+                    <OrderListCard
+                      key={order.id}
+                      order={order}
+                      mode="completed"
+                      index={i}
+                      onReorder={() => void reorder(order.id)}
+                    />
+                  ))}
+                </div>
+              )
+            ) : null}
+          </motion.div>
+        </AnimatePresence>
+      )}
+
+      <AuthGateSheet
+        open={authOpen}
+        onClose={() => setAuthOpen(false)}
+        returnTo="/orders?checkout=1"
+        title="Almost there"
+        message="Add your name and number so we can deliver and keep you posted. Your cart stays just as it is."
+      />
     </div>
   );
 }
 
-function EventsNudge() {
+function TabEmpty({ actionHref, actionLabel }: { actionHref?: string; actionLabel?: string }) {
   return (
-    <Link
-      href="/events"
-      className="pressable relative flex items-center gap-4 overflow-hidden rounded-[28px] bg-deep p-4 text-white shadow-[var(--shadow-float)] md:p-5"
-    >
-      <span className="absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/10" />
-      <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[20px] ring-2 ring-white/20 md:h-20 md:w-20">
-        <Image src={EVENT_PLACEHOLDER} alt="" fill className="object-cover" sizes="80px" unoptimized />
-      </span>
-      <span className="relative flex-1">
-        <span className="block font-display text-lg leading-tight md:text-2xl">Feeding a crowd?</span>
-        <span className="block text-xs text-white/65 md:text-sm">Let us cater your next celebration</span>
-      </span>
-      <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-honey text-deep md:h-11 md:w-11">
-        <PartyPopper size={16} />
-      </span>
-    </Link>
+    <EmptyState
+      icon={<Inbox size={56} strokeWidth={1.4} />}
+      title="Uh-oh! 👀"
+      message="Looks like there's nothing here yet."
+      actionHref={actionHref}
+      actionLabel={actionLabel}
+    />
   );
 }

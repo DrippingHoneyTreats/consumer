@@ -572,9 +572,9 @@ export default function HomePage() {
         item={selected}
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        onConfirm={({ variantId, qty, note }) => {
+        onConfirm={({ variantId, qty }) => {
           if (!selected) return;
-          void addItem({ item: selected, variantId, qty, note });
+          void addItem({ item: selected, variantId, qty });
         }}
       />
     </div>

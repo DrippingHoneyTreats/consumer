@@ -42,7 +42,8 @@ export function CartBanner() {
   const total = guestItems.length
     ? guestItems.reduce((sum, i) => sum + i.unitPrice * i.qty, 0)
     : (draft?.total ?? 0);
-  const href = guestItems.length || !draft?.id ? "/orders/cart" : `/orders/${draft.id}`;
+  // Land on the Orders hub (Current tab) — not a poured product list
+  const href = "/orders";
 
   return (
     <div

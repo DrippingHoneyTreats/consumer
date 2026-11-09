@@ -19,7 +19,10 @@ export type GuestLine = {
 type CartState = {
   draft: Order | null;
   guestItems: GuestLine[];
+  /** Order-level note for rider/baker — collected before payment. */
+  orderNote: string;
   setDraft: (order: Order | null) => void;
+  setOrderNote: (note: string) => void;
   addGuestItem: (line: GuestLine) => void;
   updateGuestQty: (itemId: string, variantId: string | undefined, qty: number) => void;
   clearGuest: () => void;
@@ -35,7 +38,9 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       draft: null,
       guestItems: [],
+      orderNote: "",
       setDraft: (draft) => set({ draft }),
+      setOrderNote: (orderNote) => set({ orderNote }),
       addGuestItem: (line) => {
         const items = [...get().guestItems];
         const idx = items.findIndex(
@@ -56,7 +61,7 @@ export const useCartStore = create<CartState>()(
         }
         set({ guestItems: items });
       },
-      clearGuest: () => set({ guestItems: [] }),
+      clearGuest: () => set({ guestItems: [], orderNote: "" }),
       refreshDraft: async () => {
         try {
           const res = await apiClient.get<{ data: Order[] }>("/orders", {
@@ -101,7 +106,7 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: "dht-cart",
-      partialize: (s) => ({ guestItems: s.guestItems, draft: s.draft }),
+      partialize: (s) => ({ guestItems: s.guestItems, draft: s.draft, orderNote: s.orderNote }),
     },
   ),
 );

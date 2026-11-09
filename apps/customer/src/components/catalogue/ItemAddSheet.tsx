@@ -3,12 +3,11 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, ShoppingBag, Star } from "lucide-react";
+import { ChevronDown, ShoppingBag } from "lucide-react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { QtyStepper } from "@/components/ui/QtyStepper";
-import { textareaClass } from "@/components/ui/Input";
 import { formatNgn } from "@/lib/format";
 import { ITEM_PLACEHOLDER } from "@/lib/placeholders";
 import type { CatalogueItem } from "@/lib/catalogue-types";
@@ -19,19 +18,32 @@ type Props = {
   item: Item | CatalogueItem | null;
   open: boolean;
   onClose: () => void;
-  onConfirm: (opts: { variantId?: string; qty: number; note?: string }) => void;
+  onConfirm: (opts: { variantId?: string; qty: number }) => void;
 };
 
 function isCatalogue(item: Item | CatalogueItem): item is CatalogueItem {
-  return "fibre" in item || "nutrition" in item || "rating" in item || "ingredients" in item;
+  return "nutrition" in item || "ingredients" in item || "fibre" in item || "rating" in item;
+}
+
+function variantSectionLabel(categoryId: string): string {
+  switch (categoryId) {
+    case "cat-chinchin":
+      return "Choose jar size";
+    case "cat-doughnuts":
+    case "cat-puff-puff":
+    case "cat-meat-pie":
+      return "Choose package";
+    case "cat-cakes":
+    default:
+      return "Choose size";
+  }
 }
 
 export function ItemAddSheet({ item, open, onClose, onConfirm }: Props) {
   const [variantId, setVariantId] = useState<string | undefined>();
   const [qty, setQty] = useState(1);
-  const [note, setNote] = useState("");
   const [imgIdx, setImgIdx] = useState(0);
-  const [openPanel, setOpenPanel] = useState<"ingredients" | "nutrition" | "fibre" | null>("fibre");
+  const [openPanel, setOpenPanel] = useState<"ingredients" | "nutrition" | null>("ingredients");
 
   const price = useMemo(() => {
     if (!item) return 0;
@@ -90,20 +102,13 @@ export function ItemAddSheet({ item, open, onClose, onConfirm }: Props) {
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           {item.description ? <p className="text-sm leading-relaxed text-deep/65">{item.description}</p> : null}
-          {rich?.rating ? (
-            <p className="mt-2 flex items-center gap-1 text-sm font-medium text-deep">
-              <Star size={14} className="fill-honey text-honey" />
-              {rich.rating.toFixed(1)}
-              {rich.reviewCount ? <span className="font-normal text-deep/45">({rich.reviewCount} reviews)</span> : null}
-            </p>
-          ) : null}
         </div>
         <p className="shrink-0 font-display text-xl font-semibold text-deep">{formatNgn(price)}</p>
       </div>
 
       {hasVariants ? (
         <div className="mb-4 space-y-2">
-          <p className="text-sm font-semibold text-deep">Choose size</p>
+          <p className="text-sm font-semibold text-deep">{variantSectionLabel(item.categoryId)}</p>
           <div className="flex flex-wrap gap-2">
             {item.variants!.map((v) => (
               <motion.button
@@ -128,14 +133,13 @@ export function ItemAddSheet({ item, open, onClose, onConfirm }: Props) {
         <QtyStepper value={qty} min={1} max={item.maxQty} onChange={setQty} className="bg-white" />
       </div>
 
-      {rich?.fibre || rich?.ingredients || rich?.nutrition ? (
-        <div className="mb-4 space-y-2">
+      {rich?.ingredients || rich?.nutrition ? (
+        <div className="mb-6 space-y-2">
           {(
             [
-              rich.fibre ? ("fibre" as const) : null,
               rich.ingredients?.length ? ("ingredients" as const) : null,
               rich.nutrition ? ("nutrition" as const) : null,
-            ].filter(Boolean) as Array<"fibre" | "ingredients" | "nutrition">
+            ].filter(Boolean) as Array<"ingredients" | "nutrition">
           ).map((key) => (
             <div key={key} className="overflow-hidden rounded-2xl bg-off-white">
               <button
@@ -143,7 +147,7 @@ export function ItemAddSheet({ item, open, onClose, onConfirm }: Props) {
                 className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-deep"
                 onClick={() => setOpenPanel((p) => (p === key ? null : key))}
               >
-                {key === "fibre" ? "Fibre story" : key === "ingredients" ? "Ingredients" : "Nutrition info"}
+                {key === "ingredients" ? "Ingredients" : "Nutrition info"}
                 <ChevronDown size={16} className={cn("transition", openPanel === key && "rotate-180")} />
               </button>
               <AnimatePresence initial={false}>
@@ -155,28 +159,31 @@ export function ItemAddSheet({ item, open, onClose, onConfirm }: Props) {
                     className="overflow-hidden"
                   >
                     <div className="space-y-2 px-4 pb-3 text-sm text-deep/70">
-                      {key === "fibre" && rich.fibre ? (
+                      {key === "ingredients" && rich.ingredients ? (
                         <>
-                          <p>
-                            <span className="font-semibold text-deep">Target:</span> {rich.fibre.targetPer100g} fibre / 100g
-                          </p>
-                          <p>
-                            <span className="font-semibold text-deep">Best fibres:</span> {rich.fibre.bestFibres.join(", ")}
-                          </p>
-                          {rich.fibre.tip ? <p className="text-tea">{rich.fibre.tip}</p> : null}
-                          {rich.fibre.flavourIdeas?.length ? (
+                          <p>{rich.ingredients.join(", ")}</p>
+                          {rich.fibre?.flavourIdeas?.length ? (
                             <p>
-                              <span className="font-semibold text-deep">Flavours:</span> {rich.fibre.flavourIdeas.join(" · ")}
+                              <span className="font-semibold text-deep">Flavour ideas:</span>{" "}
+                              {rich.fibre.flavourIdeas.join(" · ")}
                             </p>
                           ) : null}
                         </>
                       ) : null}
-                      {key === "ingredients" && rich.ingredients ? <p>{rich.ingredients.join(", ")}</p> : null}
                       {key === "nutrition" && rich.nutrition ? (
-                        <p>
-                          {rich.nutrition.kcal} kcal · {rich.nutrition.fat} fat · {rich.nutrition.carbs} carbs ·{" "}
-                          {rich.nutrition.protein} protein · {rich.nutrition.fibre} fibre
-                        </p>
+                        <>
+                          <p>
+                            {rich.nutrition.kcal} kcal · {rich.nutrition.fat} fat · {rich.nutrition.carbs} carbs ·{" "}
+                            {rich.nutrition.protein} protein · {rich.nutrition.fibre} fibre
+                          </p>
+                          {rich.fibre?.targetPer100g ? (
+                            <p>
+                              <span className="font-semibold text-deep">Fibre target:</span>{" "}
+                              {rich.fibre.targetPer100g} / 100g
+                            </p>
+                          ) : null}
+                          {rich.fibre?.tip ? <p className="text-tea">{rich.fibre.tip}</p> : null}
+                        </>
                       ) : null}
                     </div>
                   </motion.div>
@@ -187,27 +194,15 @@ export function ItemAddSheet({ item, open, onClose, onConfirm }: Props) {
         </div>
       ) : null}
 
-      <label className="mb-6 block text-sm">
-        <span className="mb-1.5 block pl-1 font-semibold text-deep">Note (optional)</span>
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          rows={2}
-          placeholder="e.g. Write Happy Birthday on the cake"
-          className={textareaClass}
-        />
-      </label>
-
       <Button
         fullWidth
         variant="dark"
         leftIcon={<ShoppingBag size={18} />}
         disabled={soldOut || (hasVariants && !variantId)}
         onClick={() => {
-          onConfirm({ variantId, qty, note: note.trim() || undefined });
+          onConfirm({ variantId, qty });
           onClose();
           setQty(1);
-          setNote("");
           setVariantId(undefined);
           setImgIdx(0);
         }}

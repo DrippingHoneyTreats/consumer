@@ -45,7 +45,7 @@ export function BottomSheet({
   return createPortal(
     <AnimatePresence>
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-3 py-[calc(16px+var(--safe-bottom))] md:px-4 md:py-8">
           <motion.button
             aria-label="Close"
             className="absolute inset-0 bg-deep/35 backdrop-blur-[3px]"
@@ -59,18 +59,18 @@ export function BottomSheet({
             aria-modal="true"
             aria-label={title}
             className={cn(
-              "relative z-10 max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-t-[32px] bg-white px-5 pb-[calc(20px+var(--safe-bottom))] pt-3 shadow-2xl md:rounded-[32px] md:max-h-[85dvh]",
+              "relative z-10 max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-[32px] bg-white px-5 pb-5 pt-3 shadow-2xl md:max-h-[80dvh]",
               className,
             )}
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 32, stiffness: 320 }}
+            initial={{ y: 40, opacity: 0, scale: 0.98 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: 24, opacity: 0, scale: 0.98 }}
+            transition={{ type: "spring", damping: 28, stiffness: 320 }}
             drag="y"
             dragControls={dragControls}
             dragListener={false}
             dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0, bottom: 0.6 }}
+            dragElastic={{ top: 0.15, bottom: 0.45 }}
             onDragEnd={onDragEnd}
           >
             <div
