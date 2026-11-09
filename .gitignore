@@ -1,0 +1,15 @@
+node_modules
+.turbo
+dist
+.next
+.env
+.env.local
+*.log
+coverage
+.DS_Store
+uploads
+*.tsbuildinfo
+
+# Pre-monorepo backups (do not commit)
+dhtcustomers-app/
+dhtcustomers-server/

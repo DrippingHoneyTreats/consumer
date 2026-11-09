@@ -1,0 +1,230 @@
+@import "tailwindcss";
+
+/* DHT brand tokens — warm, elegant, Lagos-first (PRD §4.3) */
+:root {
+  /* Brand from logo: blush hat, tea/forest greens, honey drip */
+  --white: #ffffff;
+  --off-white: #f9f7f3;
+  --cream: #f3eee5;
+  --blush: #f0b7c0;
+  --blush-soft: #fbe3e6;
+  --blush-deep: #e59aa6;
+  --sage: #a7bfa7;
+  --sage-soft: #e4ece2;
+  --tea: #6a8568;
+  --deep: #3f5f46;
+  --deep-soft: #4a6d52;
+  --honey: #d4a017;
+  --honey-soft: #f3e2b0;
+  --danger: #b42318;
+  --shadow-soft: 0 8px 24px rgba(63, 95, 70, 0.08);
+  --shadow-card: 0 1px 2px rgba(63, 95, 70, 0.04), 0 12px 32px -12px rgba(63, 95, 70, 0.18);
+  --shadow-float: 0 18px 40px -16px rgba(63, 95, 70, 0.35);
+  --radius-card: 24px;
+  /* Content + chrome track the device; capped only on very wide desktops */
+  --app-max: 72rem;
+  --tab-h: 84px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+@theme inline {
+  --color-white: var(--white);
+  --color-off-white: var(--off-white);
+  --color-cream: var(--cream);
+  --color-blush: var(--blush);
+  --color-blush-soft: var(--blush-soft);
+  --color-blush-deep: var(--blush-deep);
+  --color-sage: var(--sage);
+  --color-sage-soft: var(--sage-soft);
+  --color-tea: var(--tea);
+  --color-deep: var(--deep);
+  --color-deep-soft: var(--deep-soft);
+  --color-honey: var(--honey);
+  --color-honey-soft: var(--honey-soft);
+  --color-danger: var(--danger);
+  --font-display: var(--font-playfair);
+  --font-sans: var(--font-montserrat);
+  --shadow-card: var(--shadow-card);
+  --shadow-float: var(--shadow-float);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(120% 80% at 10% -10%, rgba(247, 200, 206, 0.35), transparent 55%),
+    radial-gradient(100% 70% at 100% 0%, rgba(167, 191, 167, 0.28), transparent 50%),
+    var(--off-white);
+  color: var(--deep);
+  font-family: var(--font-montserrat), system-ui, sans-serif;
+}
+
+/* Full-viewport shell — uses the device width (phone / tablet / desktop) */
+.app-shell {
+  width: 100%;
+  height: 100dvh;
+  margin: 0;
+  background:
+    radial-gradient(90% 40% at 100% 0%, rgba(247, 200, 206, 0.35), transparent 60%),
+    radial-gradient(80% 35% at 0% 8%, rgba(228, 236, 226, 0.7), transparent 60%),
+    linear-gradient(180deg, #ffffff, var(--off-white));
+  position: relative;
+  overflow: hidden;
+}
+
+.app-scroll {
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+/* Readable content column that still fills tablet/desktop */
+.app-frame {
+  width: 100%;
+  max-width: var(--app-max);
+  margin: 0 auto;
+}
+
+.tab-fade {
+  background: linear-gradient(
+    to top,
+    rgba(249, 247, 243, 0.98) 0%,
+    rgba(249, 247, 243, 0.85) 45%,
+    rgba(249, 247, 243, 0) 100%
+  );
+}
+
+.page-pad {
+  padding: calc(12px + var(--safe-top)) 16px calc(var(--tab-h) + var(--safe-bottom) + var(--banner-h, 0px) + 40px);
+  transition: padding-bottom 300ms ease;
+}
+
+.page-pad-no-tab {
+  padding: calc(12px + var(--safe-top)) 16px 16px;
+}
+
+@media (min-width: 768px) {
+  .page-pad,
+  .page-pad-no-tab {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .page-pad,
+  .page-pad-no-tab {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+  backdrop-filter: saturate(160%) blur(18px);
+}
+
+.glass-deep {
+  background: rgba(63, 95, 70, 0.92);
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+  backdrop-filter: saturate(160%) blur(18px);
+}
+
+.bg-hero {
+  background:
+    radial-gradient(120% 120% at 0% 0%, #fff8ec 0%, transparent 55%),
+    radial-gradient(120% 120% at 100% 100%, #f7c8ce 0%, transparent 60%),
+    linear-gradient(135deg, #fdf3e7 0%, #fbe3e6 55%, #f7c8ce 100%);
+}
+
+.bg-sage-glow {
+  background:
+    radial-gradient(120% 120% at 100% 0%, #ffffff 0%, transparent 50%),
+    linear-gradient(160deg, #eef3ec 0%, #d5e2d3 100%);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.pressable {
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.pressable:active {
+  transform: scale(0.97);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--float-rot, 0deg));
+  }
+  50% {
+    transform: translateY(-8px) rotate(var(--float-rot, 0deg));
+  }
+}
+
+.animate-float {
+  animation: float-y 5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f1ece4 0%, #faf7f2 40%, #f1ece4 80%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-fade-up,
+  .skeleton {
+    animation: none;
+  }
+}

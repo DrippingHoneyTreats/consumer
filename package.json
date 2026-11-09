@@ -1,0 +1,26 @@
+{
+  "name": "dripping-honey-treats",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:customer": "turbo run dev --filter=@dht/customer",
+    "dev:admin": "turbo run dev --filter=@dht/admin",
+    "dev:api": "turbo run dev --filter=@dht/api",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:migrate": "npm run db:migrate -w @dht/api",
+    "db:seed": "npm run db:seed -w @dht/api"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "npm@10.9.2"
+}
