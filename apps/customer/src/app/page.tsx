@@ -18,8 +18,8 @@ import {
 } from "lucide-react";
 import { getHomeCatalogue, searchItems } from "@/lib/catalogue";
 import type { Banner, CatalogueCategory, CatalogueItem } from "@/lib/catalogue-types";
-import { formatNgn, greetingForNow, whatsappLink } from "@/lib/format";
-import { BANNER_PLACEHOLDER, EVENTS_BANNER, LOGO, categoryImage, ITEM_PLACEHOLDER, toneFor } from "@/lib/placeholders";
+import { greetingForNow, whatsappLink } from "@/lib/format";
+import { BANNER_PLACEHOLDER, EVENTS_BANNER, LOGO, categoryImage, toneFor } from "@/lib/placeholders";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartActions } from "@/hooks/useCartActions";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -413,34 +413,18 @@ export default function HomePage() {
               message={`Nothing found for “${query.trim()}”. Try chinchin, cake, or donut.`}
             />
           ) : (
-            <ul className="space-y-2 md:grid md:grid-cols-2 md:gap-3 md:space-y-0 lg:grid-cols-3">
-              <AnimatePresence initial={false}>
-                {hits.map((item, i) => (
-                  <motion.li
-                    key={item.id}
-                    initial={{ opacity: 0, y: 28 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ delay: i * 0.05, duration: 0.55, ease }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => openItem(item)}
-                      className="pressable flex w-full items-center gap-3 rounded-[22px] bg-white p-2 pr-4 text-left shadow-[var(--shadow-card)]"
-                    >
-                      <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-blush-soft">
-                        <Image src={item.images?.[0] || ITEM_PLACEHOLDER} alt="" fill className="object-cover" sizes="64px" unoptimized />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-semibold text-deep">{item.name}</span>
-                        <span className="text-xs text-deep/55">{formatNgn(item.basePrice)}</span>
-                      </span>
-                      <ArrowRight size={16} className="text-tea" />
-                    </button>
-                  </motion.li>
-                ))}
-              </AnimatePresence>
-            </ul>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
+              {hits.map((item, i) => (
+                <ProductCard
+                  key={item.id}
+                  item={item}
+                  index={i}
+                  layout="grid"
+                  onOpen={() => openItem(item)}
+                  onAdd={() => openItem(item)}
+                />
+              ))}
+            </div>
           )}
         </motion.section>
       ) : (

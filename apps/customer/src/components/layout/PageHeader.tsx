@@ -11,21 +11,28 @@ export function PageHeader({
   subtitle,
   eyebrow,
   backHref,
+  onBack,
   right,
-  showBrand = true,
+  showBrand = false,
 }: {
   title: string;
   subtitle?: string;
   eyebrow?: string;
   /** Fallback when there is no browser history (e.g. opened via deep link). */
   backHref?: string;
+  /** Prefer this over history when provided (multi-step flows). */
+  onBack?: () => void;
   right?: ReactNode;
-  /** Show DHT mark in the header (default on for brand presence). */
+  /** Brand mark — only for home/welcome; off by default on inner pages. */
   showBrand?: boolean;
 }) {
   const router = useRouter();
 
   function goBack() {
+    if (onBack) {
+      onBack();
+      return;
+    }
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
       return;
@@ -37,11 +44,13 @@ export function PageHeader({
     router.push("/");
   }
 
+  const showBack = Boolean(backHref || onBack);
+
   return (
     <header className="mb-4 pt-2">
-      {showBrand || backHref || right ? (
+      {showBrand || showBack || right ? (
         <div className="mb-3 flex items-center justify-between gap-3">
-          {backHref ? (
+          {showBack ? (
             <button
               type="button"
               onClick={goBack}

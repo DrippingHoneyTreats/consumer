@@ -118,13 +118,16 @@ function BookEventForm() {
   }
 
   const canContinue = step === 0 ? !!typeId : step === 1 ? !!date && !!venue : true;
+  const showSticky =
+    step > 0 || (step === 0 && typesState === "ready" && types.length > 0);
 
   return (
-    <div className="page-pad pb-[calc(var(--tab-h)+var(--safe-bottom)+110px)]">
+    <div className={cn("page-pad", showSticky && "pb-[calc(var(--tab-h)+var(--safe-bottom)+110px)]")}>
       <PageHeader
         eyebrow={`Step ${step + 1} of ${STEPS.length}`}
         title={STEPS[step]}
         backHref={step === 0 ? "/events" : undefined}
+        onBack={step > 0 ? () => setStep((s) => s - 1) : undefined}
       />
 
       <div className="mb-6 flex gap-1.5">
@@ -250,24 +253,26 @@ function BookEventForm() {
         </motion.div>
       </AnimatePresence>
 
-      <StickyActions aboveTabs>
-        <div className="glass flex gap-2 rounded-[30px] border border-white/80 p-2 shadow-[var(--shadow-float)]">
-          {step > 0 ? (
-            <Button variant="tertiary" onClick={() => setStep((s) => s - 1)}>
-              Back
-            </Button>
-          ) : null}
-          {step < STEPS.length - 1 ? (
-            <Button fullWidth variant="dark" disabled={!canContinue} onClick={() => setStep((s) => s + 1)}>
-              Continue
-            </Button>
-          ) : (
-            <Button fullWidth variant="dark" loading={loading} onClick={() => void submit()}>
-              Submit request
-            </Button>
-          )}
-        </div>
-      </StickyActions>
+      {showSticky ? (
+        <StickyActions aboveTabs>
+          <div className="flex justify-center gap-2">
+            {step > 0 ? (
+              <Button variant="tertiary" onClick={() => setStep((s) => s - 1)}>
+                Back
+              </Button>
+            ) : null}
+            {step < STEPS.length - 1 ? (
+              <Button variant="dark" className="px-8" disabled={!canContinue} onClick={() => setStep((s) => s + 1)}>
+                Continue
+              </Button>
+            ) : (
+              <Button variant="dark" className="px-8" loading={loading} onClick={() => void submit()}>
+                Submit request
+              </Button>
+            )}
+          </div>
+        </StickyActions>
+      ) : null}
 
       <AuthGateSheet
         open={authOpen}
