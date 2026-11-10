@@ -1,5 +1,12 @@
 import type { LucideIcon } from "lucide-react";
-import { CalendarDays, LayoutDashboard, Megaphone, ShoppingBag } from "lucide-react";
+import {
+  CalendarDays,
+  LayoutDashboard,
+  Megaphone,
+  Shield,
+  ShoppingBag,
+  Users,
+} from "lucide-react";
 
 export type AdminNavItem = {
   href: string;
@@ -8,9 +15,11 @@ export type AdminNavItem = {
   match?: (path: string) => boolean;
 };
 
-/** MVP admin: products, promos, orders, events. */
+/** MVP admin: products, users, staff, promos, orders, events. */
 export const ADMIN_NAV: AdminNavItem[] = [
   { href: "/catalogue", label: "Products", icon: ShoppingBag },
+  { href: "/users", label: "Users", icon: Users },
+  { href: "/staff", label: "Staff", icon: Shield },
   { href: "/promos", label: "Promos", icon: Megaphone },
   {
     href: "/orders",

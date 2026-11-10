@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     default: "DHT Admin",
     template: "%s · DHT Admin",
   },
-  description: "Kitchen and ops for Dripping Honey Treats",
+  description: "Admin dashboard for Dripping Honey Treats",
   applicationName: "DHT Admin",
   icons: {
     icon: [

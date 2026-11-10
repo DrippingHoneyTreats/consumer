@@ -6,10 +6,11 @@ import type { AdminListResponse, EventRequest } from "@/lib/types";
 import { formatNgn } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Input, selectClass } from "@/components/ui/Input";
 import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
 import { AdminTable } from "@/components/admin/AdminTable";
 import { toast } from "@/components/ui/Toast";
+import { cn } from "@/lib/cn";
 
 const STATUSES = ["submitted", "reviewing", "quote_sent", "confirmed", "completed", "cancelled"];
 
@@ -60,7 +61,7 @@ export default function AdminEventsPage() {
     <>
       <AdminPageTitle title="Events" />
       <select
-        className="mb-4 min-h-11 rounded-2xl border border-deep/10 bg-white px-3 text-sm"
+        className={cn(selectClass, "mb-4 max-w-xs")}
         value={statusFilter}
         onChange={(e) => setStatusFilter(e.target.value)}
       >
@@ -119,7 +120,7 @@ export default function AdminEventsPage() {
             <label className="mt-4 block text-sm">
               <span className="font-medium">Status</span>
               <select
-                className="mt-1 min-h-11 w-full rounded-2xl border border-deep/10 px-3"
+                className={cn(selectClass, "mt-1")}
                 value={newStatus}
                 onChange={(e) => setNewStatus(e.target.value)}
               >

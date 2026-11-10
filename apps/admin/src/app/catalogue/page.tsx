@@ -10,12 +10,13 @@ import { formatNgn } from "@/lib/format";
 import { ITEM_PLACEHOLDER, LOGO } from "@/lib/placeholders";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Input, selectClass } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ColumnLoader } from "@/components/ui/ColumnLoader";
 import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
 import { AdminCardList } from "@/components/admin/AdminTable";
 import { toast } from "@/components/ui/Toast";
+import { cn } from "@/lib/cn";
 
 type ItemForm = {
   categoryId: string;
@@ -199,7 +200,7 @@ export default function AdminCataloguePage() {
             <label className="text-sm">
               <span className="font-medium">Category</span>
               <select
-                className="mt-1 min-h-12 w-full rounded-2xl border border-deep/10 px-3"
+                className={cn(selectClass, "mt-1")}
                 value={itemForm.categoryId}
                 onChange={(e) => setItemForm({ ...itemForm, categoryId: e.target.value })}
                 disabled={!categories.length}

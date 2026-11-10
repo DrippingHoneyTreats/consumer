@@ -56,6 +56,15 @@ export class User extends Model<UserAttributes, UserCreation> implements UserAtt
       avatar: this.avatar,
     };
   }
+
+  toAdmin() {
+    return {
+      ...this.toPublic(),
+      consentAt: this.consentAt,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+    };
+  }
 }
 
 User.init(

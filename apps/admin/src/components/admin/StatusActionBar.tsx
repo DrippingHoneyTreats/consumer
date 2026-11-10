@@ -139,7 +139,7 @@ export function StatusActionBar({ order, onUpdated }: Props) {
             <Button
               variant="danger"
               loading={loading}
-              onClick={() => void patchStatus("cancelled", rejectReason.trim() || "Rejected by staff")}
+              onClick={() => void patchStatus("cancelled", rejectReason.trim() || "Rejected by admin")}
             >
               Confirm reject
             </Button>

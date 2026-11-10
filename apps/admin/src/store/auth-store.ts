@@ -9,9 +9,12 @@ type AuthState = {
   user: User | null;
   hydrated: boolean;
   setUser: (user: User | null) => void;
+  setHydrated: (hydrated: boolean) => void;
   refreshMe: () => Promise<User | null>;
   logout: () => Promise<void>;
 };
+
+const REFRESH_TIMEOUT_MS = 8000;
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -19,9 +22,19 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       hydrated: false,
       setUser: (user) => set({ user }),
+      setHydrated: (hydrated) => set({ hydrated }),
       refreshMe: async () => {
+        const timeout = new Promise<null>((resolve) => {
+          window.setTimeout(() => resolve(null), REFRESH_TIMEOUT_MS);
+        });
+
         try {
-          const user = await apiClient.get<User>("/me");
+          const user = await Promise.race([
+            apiClient.get<User>("/me"),
+            timeout.then(() => {
+              throw new Error("AUTH_REFRESH_TIMEOUT");
+            }),
+          ]);
           set({ user });
           return user;
         } catch (err) {
@@ -29,6 +42,7 @@ export const useAuthStore = create<AuthState>()(
             set({ user: null });
             return null;
           }
+          // Network / timeout: keep any cached user, do not hang the gate.
           return get().user;
         }
       },
@@ -41,11 +55,9 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: "dht-auth",
+      name: "dht-admin-auth",
       partialize: (s) => ({ user: s.user }),
-      onRehydrateStorage: () => () => {
-        useAuthStore.setState({ hydrated: true });
-      },
+      skipHydration: true,
     },
   ),
 );
