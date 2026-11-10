@@ -27,11 +27,23 @@ import { ProductCard } from "@/components/catalogue/ProductCard";
 import { ItemAddSheet } from "@/components/catalogue/ItemAddSheet";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
 import { PageSkeleton } from "@/components/ui/ColumnLoader";
-import { easeGentle, fadeUp, springSnappy, stagger } from "@/lib/motion";
+import { easeGentle, fadeUp, kenBurns, springSnappy, stagger } from "@/lib/motion";
+import { HeroImageCycle } from "@/components/motion/HeroImageCycle";
 import { cn } from "@/lib/cn";
 
 const SLIDE_MS = 4500;
 const ease = easeGentle;
+
+const LAGOS_MARKETS = [
+  { place: "Lekki", note: "Drips" },
+  { place: "Yaba", note: "Snack jars" },
+  { place: "Ikeja", note: "Party packs" },
+  { place: "VI", note: "Dessert tables" },
+  { place: "Surulere", note: "Chinchin" },
+  { place: "Ikoyi", note: "Cake boxes" },
+  { place: "Ajah", note: "Same-day" },
+  { place: "Mainland", note: "Fibre treats" },
+];
 
 function SectionTitle({ title, href, linkLabel = "See all" }: { title: string; href?: string; linkLabel?: string }) {
   return (
@@ -101,26 +113,34 @@ function PromoCarousel({ banners }: { banners: Banner[] }) {
           }}
           className="relative aspect-[16/9] w-full md:aspect-[21/8] lg:aspect-[24/7]"
         >
-          <Image
-            src={banner.image || BANNER_PLACEHOLDER}
-            alt={banner.title || "Promo"}
-            fill
-            className="object-cover"
-            sizes="100vw"
-            unoptimized
-            priority={idx === 0}
-          />
-          {/* Artwork already carries copy — only CTA on top, no gradient / title overlay. */}
+          <motion.div
+            className="absolute inset-0"
+            initial={kenBurns.initial}
+            animate={kenBurns.animate}
+            transition={kenBurns.transition}
+          >
+            <Image
+              src={banner.image || BANNER_PLACEHOLDER}
+              alt={banner.title || "Promo"}
+              fill
+              className="object-cover"
+              sizes="100vw"
+              unoptimized
+              priority={idx === 0}
+            />
+          </motion.div>
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 px-4 pb-8 pt-4 md:px-6 md:pb-10 md:pt-6">
-            <Link
-              href={href}
-              onClick={(e) => {
-                if (dragged.current) e.preventDefault();
-              }}
-              className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-honey px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-deep shadow-[var(--shadow-card)] md:px-5 md:py-3 md:text-sm"
-            >
-              {banner.ctaLabel || "Order now"} <ArrowRight size={14} />
-            </Link>
+            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+              <Link
+                href={href}
+                onClick={(e) => {
+                  if (dragged.current) e.preventDefault();
+                }}
+                className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-honey px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-deep shadow-[var(--shadow-card)] md:px-5 md:py-3 md:text-sm"
+              >
+                {banner.ctaLabel || "Order now"} <ArrowRight size={14} />
+              </Link>
+            </motion.div>
           </div>
         </motion.div>
       </AnimatePresence>
@@ -156,7 +176,7 @@ function CategoryRail({ categories }: { categories: CatalogueCategory[] }) {
       <motion.div variants={fadeUp}>
         <Link href="/pastries" className="flex w-[72px] shrink-0 flex-col items-center gap-2 md:w-[84px]">
           <motion.span
-            whileHover={{ scale: 1.08, y: -3 }}
+            whileHover={{ scale: 1.1, y: -5, rotate: -4 }}
             whileTap={{ scale: 0.92 }}
             transition={springSnappy}
             className="flex h-[64px] w-[64px] items-center justify-center rounded-[22px] bg-honey text-deep shadow-[var(--shadow-card)] md:h-[76px] md:w-[76px] md:rounded-[26px]"
@@ -170,7 +190,7 @@ function CategoryRail({ categories }: { categories: CatalogueCategory[] }) {
         <motion.div key={cat.id} variants={fadeUp}>
           <Link href={`/pastries/${cat.slug}`} className="flex w-[72px] shrink-0 flex-col items-center gap-2 md:w-[84px]">
             <motion.span
-              whileHover={{ scale: 1.08, y: -3 }}
+              whileHover={{ scale: 1.1, y: -5, rotate: i % 2 ? 4 : -4 }}
               whileTap={{ scale: 0.92 }}
               transition={springSnappy}
               className={cn(
@@ -178,7 +198,13 @@ function CategoryRail({ categories }: { categories: CatalogueCategory[] }) {
                 toneFor(i),
               )}
             >
-              <Image src={categoryImage(cat)} alt="" fill className="object-cover" sizes="76px" unoptimized />
+              <motion.div
+                className="absolute inset-0"
+                whileHover={{ scale: 1.12 }}
+                transition={{ duration: 0.4 }}
+              >
+                <Image src={categoryImage(cat)} alt="" fill className="object-cover" sizes="76px" unoptimized />
+              </motion.div>
             </motion.span>
             <span className="line-clamp-1 text-center text-[11px] font-semibold text-deep">{cat.name}</span>
           </Link>
@@ -252,8 +278,10 @@ export default function HomePage() {
   };
 
   const showUser = hydrated && !!user;
-  const heroImage =
-    popular[0]?.images?.[0] || categories[0]?.image || "/temp/images/cake-wholewheat.jpg";
+  const heroImages = [
+    "/temp/images/cake-wholewheat-nobg.png",
+    "/temp/images/cake-wholewheat2-nobg.png",
+  ];
   const isSearch = query.trim().length >= 2;
 
   return (
@@ -308,14 +336,14 @@ export default function HomePage() {
           initial={{ opacity: 0, y: 18, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.55, ease, delay: 0.05 }}
-          className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#f7efe6_0%,#fbe3e6_48%,#e8f0e6_100%)] shadow-[var(--shadow-card)] md:rounded-[32px]"
+          className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#f7efe6_0%,#fbe3e6_48%,#e8f0e6_100%)] shadow-[var(--shadow-card)] md:overflow-visible md:rounded-[32px]"
         >
-          <div className="relative z-10 grid gap-4 p-5 md:grid-cols-[1fr_1.05fr] md:items-center md:gap-8 md:p-7 lg:gap-10 lg:p-8">
-            <div className="max-w-lg">
+          <div className="relative z-10 grid items-center gap-4 p-5 md:grid-cols-[minmax(0,1fr)_minmax(260px,1.15fr)] md:gap-3 md:p-7 lg:gap-4 lg:p-8">
+            <div className="relative z-20 max-w-md lg:max-w-lg">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-tea md:text-[13px]">{greeting}</p>
               <h1 className="mt-2 font-display text-[30px] leading-[1.08] text-deep md:text-[40px] lg:text-[48px]">
                 Freshly baked{" "}
-                <span className="text-honey">drips</span>
+                <span className="inline-block text-honey">drips</span>
                 <br />
                 delivered to your door.
               </h1>
@@ -323,7 +351,8 @@ export default function HomePage() {
                 Fibre-rich pastries and event tables — baked fresh for Lagos.
               </p>
               <motion.label
-                whileFocus={{ scale: 1.01 }}
+                whileFocus={{ scale: 1.015 }}
+                whileHover={{ scale: 1.01 }}
                 className="glass mt-5 flex min-h-12 w-full items-center gap-2.5 rounded-full border border-white/90 py-1.5 pl-4 pr-1.5 shadow-[var(--shadow-card)]"
               >
                 <Search size={17} className="shrink-0 text-tea" />
@@ -352,44 +381,13 @@ export default function HomePage() {
               </motion.label>
             </div>
 
-            {/* Desktop only — large free-form treat with continuous motion */}
             <motion.div
-              initial={{ opacity: 0, y: 28 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 28, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.75, ease, delay: 0.12 }}
-              className="relative hidden aspect-square w-full justify-self-end md:block lg:max-w-[420px] xl:max-w-[460px]"
+              className="relative z-10 mx-auto h-[240px] w-full max-w-[380px] sm:h-[250px] md:mx-0 md:h-[260px] md:max-w-none lg:h-[280px]"
             >
-              <motion.div
-                aria-hidden
-                className="absolute inset-[-6%] rounded-full bg-honey/30 blur-3xl"
-                animate={{ scale: [1, 1.14, 1], opacity: [0.35, 0.6, 0.35] }}
-                transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
-              />
-              <motion.div
-                aria-hidden
-                className="absolute inset-[18%] rounded-full bg-blush/35 blur-2xl"
-                animate={{ scale: [1.08, 0.95, 1.08], opacity: [0.4, 0.65, 0.4] }}
-                transition={{ duration: 4.2, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
-              />
-              <motion.div
-                className="relative h-full w-full"
-                animate={{
-                  y: [0, -14, 0],
-                  rotate: [0, 2.5, -1.5, 0],
-                  scale: [1, 1.035, 1],
-                }}
-                transition={{ duration: 6.5, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <Image
-                  src={heroImage}
-                  alt=""
-                  fill
-                  className="object-contain drop-shadow-[0_28px_48px_rgba(63,95,70,0.28)]"
-                  sizes="(min-width:768px) 420px, 0px"
-                  priority
-                  unoptimized
-                />
-              </motion.div>
+              <HeroImageCycle images={heroImages} variant="home" className="relative h-full w-full" />
             </motion.div>
           </div>
         </motion.div>
@@ -439,9 +437,38 @@ export default function HomePage() {
           </motion.section>
 
           <motion.section
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="border-y border-dotted border-deep/20 py-4 md:py-5"
+          >
+            <div className="flex items-center gap-4 md:gap-5">
+              <p className="shrink-0 max-w-[9.5rem] text-sm font-semibold leading-snug text-deep sm:max-w-[11rem] md:max-w-[13rem] md:text-[15px]">
+                Made for every hood across{" "}
+                <span className="underline decoration-honey decoration-[3px] underline-offset-4">Lagos</span>
+              </p>
+              <span className="hidden h-10 w-px shrink-0 bg-deep/15 sm:block" aria-hidden />
+              <div className="relative min-w-0 flex-1 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]">
+                <motion.ul
+                  className="flex w-max gap-8"
+                  animate={{ x: ["0%", "-50%"] }}
+                  transition={{ duration: 8, ease: "linear", repeat: Infinity }}
+                >
+                  {[...LAGOS_MARKETS, ...LAGOS_MARKETS].map((m, i) => (
+                    <li key={`${m.place}-${i}`} className="shrink-0">
+                      <p className="text-sm font-bold text-deep">{m.place}</p>
+                      <p className="text-[11px] font-medium text-deep/45 md:text-xs">{m.note}</p>
+                    </li>
+                  ))}
+                </motion.ul>
+              </div>
+            </div>
+          </motion.section>
+
+          <motion.section
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.12 }}
+            viewport={{ once: false, amount: 0.12 }}
             transition={{ duration: 0.75, ease }}
           >
             <SectionTitle title="Popular this week" href="/pastries" />
@@ -484,9 +511,9 @@ export default function HomePage() {
           </motion.section>
 
           <motion.section
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.15 }}
+            initial={{ opacity: 0, y: 40, scale: 0.98 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
+            viewport={{ once: false, amount: 0.15 }}
             transition={{ duration: 0.75, ease }}
           >
             {banners.length ? (
@@ -505,14 +532,14 @@ export default function HomePage() {
           <motion.section
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.15 }}
+            viewport={{ once: false, amount: 0.15 }}
             transition={{ duration: 0.75, ease }}
             className="grid gap-3 md:grid-cols-2"
           >
-            <motion.div whileHover={{ y: -4, scale: 1.01 }} whileTap={{ scale: 0.98 }} transition={springSnappy}>
+            <motion.div whileHover={{ y: -6, scale: 1.015 }} whileTap={{ scale: 0.98 }} transition={springSnappy}>
               <Link
                 href="/events"
-                className="relative flex h-full overflow-hidden rounded-[28px] bg-deep p-5 text-white shadow-[var(--shadow-card)]"
+                className="relative flex h-full min-h-[160px] overflow-hidden rounded-[28px] bg-deep p-5 text-white shadow-[var(--shadow-card)]"
               >
                 <div className="relative z-10 max-w-[70%]">
                   <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-blush">

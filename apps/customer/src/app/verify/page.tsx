@@ -180,7 +180,7 @@ function Shell({
         <div className="relative mb-5 flex items-center justify-between gap-3 md:mb-10">
           <BrandLogo size="sm" href="/" />
           <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-tea shadow-sm">
-            <Sparkles size={11} /> Join DHT
+            <Sparkles size={11} /> Seamless Drip!
           </span>
         </div>
 

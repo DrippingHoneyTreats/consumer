@@ -17,3 +17,7 @@ export const verifyOtpSchema = z.object({
   contact: z.string().trim().min(3).max(160),
   code: z.string().trim().min(4).max(8),
 });
+
+export const updateProfileSchema = z.object({
+  fullName: z.string().trim().min(2).max(120),
+});

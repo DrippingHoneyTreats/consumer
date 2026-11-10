@@ -142,3 +142,13 @@ export async function verifyOtp(input: {
 export async function getUserById(id: string): Promise<User | null> {
   return User.findByPk(id);
 }
+
+export async function updateProfile(userId: string, input: { fullName: string }): Promise<User> {
+  const user = await User.findByPk(userId);
+  if (!user) {
+    throw unauthorized();
+  }
+  await user.update({ fullName: input.fullName.trim() });
+  await user.reload();
+  return user;
+}

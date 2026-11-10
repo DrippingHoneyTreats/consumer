@@ -46,3 +46,30 @@ export const flyUp = {
   viewport: { once: true, amount: 0.15 } as const,
   transition: { duration: 0.65, ease: easeGentle },
 };
+
+/** Scroll-reveal that can re-trigger for livelier pages. */
+export const revealPop = {
+  initial: { opacity: 0, y: 48, scale: 0.96 },
+  whileInView: { opacity: 1, y: 0, scale: 1 },
+  viewport: { once: false, amount: 0.2 } as const,
+  transition: { duration: 0.7, ease: easeGentle },
+};
+
+/** Continuous float loops for hero / product imagery. */
+export const floatLoop = {
+  soft: {
+    animate: { y: [0, -10, 0], rotate: [0, 1.2, -0.8, 0] },
+    transition: { duration: 5.2, repeat: Infinity, ease: "easeInOut" as const },
+  },
+  bold: {
+    animate: { y: [0, -16, 0], rotate: [0, 2.8, -1.8, 0], scale: [1, 1.03, 1] },
+    transition: { duration: 6.4, repeat: Infinity, ease: "easeInOut" as const },
+  },
+};
+
+/** Ken Burns–style slow zoom for carousel slides. */
+export const kenBurns = {
+  initial: { scale: 1.08 },
+  animate: { scale: 1.18 },
+  transition: { duration: 8, ease: "linear" as const },
+};

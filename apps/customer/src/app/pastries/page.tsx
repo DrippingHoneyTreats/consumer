@@ -21,14 +21,20 @@ import {
 import { getCategories, searchItems } from "@/lib/catalogue";
 import type { CatalogueCategory, CatalogueItem } from "@/lib/catalogue-types";
 import { whatsappLink } from "@/lib/format";
-import { categoryImage, ITEM_PLACEHOLDER } from "@/lib/placeholders";
+import { categoryImage } from "@/lib/placeholders";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
 import { ColumnLoader } from "@/components/ui/ColumnLoader";
 import { ProductCard } from "@/components/catalogue/ProductCard";
 import { ItemAddSheet } from "@/components/catalogue/ItemAddSheet";
+import { HeroImageCycle } from "@/components/motion/HeroImageCycle";
 import { useCartActions } from "@/hooks/useCartActions";
 import { easeGentle } from "@/lib/motion";
 import { cn } from "@/lib/cn";
+
+const PASTRY_HERO_CUTOUTS = [
+  "/temp/images/cake-wholewheat-nobg.png",
+  "/temp/images/cake-wholewheat2-nobg.png",
+];
 
 const ease = easeGentle;
 
@@ -99,9 +105,7 @@ export default function PastriesPage() {
   }, [query, searchNonce]);
 
   const searching = query.trim().length >= 2;
-  const hero = categories[0];
   const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP ?? "2348000000000";
-  const heroImage = hero ? categoryImage(hero) : ITEM_PLACEHOLDER;
 
   return (
     <div className="page-pad !px-0 !pt-0 bg-[#fffaf7]">
@@ -115,8 +119,8 @@ export default function PastriesPage() {
             <span className="pointer-events-none absolute left-[28%] top-24 h-1.5 w-1.5 rounded-full bg-[#e8a48a]" aria-hidden />
             <span className="pointer-events-none absolute right-[42%] top-14 h-2.5 w-2.5 rounded-full border-2 border-[#f9a8bb]/70" aria-hidden />
 
-            <div className="relative grid items-center gap-4 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] md:gap-6">
-              <div className="relative z-10">
+            <div className="relative grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_minmax(280px,1.2fr)] md:gap-2">
+              <div className="relative z-20">
                 <div className="flex items-start gap-4 md:gap-6">
                   <ul className="mt-2 hidden shrink-0 flex-col gap-3 sm:flex">
                     {sideLinks.map((s) => {
@@ -190,12 +194,9 @@ export default function PastriesPage() {
                 initial={{ opacity: 0, x: 28, scale: 0.94 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 transition={{ type: "spring", stiffness: 140, damping: 18, delay: 0.06 }}
-                className="relative -mr-2 h-[210px] md:-mr-6 md:h-[300px]"
+                className="relative z-10 mx-auto h-[230px] w-full max-w-[400px] sm:h-[250px] md:mx-0 md:h-[270px] md:max-w-none lg:h-[290px]"
               >
-                <span className="absolute -left-4 top-6 h-24 w-24 rounded-full bg-[#ffe0e8]/80 md:h-32 md:w-32" aria-hidden />
-                <span className="absolute inset-y-0 right-0 w-[92%] overflow-hidden rounded-[48%_42%_38%_52%] bg-[#ffd6e0]/50 shadow-[0_20px_50px_-24px_rgba(93,64,55,0.35)]">
-                  <Image src={heroImage} alt="" fill className="object-cover" sizes="420px" unoptimized priority />
-                </span>
+                <HeroImageCycle images={PASTRY_HERO_CUTOUTS} variant="pastries" className="h-full w-full" />
               </motion.div>
             </div>
 

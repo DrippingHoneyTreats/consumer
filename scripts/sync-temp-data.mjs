@@ -21,6 +21,8 @@ const imageMap = {
   "wheat puff puff.jpg": "puff-puff.jpg",
   "wholewheat donut.jpg": "donut.jpg",
   "wholewheatcake.jpg": "cake-wholewheat.jpg",
+  "wholewheatcake-nobg.png": "cake-wholewheat-nobg.png",
+  "wholewheat2-nobg.png": "cake-wholewheat2-nobg.png",
   "carrot cake.jpg": "cake-carrot.jpg",
   "citrus wheat cake.jpg": "cake-citrus.jpg",
 };

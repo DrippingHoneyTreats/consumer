@@ -24,12 +24,12 @@ export function ProductCard({ item, index = 0, layout = "grid", onAdd, onOpen }:
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.15 }}
+      initial={{ opacity: 0, y: 44, scale: 0.96 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      viewport={{ once: true, amount: 0.18 }}
       transition={{ duration: 0.7, delay: Math.min(index, 8) * 0.06, ease: easeGentle }}
-      whileHover={{ y: -7, scale: 1.025 }}
-      whileTap={{ scale: 0.975 }}
+      whileHover={{ y: -10, scale: 1.03 }}
+      whileTap={{ scale: 0.97 }}
       className={cn(
         "group relative flex cursor-pointer flex-col overflow-hidden rounded-[26px] bg-white shadow-[var(--shadow-card)] will-change-transform",
         rail ? "w-[168px] shrink-0 md:w-[210px]" : "h-full",
@@ -45,10 +45,18 @@ export function ProductCard({ item, index = 0, layout = "grid", onAdd, onOpen }:
           sizes={rail ? "200px" : "(max-width:768px) 50vw, 240px"}
           unoptimized
         />
+        <motion.span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-deep/25 via-transparent to-transparent opacity-0 transition group-hover:opacity-100"
+        />
         {item.badge ? (
-          <span className="absolute left-2.5 top-2.5 rounded-full bg-honey px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-deep">
+          <motion.span
+            initial={{ scale: 0.8, opacity: 0 }}
+            whileInView={{ scale: 1, opacity: 1 }}
+            className="absolute left-2.5 top-2.5 rounded-full bg-honey px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-deep"
+          >
             {item.badge}
-          </span>
+          </motion.span>
         ) : null}
       </button>
 
@@ -66,7 +74,7 @@ export function ProductCard({ item, index = 0, layout = "grid", onAdd, onOpen }:
         <div className="mt-auto flex items-center justify-between gap-2 pt-1">
           <p className="font-display text-[15px] font-semibold text-deep md:text-base">{formatNgn(item.basePrice)}</p>
           <motion.button
-            whileHover={{ scale: 1.1, rotate: 90 }}
+            whileHover={{ scale: 1.12, rotate: 90 }}
             whileTap={{ scale: 0.85 }}
             transition={springSnappy}
             type="button"

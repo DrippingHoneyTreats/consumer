@@ -24,7 +24,7 @@ const slides = [
   },
   {
     image: "/temp/images/cake-carrot.jpg",
-    title: "Celebrate with DHT",
+    title: "Celebrate with Dripping Treats",
     accent: "tables that taste good",
     body: "Birthdays, boardrooms, dessert bars — Lagos & Ibadan when booked early.",
   },

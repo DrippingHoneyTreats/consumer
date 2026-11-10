@@ -5,6 +5,7 @@ import { validate } from "../middleware/validate";
 import {
   registerSchema,
   sendOtpSchema,
+  updateProfileSchema,
   verifyOtpSchema,
 } from "../validators/auth.validators";
 
@@ -15,3 +16,4 @@ authRoutes.post("/auth/otp/send", validate(sendOtpSchema), authController.sendOt
 authRoutes.post("/auth/otp/verify", validate(verifyOtpSchema), authController.verifyOtp);
 authRoutes.post("/auth/logout", authController.logout);
 authRoutes.get("/me", requireAuth, authController.me);
+authRoutes.patch("/me", requireAuth, validate(updateProfileSchema), authController.updateProfile);

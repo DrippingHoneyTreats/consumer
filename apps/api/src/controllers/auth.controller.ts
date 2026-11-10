@@ -53,3 +53,15 @@ export async function me(req: AuthedRequest, res: Response, next: NextFunction) 
     next(err);
   }
 }
+
+export async function updateProfile(req: AuthedRequest, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) {
+      throw unauthorized();
+    }
+    const user = await authService.updateProfile(req.user.id, req.body);
+    res.status(200).json(user.toPublic());
+  } catch (err) {
+    next(err);
+  }
+}
