@@ -1,16 +1,13 @@
 # DHT customer app — Netlify staging/QA
 # Site settings (UI):
-#   Base directory:     (repo root — leave empty)
+#   Base directory:     (leave empty — repo root)
 #   Package directory:  apps/customer
-#   Branch deploys:     staging → this site / branch deploy
 #
-# Catalogue uses bundled temp data until live API is ready
-# (NEXT_PUBLIC_USE_TEMP_CATALOGUE defaults to true).
+# Paths below are relative to the repo root (base), not apps/customer.
 
 [build]
-  # Install + build from monorepo root so workspaces resolve
-  command = "npm --prefix ../.. ci && npm --prefix ../.. run build -w @dht/customer"
-  publish = ".next"
+  command = "npm ci && npm run build -w @dht/customer"
+  publish = "apps/customer/.next"
 
 [build.environment]
   NODE_VERSION = "20"
@@ -18,7 +15,6 @@
   NEXT_PUBLIC_USE_TEMP_CATALOGUE = "true"
   NEXT_PUBLIC_APP_NAME = "Dripping Honey Treats"
   NEXT_PUBLIC_WHATSAPP = "2348000000000"
-  # Placeholder until real staging API exists — app stays on temp catalogue
   NEXT_PUBLIC_API_URL = "https://api.staging.invalid/api/v1"
   NEXT_PUBLIC_WS_URL = "https://api.staging.invalid/realtime"
 
@@ -26,11 +22,8 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-[context.production]
-  # Prefer using branch deploys from `staging` for QA; wire production later.
-
 [context.branch-deploy]
-  command = "npm --prefix ../.. ci && npm --prefix ../.. run build -w @dht/customer"
+  command = "npm ci && npm run build -w @dht/customer"
 
 [context.deploy-preview]
-  command = "npm --prefix ../.. ci && npm --prefix ../.. run build -w @dht/customer"
+  command = "npm ci && npm run build -w @dht/customer"

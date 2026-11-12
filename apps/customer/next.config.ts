@@ -4,14 +4,16 @@ import path from "path";
 
 /** Current machine LAN IPs so phone testing via http://192.168… works with HMR. */
 function lanHosts(): string[] {
-  const hosts = new Set<string>();
-  for (const nets of Object.values(os.networkInterfaces())) {
-    for (const net of nets ?? []) {
-      if (net.family === "IPv4" && !net.internal) hosts.add(net.address);
+  const hosts = new Set<string>(["192.168.0.176"]);
+  try {
+    for (const nets of Object.values(os.networkInterfaces())) {
+      for (const net of nets ?? []) {
+        if (net.family === "IPv4" && !net.internal) hosts.add(net.address);
+      }
     }
+  } catch {
+    // CI / restricted sandboxes may block os.networkInterfaces()
   }
-  // Keep a couple of common DHCP leftovers so a short IP change still works mid-session.
-  hosts.add("192.168.0.176");
   return [...hosts];
 }
 

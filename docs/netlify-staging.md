@@ -7,10 +7,11 @@ Deploy the **`staging`** branch so the PM can QA the customer UI with **bundled 
 1. Create a Netlify site linked to this repo.
 2. **Build settings**
    - **Base directory:** leave empty (repo root)
-   - **Package directory:** `apps/customer`
-   - **Branch to deploy:** `staging` (Site configuration → Build & deploy → Continuous Deployment → Branches — enable branch deploys / set production branch to `staging` for now if this site is QA-only)
-3. Config is already in `apps/customer/netlify.toml` (temp catalogue env vars included).
-4. Trigger a deploy from `staging`.
+   - **Package directory:** `apps/customer` (required — this is where `netlify.toml` lives)
+   - **Publish directory:** `apps/customer/.next` (set by `netlify.toml`; don’t override to `.next` at repo root)
+   - **Branch to deploy:** `main` or `staging` (whichever this QA site tracks)
+3. Config is already in `apps/customer/netlify.toml` (temp catalogue env vars + OpenNext plugin).
+4. Trigger a deploy after connecting/reconnecting the GitHub repo (`DrippingHoneyTreats/consumer`).
 
 ## Temp / dummy data
 
