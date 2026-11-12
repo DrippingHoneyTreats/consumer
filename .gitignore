@@ -14,9 +14,9 @@ uploads
 dhtcustomers-app/
 dhtcustomers-server/
 
-# Local editable mock source (sync with: npm run temp:sync)
-apps/tempData/
+# Admin local mocks only — customer staging fixtures are tracked
 apps/admin/public/temp/
 
-# Staging/QA: track customer temp images + catalogue (not huge SVG banners)
+# Huge SVG banners (~169MB) — keep local; product images under temp/images are tracked
+apps/tempData/banners/
 apps/customer/public/temp/banners/
