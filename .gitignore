@@ -14,7 +14,9 @@ uploads
 dhtcustomers-app/
 dhtcustomers-server/
 
-# Local-only mock catalogue (API / Cloudinary in production)
+# Local editable mock source (sync with: npm run temp:sync)
 apps/tempData/
-apps/customer/public/temp/
 apps/admin/public/temp/
+
+# Staging/QA: track customer temp images + catalogue (not huge SVG banners)
+apps/customer/public/temp/banners/

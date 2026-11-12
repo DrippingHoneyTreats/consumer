@@ -9,7 +9,7 @@
       "title": "Valentine specials",
       "subtitle": "Fibre-rich cakes for someone sweet",
       "description": "Pre-order Valentine cakes and snack boxes — Lagos delivery.",
-      "image": "/temp/banners/valentine.svg",
+      "image": "/assets/banners/banner-valentines.png",
       "ctaType": "category",
       "ctaTarget": "/pastries/cakes",
       "ctaLabel": "Shop cakes"
@@ -19,7 +19,7 @@
       "title": "Freshly baked, delivered",
       "subtitle": "Lagos doorstep in a flash",
       "description": "Order pastries today — we bake with whole grains and real fibre.",
-      "image": "/temp/banners/delivery.svg",
+      "image": "/assets/banners/banner-launch.png",
       "ctaType": "link",
       "ctaTarget": "/pastries",
       "ctaLabel": "Order now"
@@ -29,7 +29,7 @@
       "title": "Events & catering",
       "subtitle": "Tables that taste as good as they look",
       "description": "Birthdays, boardrooms, and big Lagos celebrations.",
-      "image": "/temp/banners/catering.svg",
+      "image": "/assets/banners/banner-events.png",
       "ctaType": "link",
       "ctaTarget": "/events",
       "ctaLabel": "Book an event"
@@ -39,7 +39,7 @@
       "title": "New year treat boxes",
       "subtitle": "Chinchin, cookies & cake mixes",
       "description": "Share boxes packed with high-fibre favourites.",
-      "image": "/temp/banners/new-year.svg",
+      "image": "/assets/banners/banner-christmas.png",
       "ctaType": "category",
       "ctaTarget": "/pastries/chinchin",
       "ctaLabel": "See boxes"
@@ -977,7 +977,7 @@
       "name": "Corporate tray",
       "slug": "corporate",
       "description": "Boardroom-ready pastry trays with dietary notes.",
-      "image": "/temp/banners/catering.svg",
+      "image": "/assets/banners/banner-events.png",
       "includes": [
         "Assorted pastry tray",
         "Labelled allergens",

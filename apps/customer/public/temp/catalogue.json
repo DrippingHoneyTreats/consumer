@@ -1,0 +1,1009 @@
+{
+  "settings": {
+    "whatsappNumber": "2348000000000",
+    "pauseOrders": false
+  },
+  "banners": [
+    {
+      "id": "bn-valentine",
+      "title": "Valentine specials",
+      "subtitle": "Fibre-rich cakes for someone sweet",
+      "description": "Pre-order Valentine cakes and snack boxes — Lagos delivery.",
+      "image": "/assets/banners/banner-valentines.png",
+      "ctaType": "category",
+      "ctaTarget": "/pastries/cakes",
+      "ctaLabel": "Shop cakes"
+    },
+    {
+      "id": "bn-delivery",
+      "title": "Freshly baked, delivered",
+      "subtitle": "Lagos doorstep in a flash",
+      "description": "Order pastries today — we bake with whole grains and real fibre.",
+      "image": "/assets/banners/banner-launch.png",
+      "ctaType": "link",
+      "ctaTarget": "/pastries",
+      "ctaLabel": "Order now"
+    },
+    {
+      "id": "bn-catering",
+      "title": "Events & catering",
+      "subtitle": "Tables that taste as good as they look",
+      "description": "Birthdays, boardrooms, and big Lagos celebrations.",
+      "image": "/assets/banners/banner-events.png",
+      "ctaType": "link",
+      "ctaTarget": "/events",
+      "ctaLabel": "Book an event"
+    },
+    {
+      "id": "bn-newyear",
+      "title": "New year treat boxes",
+      "subtitle": "Chinchin, cookies & cake mixes",
+      "description": "Share boxes packed with high-fibre favourites.",
+      "image": "/assets/banners/banner-christmas.png",
+      "ctaType": "category",
+      "ctaTarget": "/pastries/chinchin",
+      "ctaLabel": "See boxes"
+    }
+  ],
+  "categories": [
+    {
+      "id": "cat-chinchin",
+      "name": "Chinchin",
+      "slug": "chinchin",
+      "image": "/temp/images/chinchin.jpg",
+      "sort": 1,
+      "tagline": "Crunchy, low-moisture — our easiest fibre win"
+    },
+    {
+      "id": "cat-cookies",
+      "name": "Cookies",
+      "slug": "cookies",
+      "image": "/temp/images/chinchin.jpg",
+      "sort": 2,
+      "tagline": "Oat bran, flax & date-sweetened bakes"
+    },
+    {
+      "id": "cat-cakes",
+      "name": "Cakes",
+      "slug": "cakes",
+      "image": "/temp/images/cake-wholewheat.jpg",
+      "sort": 3,
+      "tagline": "Whole wheat, plantain & real fruit moistness"
+    },
+    {
+      "id": "cat-doughnuts",
+      "name": "Doughnuts",
+      "slug": "doughnuts",
+      "image": "/temp/images/donut.jpg",
+      "sort": 4,
+      "tagline": "Soft crumb, smarter oil uptake"
+    },
+    {
+      "id": "cat-puff-puff",
+      "name": "Puff-puff",
+      "slug": "puff-puff",
+      "image": "/temp/images/puff-puff.jpg",
+      "sort": 5,
+      "tagline": "Tigernut & oat batter, golden outside"
+    },
+    {
+      "id": "cat-meat-pie",
+      "name": "Meat pie",
+      "slug": "meat-pie",
+      "image": "/temp/images/cake-citrus.jpg",
+      "sort": 6,
+      "tagline": "Flaky whole-wheat crust, legume-smart filling"
+    }
+  ],
+  "items": [
+    {
+      "id": "item-chinchin-classic",
+      "categoryId": "cat-chinchin",
+      "name": "Classic Wheat Chinchin",
+      "description": "Crunchy cubes baked with fine wheat bran and sesame. Snack jar staple.",
+      "images": [
+        "/temp/images/chinchin.jpg"
+      ],
+      "basePrice": 250000,
+      "status": "available",
+      "maxQty": 20,
+      "badge": "BESTSELLER",
+      "rating": 4.9,
+      "reviewCount": 214,
+      "ingredients": [
+        "Whole wheat flour",
+        "Fine wheat bran",
+        "Sesame",
+        "Butter",
+        "Light cane sugar",
+        "Salt"
+      ],
+      "nutrition": {
+        "kcal": 420,
+        "fat": "14g",
+        "carbs": "62g",
+        "protein": "9g",
+        "fibre": "10g"
+      },
+      "fibre": {
+        "targetPer100g": "8–12 g",
+        "bestFibres": [
+          "fine wheat bran",
+          "whole wheat flour",
+          "oat bran",
+          "ground flax",
+          "tigernut flour",
+          "sesame"
+        ],
+        "tip": "Baked (not deep-fried) so fibre-rich dough does not soak oil."
+      },
+      "variants": [
+        {
+          "id": "v-ch-250",
+          "name": "250g jar",
+          "price": 250000
+        },
+        {
+          "id": "v-ch-500",
+          "name": "500g jar",
+          "price": 450000
+        },
+        {
+          "id": "v-ch-1k",
+          "name": "1kg party pack",
+          "price": 800000
+        }
+      ]
+    },
+    {
+      "id": "item-chinchin-tigernut",
+      "categoryId": "cat-chinchin",
+      "name": "Tigernut Crunch Chinchin",
+      "description": "Nutty tigernut flour blend with millet — naturally sweet finish.",
+      "images": [
+        "/temp/images/chinchin.jpg"
+      ],
+      "basePrice": 280000,
+      "status": "available",
+      "maxQty": 15,
+      "badge": "CHEF'S PICK",
+      "rating": 4.8,
+      "reviewCount": 96,
+      "ingredients": [
+        "Tigernut flour",
+        "Millet flour",
+        "Wheat bran",
+        "Coconut oil",
+        "Honey",
+        "Sea salt"
+      ],
+      "nutrition": {
+        "kcal": 410,
+        "fat": "13g",
+        "carbs": "60g",
+        "protein": "8g",
+        "fibre": "11g"
+      },
+      "fibre": {
+        "targetPer100g": "8–12 g",
+        "bestFibres": [
+          "tigernut flour",
+          "millet",
+          "wheat bran",
+          "sorghum flour"
+        ],
+        "tip": "Air-fried finish keeps the snap without heavy oil."
+      }
+    },
+    {
+      "id": "item-chinchin-flax",
+      "categoryId": "cat-chinchin",
+      "name": "Flax & Sesame Chinchin",
+      "description": "Ground flax and sesame for omega richness and extra crunch.",
+      "images": [
+        "/temp/images/chinchin.jpg"
+      ],
+      "basePrice": 270000,
+      "status": "few_left",
+      "maxQty": 10,
+      "rating": 4.7,
+      "reviewCount": 58,
+      "ingredients": [
+        "Whole wheat flour",
+        "Ground flax",
+        "Sesame",
+        "Oat bran",
+        "Butter",
+        "Salt"
+      ],
+      "nutrition": {
+        "kcal": 430,
+        "fat": "16g",
+        "carbs": "58g",
+        "protein": "10g",
+        "fibre": "12g"
+      },
+      "fibre": {
+        "targetPer100g": "8–12 g",
+        "bestFibres": [
+          "ground flax",
+          "sesame",
+          "oat bran",
+          "whole wheat flour"
+        ],
+        "tip": "Low-moisture dough hides fibre without chalky taste."
+      }
+    },
+    {
+      "id": "item-cookie-oat",
+      "categoryId": "cat-cookies",
+      "name": "Oat Bran Soft Cookie",
+      "description": "Beta-glucan oat bran with date paste — soft centre, toasted edge.",
+      "images": [
+        "/temp/images/chinchin.jpg"
+      ],
+      "basePrice": 150000,
+      "status": "available",
+      "maxQty": 24,
+      "badge": "POPULAR",
+      "rating": 4.8,
+      "reviewCount": 142,
+      "ingredients": [
+        "Oat flour",
+        "Oat bran",
+        "Date paste",
+        "Ground flax",
+        "Butter",
+        "Egg",
+        "Vanilla"
+      ],
+      "nutrition": {
+        "kcal": 380,
+        "fat": "15g",
+        "carbs": "52g",
+        "protein": "7g",
+        "fibre": "8g"
+      },
+      "fibre": {
+        "targetPer100g": "6–10 g",
+        "bestFibres": [
+          "oat flour",
+          "oat bran",
+          "ground flax",
+          "chia"
+        ],
+        "tip": "Inulin and dates replace part of the sugar while adding fibre."
+      },
+      "variants": [
+        {
+          "id": "v-ck-4",
+          "name": "Pack of 4",
+          "price": 150000
+        },
+        {
+          "id": "v-ck-8",
+          "name": "Pack of 8",
+          "price": 280000
+        }
+      ]
+    },
+    {
+      "id": "item-cookie-cocoa",
+      "categoryId": "cat-cookies",
+      "name": "Cocoa Groundnut Cookie",
+      "description": "Cocoa and groundnut flour — deep chocolate with Lagos crunch.",
+      "images": [
+        "/temp/images/chinchin.jpg"
+      ],
+      "basePrice": 160000,
+      "status": "available",
+      "maxQty": 20,
+      "rating": 4.6,
+      "reviewCount": 73,
+      "ingredients": [
+        "Cocoa",
+        "Groundnut flour",
+        "Oat bran",
+        "Coconut flour",
+        "Butter",
+        "Date syrup"
+      ],
+      "nutrition": {
+        "kcal": 390,
+        "fat": "17g",
+        "carbs": "48g",
+        "protein": "8g",
+        "fibre": "9g"
+      },
+      "fibre": {
+        "targetPer100g": "6–10 g",
+        "bestFibres": [
+          "cocoa",
+          "groundnut flour",
+          "oat bran",
+          "coconut flour",
+          "chia"
+        ],
+        "tip": "A little coconut flour goes far — keep dough hydrated."
+      }
+    },
+    {
+      "id": "item-cookie-tigernut",
+      "categoryId": "cat-cookies",
+      "name": "Tigernut Thumbprint",
+      "description": "Tigernut shortbread with a zobo-orange jam centre.",
+      "images": [
+        "/temp/images/chinchin.jpg"
+      ],
+      "basePrice": 180000,
+      "status": "pre_order",
+      "maxQty": 12,
+      "leadTimeHours": 24,
+      "badge": "NEW",
+      "rating": 4.9,
+      "reviewCount": 31,
+      "ingredients": [
+        "Tigernut flour",
+        "Almond flour",
+        "Butter",
+        "Zobo-orange jam",
+        "Vanilla"
+      ],
+      "nutrition": {
+        "kcal": 400,
+        "fat": "18g",
+        "carbs": "46g",
+        "protein": "6g",
+        "fibre": "7g"
+      },
+      "fibre": {
+        "targetPer100g": "6–10 g",
+        "bestFibres": [
+          "tigernut flour",
+          "almond flour",
+          "ground flax"
+        ],
+        "tip": "Dates work as both sweetener and binder."
+      }
+    },
+    {
+      "id": "item-cake-wholewheat",
+      "categoryId": "cat-cakes",
+      "name": "Whole Wheat Honey Cake",
+      "description": "Soft crumb with honey drip glaze — our signature celebration loaf.",
+      "images": [
+        "/temp/images/cake-wholewheat.jpg",
+        "/temp/images/cake-carrot.jpg",
+        "/temp/images/cake-citrus.jpg"
+      ],
+      "basePrice": 1200000,
+      "status": "available",
+      "maxQty": 5,
+      "badge": "BESTSELLER",
+      "rating": 4.9,
+      "reviewCount": 320,
+      "ingredients": [
+        "Whole wheat pastry flour",
+        "Honey",
+        "Eggs",
+        "Yoghurt",
+        "Ground flax",
+        "Vanilla"
+      ],
+      "nutrition": {
+        "kcal": 290,
+        "fat": "11g",
+        "carbs": "40g",
+        "protein": "6g",
+        "fibre": "5g"
+      },
+      "fibre": {
+        "targetPer100g": "4–7 g",
+        "bestFibres": [
+          "whole wheat pastry flour",
+          "ground flax",
+          "baobab pulp"
+        ],
+        "tip": "Swap only 20–30% of flour at first; add extra liquid so cakes stay moist.",
+        "flavourIdeas": [
+          "honey-vanilla",
+          "chocolate cocoa",
+          "banana-tigernut"
+        ]
+      },
+      "variants": [
+        {
+          "id": "v-cw-6",
+          "name": "6-inch",
+          "price": 1200000
+        },
+        {
+          "id": "v-cw-8",
+          "name": "8-inch",
+          "price": 1800000
+        },
+        {
+          "id": "v-cw-10",
+          "name": "10-inch",
+          "price": 2500000
+        }
+      ]
+    },
+    {
+      "id": "item-cake-carrot",
+      "categoryId": "cat-cakes",
+      "name": "Carrot & Date Cake",
+      "description": "Grated carrot, date paste, and warm spice — naturally moist.",
+      "images": [
+        "/temp/images/cake-carrot.jpg",
+        "/temp/images/cake-wholewheat.jpg"
+      ],
+      "basePrice": 1350000,
+      "status": "available",
+      "maxQty": 5,
+      "badge": "CHEF'S PICK",
+      "rating": 4.8,
+      "reviewCount": 188,
+      "ingredients": [
+        "Whole wheat flour",
+        "Carrot",
+        "Dates",
+        "Cinnamon",
+        "Walnut",
+        "Eggs",
+        "Oil"
+      ],
+      "nutrition": {
+        "kcal": 280,
+        "fat": "12g",
+        "carbs": "38g",
+        "protein": "5g",
+        "fibre": "6g"
+      },
+      "fibre": {
+        "targetPer100g": "4–7 g",
+        "bestFibres": [
+          "carrot purée",
+          "dates",
+          "whole wheat",
+          "ground flax"
+        ],
+        "tip": "Moist purées keep fibre cakes from turning dry and crumbly.",
+        "flavourIdeas": [
+          "carrot-and-date",
+          "pumpkin-spice"
+        ]
+      }
+    },
+    {
+      "id": "item-cake-citrus",
+      "categoryId": "cat-cakes",
+      "name": "Zitrus Wheat Cake",
+      "description": "Bright citrus zest over whole wheat crumb — light and fragrant.",
+      "images": [
+        "/temp/images/cake-citrus.jpg",
+        "/temp/images/cake-wholewheat.jpg"
+      ],
+      "basePrice": 1300000,
+      "status": "available",
+      "maxQty": 5,
+      "rating": 4.7,
+      "reviewCount": 112,
+      "ingredients": [
+        "Whole wheat pastry flour",
+        "Orange zest",
+        "Lemon",
+        "Yoghurt",
+        "Honey",
+        "Eggs"
+      ],
+      "nutrition": {
+        "kcal": 270,
+        "fat": "10g",
+        "carbs": "39g",
+        "protein": "5g",
+        "fibre": "5g"
+      },
+      "fibre": {
+        "targetPer100g": "4–7 g",
+        "bestFibres": [
+          "whole wheat pastry flour",
+          "citrus fibre",
+          "baobab pulp"
+        ],
+        "tip": "Zobo-and-orange pairing sings with tea-green DHT branding.",
+        "flavourIdeas": [
+          "zobo-and-orange",
+          "lemon-honey"
+        ]
+      }
+    },
+    {
+      "id": "item-cake-banana",
+      "categoryId": "cat-cakes",
+      "name": "Banana Tigernut Loaf",
+      "description": "Ripe banana and tigernut flour — snackable everyday loaf.",
+      "images": [
+        "/temp/images/cake-wholewheat.jpg"
+      ],
+      "basePrice": 900000,
+      "status": "available",
+      "maxQty": 8,
+      "badge": "POPULAR",
+      "rating": 4.8,
+      "reviewCount": 95,
+      "ingredients": [
+        "Banana",
+        "Tigernut flour",
+        "Whole wheat",
+        "Eggs",
+        "Coconut oil",
+        "Cinnamon"
+      ],
+      "nutrition": {
+        "kcal": 260,
+        "fat": "9g",
+        "carbs": "40g",
+        "protein": "5g",
+        "fibre": "6g"
+      },
+      "fibre": {
+        "targetPer100g": "4–7 g",
+        "bestFibres": [
+          "banana purée",
+          "tigernut flour",
+          "whole wheat",
+          "coconut flour"
+        ],
+        "flavourIdeas": [
+          "banana-and-tigernut",
+          "chocolate banana"
+        ]
+      }
+    },
+    {
+      "id": "item-donut-classic",
+      "categoryId": "cat-doughnuts",
+      "name": "Whole Wheat Ring Donut",
+      "description": "Airy ring with psyllium gel crumb — softer oil story.",
+      "images": [
+        "/temp/images/donut.jpg"
+      ],
+      "basePrice": 80000,
+      "status": "available",
+      "maxQty": 30,
+      "badge": "BESTSELLER",
+      "rating": 4.7,
+      "reviewCount": 256,
+      "ingredients": [
+        "Whole wheat flour",
+        "Oat flour",
+        "Psyllium husk",
+        "Vital wheat gluten",
+        "Yeast",
+        "Milk"
+      ],
+      "nutrition": {
+        "kcal": 310,
+        "fat": "12g",
+        "carbs": "44g",
+        "protein": "7g",
+        "fibre": "5g"
+      },
+      "fibre": {
+        "targetPer100g": "4–6 g",
+        "bestFibres": [
+          "whole wheat 30–40%",
+          "oat flour",
+          "psyllium husk 1–2%",
+          "citrus fibre",
+          "vital wheat gluten"
+        ],
+        "tip": "Psyllium and citrus fibre form a gel that tends to reduce oil uptake."
+      },
+      "variants": [
+        {
+          "id": "v-dn-sm",
+          "name": "Small package",
+          "price": 80000
+        },
+        {
+          "id": "v-dn-md",
+          "name": "Medium package",
+          "price": 420000
+        },
+        {
+          "id": "v-dn-lg",
+          "name": "Large package",
+          "price": 780000
+        }
+      ]
+    },
+    {
+      "id": "item-donut-baked",
+      "categoryId": "cat-doughnuts",
+      "name": "Baked Honey Glaze Donut",
+      "description": "Oven-baked healthier line with honey glaze — no fryer.",
+      "images": [
+        "/temp/images/donut.jpg"
+      ],
+      "basePrice": 90000,
+      "status": "available",
+      "maxQty": 24,
+      "badge": "HOT DEAL",
+      "rating": 4.6,
+      "reviewCount": 84,
+      "ingredients": [
+        "Whole wheat",
+        "Oat flour",
+        "Honey",
+        "Yoghurt",
+        "Psyllium",
+        "Egg"
+      ],
+      "nutrition": {
+        "kcal": 260,
+        "fat": "7g",
+        "carbs": "42g",
+        "protein": "6g",
+        "fibre": "5g"
+      },
+      "fibre": {
+        "targetPer100g": "4–6 g",
+        "bestFibres": [
+          "whole wheat",
+          "oat flour",
+          "psyllium husk"
+        ],
+        "tip": "Baked version for the healthier DHT line."
+      },
+      "variants": [
+        {
+          "id": "v-dnb-sm",
+          "name": "Small package",
+          "price": 90000
+        },
+        {
+          "id": "v-dnb-md",
+          "name": "Medium package",
+          "price": 480000
+        },
+        {
+          "id": "v-dnb-lg",
+          "name": "Large package",
+          "price": 880000
+        }
+      ]
+    },
+    {
+      "id": "item-donut-citrus",
+      "categoryId": "cat-doughnuts",
+      "name": "Citrus Fibre Filled Donut",
+      "description": "Soft filled ring with citrus fibre gel and light sugar dust.",
+      "images": [
+        "/temp/images/donut.jpg"
+      ],
+      "basePrice": 100000,
+      "status": "few_left",
+      "maxQty": 18,
+      "rating": 4.5,
+      "reviewCount": 47,
+      "ingredients": [
+        "Wheat flour blend",
+        "Citrus fibre",
+        "Custard filling",
+        "Yeast",
+        "Milk"
+      ],
+      "nutrition": {
+        "kcal": 320,
+        "fat": "13g",
+        "carbs": "45g",
+        "protein": "6g",
+        "fibre": "5g"
+      },
+      "fibre": {
+        "targetPer100g": "4–6 g",
+        "bestFibres": [
+          "citrus fibre",
+          "psyllium",
+          "whole wheat"
+        ],
+        "tip": "Gel-forming fibres keep the inside soft after frying."
+      },
+      "variants": [
+        {
+          "id": "v-dnc-sm",
+          "name": "Small package",
+          "price": 100000
+        },
+        {
+          "id": "v-dnc-md",
+          "name": "Medium package",
+          "price": 520000
+        },
+        {
+          "id": "v-dnc-lg",
+          "name": "Large package",
+          "price": 950000
+        }
+      ]
+    },
+    {
+      "id": "item-pp-classic",
+      "categoryId": "cat-puff-puff",
+      "name": "Wheat Puff-puff",
+      "description": "Golden balls with oat and unripe plantain flour in the batter.",
+      "images": [
+        "/temp/images/puff-puff.jpg"
+      ],
+      "basePrice": 200000,
+      "status": "available",
+      "maxQty": 20,
+      "badge": "POPULAR",
+      "rating": 4.8,
+      "reviewCount": 190,
+      "ingredients": [
+        "Wheat flour",
+        "Oat flour",
+        "Unripe plantain flour",
+        "Yeast",
+        "Nutmeg",
+        "Sugar"
+      ],
+      "nutrition": {
+        "kcal": 300,
+        "fat": "11g",
+        "carbs": "44g",
+        "protein": "5g",
+        "fibre": "5g"
+      },
+      "fibre": {
+        "targetPer100g": "4–6 g",
+        "bestFibres": [
+          "tigernut",
+          "oat",
+          "unripe plantain flours"
+        ],
+        "tip": "These flours blend well into batter without heavy gumminess."
+      },
+      "variants": [
+        {
+          "id": "v-pp-sm",
+          "name": "Small package",
+          "price": 200000
+        },
+        {
+          "id": "v-pp-md",
+          "name": "Medium package",
+          "price": 360000
+        },
+        {
+          "id": "v-pp-lg",
+          "name": "Large package",
+          "price": 650000
+        }
+      ]
+    },
+    {
+      "id": "item-pp-tigernut",
+      "categoryId": "cat-puff-puff",
+      "name": "Tigernut Puff-puff",
+      "description": "Naturally sweet tigernut batter — Sunday-afternoon energy.",
+      "images": [
+        "/temp/images/puff-puff.jpg"
+      ],
+      "basePrice": 220000,
+      "status": "available",
+      "maxQty": 16,
+      "rating": 4.7,
+      "reviewCount": 66,
+      "ingredients": [
+        "Tigernut flour",
+        "Wheat flour",
+        "Yeast",
+        "Nutmeg",
+        "Light sugar"
+      ],
+      "nutrition": {
+        "kcal": 295,
+        "fat": "10g",
+        "carbs": "45g",
+        "protein": "5g",
+        "fibre": "6g"
+      },
+      "fibre": {
+        "targetPer100g": "4–6 g",
+        "bestFibres": [
+          "tigernut flour",
+          "oat flour",
+          "psyllium husk"
+        ],
+        "tip": "Consider the baked healthier line for events."
+      },
+      "variants": [
+        {
+          "id": "v-ppt-sm",
+          "name": "Small package",
+          "price": 220000
+        },
+        {
+          "id": "v-ppt-md",
+          "name": "Medium package",
+          "price": 400000
+        },
+        {
+          "id": "v-ppt-lg",
+          "name": "Large package",
+          "price": 720000
+        }
+      ]
+    },
+    {
+      "id": "item-pie-classic",
+      "categoryId": "cat-meat-pie",
+      "name": "Lagos Fibre Meat Pie",
+      "description": "Flaky whole-wheat crust; filling stretched with cowpeas and carrot.",
+      "images": [
+        "/temp/images/cake-citrus.jpg"
+      ],
+      "basePrice": 120000,
+      "status": "available",
+      "maxQty": 24,
+      "badge": "POPULAR",
+      "rating": 4.8,
+      "reviewCount": 275,
+      "ingredients": [
+        "Whole wheat flour",
+        "Oat flour",
+        "Minced beef",
+        "Cowpeas",
+        "Carrot",
+        "Sweet potato",
+        "Cold fat"
+      ],
+      "nutrition": {
+        "kcal": 320,
+        "fat": "14g",
+        "carbs": "34g",
+        "protein": "14g",
+        "fibre": "6g"
+      },
+      "fibre": {
+        "targetPer100g": "5–8 g",
+        "bestFibres": [
+          "40–50% whole wheat crust",
+          "oat flour",
+          "fine bran",
+          "ground flax",
+          "cowpeas",
+          "lentils",
+          "oat bran thickener"
+        ],
+        "tip": "Cold fat + rest keeps crust flaky. Legumes stretch meat cost and add protein."
+      },
+      "variants": [
+        {
+          "id": "v-mp-sm",
+          "name": "Small package",
+          "price": 120000
+        },
+        {
+          "id": "v-mp-md",
+          "name": "Medium package",
+          "price": 350000
+        },
+        {
+          "id": "v-mp-lg",
+          "name": "Large package",
+          "price": 650000
+        }
+      ]
+    },
+    {
+      "id": "item-pie-lentil",
+      "categoryId": "cat-meat-pie",
+      "name": "Spiced Lentil Pie",
+      "description": "Plant-forward filling with lentils, sweet potato, and warm spice.",
+      "images": [
+        "/temp/images/cake-citrus.jpg"
+      ],
+      "basePrice": 110000,
+      "status": "available",
+      "maxQty": 20,
+      "badge": "HOT DEAL",
+      "rating": 4.5,
+      "reviewCount": 61,
+      "ingredients": [
+        "Whole wheat crust",
+        "Lentils",
+        "Sweet potato",
+        "Carrot",
+        "Oat bran",
+        "Curry spice"
+      ],
+      "nutrition": {
+        "kcal": 290,
+        "fat": "10g",
+        "carbs": "38g",
+        "protein": "11g",
+        "fibre": "7g"
+      },
+      "fibre": {
+        "targetPer100g": "5–8 g",
+        "bestFibres": [
+          "lentils",
+          "sweet potato",
+          "oat bran thickener",
+          "whole wheat crust"
+        ],
+        "tip": "Fibre in both crust and filling — double win."
+      },
+      "variants": [
+        {
+          "id": "v-mpl-sm",
+          "name": "Small package",
+          "price": 110000
+        },
+        {
+          "id": "v-mpl-md",
+          "name": "Medium package",
+          "price": 320000
+        },
+        {
+          "id": "v-mpl-lg",
+          "name": "Large package",
+          "price": 600000
+        }
+      ]
+    }
+  ],
+  "eventTypes": [
+    {
+      "id": "ev-birthday",
+      "name": "Birthday table",
+      "slug": "birthday",
+      "description": "Cake centrepiece, snack boxes, and soft drinks styling.",
+      "image": "/temp/images/cake-wholewheat.jpg",
+      "includes": [
+        "Signature cake",
+        "Chinchin jars",
+        "Mini meat pies",
+        "Setup consult"
+      ]
+    },
+    {
+      "id": "ev-corporate",
+      "name": "Corporate tray",
+      "slug": "corporate",
+      "description": "Boardroom-ready pastry trays with dietary notes.",
+      "image": "/assets/banners/banner-events.png",
+      "includes": [
+        "Assorted pastry tray",
+        "Labelled allergens",
+        "Lagos delivery window"
+      ]
+    },
+    {
+      "id": "ev-wedding",
+      "name": "Wedding dessert bar",
+      "slug": "wedding",
+      "description": "Multi-tier fibre cakes and guest favour boxes.",
+      "image": "/temp/images/cake-citrus.jpg",
+      "includes": [
+        "Celebration cake",
+        "Favour cookies",
+        "On-site styling"
+      ]
+    }
+  ],
+  "popularIds": [
+    "item-chinchin-classic",
+    "item-cake-wholewheat",
+    "item-donut-classic",
+    "item-pp-classic",
+    "item-pie-classic",
+    "item-cookie-oat",
+    "item-cake-carrot"
+  ]
+}

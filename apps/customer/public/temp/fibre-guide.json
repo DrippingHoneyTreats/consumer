@@ -1,0 +1,42 @@
+{
+  "categories": {
+    "chinchin": {
+      "targetPer100g": "8–12 g",
+      "bestFibres": ["fine wheat bran", "whole wheat flour", "oat bran", "ground flax", "tigernut flour", "millet or sorghum flour", "sesame"],
+      "tip": "Bake or air-fry instead of deep-frying. Fibre-rich dough soaks up more oil.",
+      "note": "Low-moisture crunchy snack — easiest fibre win."
+    },
+    "cookies": {
+      "targetPer100g": "6–10 g",
+      "bestFibres": ["oat flour", "oat bran", "ground flax", "almond or groundnut flour", "coconut flour", "tigernut flour", "cocoa", "chia"],
+      "tip": "Inulin can replace part of the sugar and add fibre. Dates also work as sweetener."
+    },
+    "cakes": {
+      "targetPer100g": "4–7 g",
+      "bestFibres": ["whole wheat pastry flour", "ground flax", "baobab pulp", "coconut flour", "plantain", "banana", "carrot", "pumpkin", "dates"],
+      "tip": "Swap only 20–30% of flour at first. Add extra liquid — cakes turn dry and crumbly fast.",
+      "flavourIdeas": ["carrot-and-date", "zobo-and-orange", "banana-and-tigernut", "chocolate cocoa"]
+    },
+    "doughnuts": {
+      "targetPer100g": "4–6 g",
+      "bestFibres": ["whole wheat 30–40%", "oat flour", "psyllium husk 1–2%", "citrus fibre", "vital wheat gluten"],
+      "tip": "Psyllium and citrus fibre form a gel that reduces oil uptake and keeps the inside soft. Offer a baked healthier line."
+    },
+    "puff-puff": {
+      "targetPer100g": "4–6 g",
+      "bestFibres": ["tigernut", "oat", "unripe plantain flours", "psyllium"],
+      "tip": "These flours blend well into batter. Consider baked versions for the healthier line."
+    },
+    "bread": {
+      "targetPer100g": "6–9 g",
+      "bestFibres": ["whole wheat flour", "wheat bran", "oat bran", "psyllium husk", "ground flax", "chia", "millet", "sorghum"],
+      "tip": "Soak bran/seeds 30–60 minutes. Use vital wheat gluten so bran does not collapse the loaf. Preferment or autolyse for texture.",
+      "note": "Agege bread is a perfect local base to reinvent — strongest health positioning."
+    },
+    "meat-pie": {
+      "targetPer100g": "5–8 g",
+      "bestFibres": ["40–50% whole wheat crust", "oat flour", "fine bran", "ground flax", "cowpeas", "lentils", "carrot", "sweet potato", "oat bran thickener"],
+      "tip": "Fibre in crust and filling. Cold fat + rest keeps crust flaky. Legumes stretch meat cost and add protein."
+    }
+  }
+}

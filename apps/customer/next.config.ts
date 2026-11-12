@@ -15,8 +15,11 @@ function lanHosts(): string[] {
   return [...hosts];
 }
 
+const onNetlify = Boolean(process.env.NETLIFY);
+
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Standalone is for Docker/self-host; Netlify OpenNext handles the deploy runtime.
+  ...(onNetlify ? {} : { output: "standalone" as const }),
   outputFileTracingRoot: path.join(__dirname, "../.."),
   transpilePackages: ["@dht/ui", "@dht/api-client", "@dht/types"],
   allowedDevOrigins: lanHosts(),
