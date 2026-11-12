@@ -1,5 +1,5 @@
 /* DHT customer PWA service worker */
-const CACHE = "dht-customer-v4";
+const CACHE = "dht-customer-v5";
 const PRECACHE = ["/assets/logo/logo.png", "/assets/icons/icon-192.png", "/assets/icons/icon-512.png"];
 
 function isDevOrLanHost(hostname) {

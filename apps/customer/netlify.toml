@@ -2,7 +2,7 @@
 # Site settings (UI):
 #   Base directory:     (repo root — leave empty)
 #   Package directory:  apps/customer
-#   Branch deploys:     staging → staging subdomain / branch deploy
+#   Branch deploys:     staging → this site / branch deploy
 #
 # Catalogue uses bundled temp data until live API is ready
 # (NEXT_PUBLIC_USE_TEMP_CATALOGUE defaults to true).
@@ -22,11 +22,14 @@
   NEXT_PUBLIC_API_URL = "https://api.staging.invalid/api/v1"
   NEXT_PUBLIC_WS_URL = "https://api.staging.invalid/realtime"
 
+# OpenNext runtime — required so public/ assets (catalogue, banners) are served
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
 [context.production]
   # Prefer using branch deploys from `staging` for QA; wire production later.
 
 [context.branch-deploy]
-  # Applies to staging branch deploys
   command = "npm --prefix ../.. ci && npm --prefix ../.. run build -w @dht/customer"
 
 [context.deploy-preview]
