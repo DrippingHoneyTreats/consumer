@@ -50,7 +50,7 @@
       "id": "cat-chinchin",
       "name": "Chinchin",
       "slug": "chinchin",
-      "image": "/temp/images/chinchin.jpg",
+      "image": "/assets/catalogue/chinchin.jpg",
       "sort": 1,
       "tagline": "Crunchy, low-moisture — our easiest fibre win"
     },
@@ -58,7 +58,7 @@
       "id": "cat-cookies",
       "name": "Cookies",
       "slug": "cookies",
-      "image": "/temp/images/chinchin.jpg",
+      "image": "/assets/catalogue/chinchin.jpg",
       "sort": 2,
       "tagline": "Oat bran, flax & date-sweetened bakes"
     },
@@ -66,7 +66,7 @@
       "id": "cat-cakes",
       "name": "Cakes",
       "slug": "cakes",
-      "image": "/temp/images/cake-wholewheat.jpg",
+      "image": "/assets/catalogue/cake-wholewheat.jpg",
       "sort": 3,
       "tagline": "Whole wheat, plantain & real fruit moistness"
     },
@@ -74,7 +74,7 @@
       "id": "cat-doughnuts",
       "name": "Doughnuts",
       "slug": "doughnuts",
-      "image": "/temp/images/donut.jpg",
+      "image": "/assets/catalogue/donut.jpg",
       "sort": 4,
       "tagline": "Soft crumb, smarter oil uptake"
     },
@@ -82,7 +82,7 @@
       "id": "cat-puff-puff",
       "name": "Puff-puff",
       "slug": "puff-puff",
-      "image": "/temp/images/puff-puff.jpg",
+      "image": "/assets/catalogue/puff-puff.jpg",
       "sort": 5,
       "tagline": "Tigernut & oat batter, golden outside"
     },
@@ -90,7 +90,7 @@
       "id": "cat-meat-pie",
       "name": "Meat pie",
       "slug": "meat-pie",
-      "image": "/temp/images/cake-citrus.jpg",
+      "image": "/assets/catalogue/cake-citrus.jpg",
       "sort": 6,
       "tagline": "Flaky whole-wheat crust, legume-smart filling"
     }
@@ -102,7 +102,7 @@
       "name": "Classic Wheat Chinchin",
       "description": "Crunchy cubes baked with fine wheat bran and sesame. Snack jar staple.",
       "images": [
-        "/temp/images/chinchin.jpg"
+        "/assets/catalogue/chinchin.jpg"
       ],
       "basePrice": 250000,
       "status": "available",
@@ -161,7 +161,7 @@
       "name": "Tigernut Crunch Chinchin",
       "description": "Nutty tigernut flour blend with millet — naturally sweet finish.",
       "images": [
-        "/temp/images/chinchin.jpg"
+        "/assets/catalogue/chinchin.jpg"
       ],
       "basePrice": 280000,
       "status": "available",
@@ -201,7 +201,7 @@
       "name": "Flax & Sesame Chinchin",
       "description": "Ground flax and sesame for omega richness and extra crunch.",
       "images": [
-        "/temp/images/chinchin.jpg"
+        "/assets/catalogue/chinchin.jpg"
       ],
       "basePrice": 270000,
       "status": "few_left",
@@ -240,7 +240,7 @@
       "name": "Oat Bran Soft Cookie",
       "description": "Beta-glucan oat bran with date paste — soft centre, toasted edge.",
       "images": [
-        "/temp/images/chinchin.jpg"
+        "/assets/catalogue/chinchin.jpg"
       ],
       "basePrice": 150000,
       "status": "available",
@@ -293,7 +293,7 @@
       "name": "Cocoa Groundnut Cookie",
       "description": "Cocoa and groundnut flour — deep chocolate with Lagos crunch.",
       "images": [
-        "/temp/images/chinchin.jpg"
+        "/assets/catalogue/chinchin.jpg"
       ],
       "basePrice": 160000,
       "status": "available",
@@ -333,7 +333,7 @@
       "name": "Tigernut Thumbprint",
       "description": "Tigernut shortbread with a zobo-orange jam centre.",
       "images": [
-        "/temp/images/chinchin.jpg"
+        "/assets/catalogue/chinchin.jpg"
       ],
       "basePrice": 180000,
       "status": "pre_order",
@@ -372,9 +372,9 @@
       "name": "Whole Wheat Honey Cake",
       "description": "Soft crumb with honey drip glaze — our signature celebration loaf.",
       "images": [
-        "/temp/images/cake-wholewheat.jpg",
-        "/temp/images/cake-carrot.jpg",
-        "/temp/images/cake-citrus.jpg"
+        "/assets/catalogue/cake-wholewheat.jpg",
+        "/assets/catalogue/cake-carrot.jpg",
+        "/assets/catalogue/cake-citrus.jpg"
       ],
       "basePrice": 1200000,
       "status": "available",
@@ -435,8 +435,8 @@
       "name": "Carrot & Date Cake",
       "description": "Grated carrot, date paste, and warm spice — naturally moist.",
       "images": [
-        "/temp/images/cake-carrot.jpg",
-        "/temp/images/cake-wholewheat.jpg"
+        "/assets/catalogue/cake-carrot.jpg",
+        "/assets/catalogue/cake-wholewheat.jpg"
       ],
       "basePrice": 1350000,
       "status": "available",
@@ -481,8 +481,8 @@
       "name": "Zitrus Wheat Cake",
       "description": "Bright citrus zest over whole wheat crumb — light and fragrant.",
       "images": [
-        "/temp/images/cake-citrus.jpg",
-        "/temp/images/cake-wholewheat.jpg"
+        "/assets/catalogue/cake-citrus.jpg",
+        "/assets/catalogue/cake-wholewheat.jpg"
       ],
       "basePrice": 1300000,
       "status": "available",
@@ -524,7 +524,7 @@
       "name": "Banana Tigernut Loaf",
       "description": "Ripe banana and tigernut flour — snackable everyday loaf.",
       "images": [
-        "/temp/images/cake-wholewheat.jpg"
+        "/assets/catalogue/cake-wholewheat.jpg"
       ],
       "basePrice": 900000,
       "status": "available",
@@ -567,7 +567,7 @@
       "name": "Whole Wheat Ring Donut",
       "description": "Airy ring with psyllium gel crumb — softer oil story.",
       "images": [
-        "/temp/images/donut.jpg"
+        "/assets/catalogue/donut.jpg"
       ],
       "basePrice": 80000,
       "status": "available",
@@ -625,7 +625,7 @@
       "name": "Baked Honey Glaze Donut",
       "description": "Oven-baked healthier line with honey glaze — no fryer.",
       "images": [
-        "/temp/images/donut.jpg"
+        "/assets/catalogue/donut.jpg"
       ],
       "basePrice": 90000,
       "status": "available",
@@ -681,7 +681,7 @@
       "name": "Citrus Fibre Filled Donut",
       "description": "Soft filled ring with citrus fibre gel and light sugar dust.",
       "images": [
-        "/temp/images/donut.jpg"
+        "/assets/catalogue/donut.jpg"
       ],
       "basePrice": 100000,
       "status": "few_left",
@@ -735,7 +735,7 @@
       "name": "Wheat Puff-puff",
       "description": "Golden balls with oat and unripe plantain flour in the batter.",
       "images": [
-        "/temp/images/puff-puff.jpg"
+        "/assets/catalogue/puff-puff.jpg"
       ],
       "basePrice": 200000,
       "status": "available",
@@ -791,7 +791,7 @@
       "name": "Tigernut Puff-puff",
       "description": "Naturally sweet tigernut batter — Sunday-afternoon energy.",
       "images": [
-        "/temp/images/puff-puff.jpg"
+        "/assets/catalogue/puff-puff.jpg"
       ],
       "basePrice": 220000,
       "status": "available",
@@ -845,7 +845,7 @@
       "name": "Lagos Fibre Meat Pie",
       "description": "Flaky whole-wheat crust; filling stretched with cowpeas and carrot.",
       "images": [
-        "/temp/images/cake-citrus.jpg"
+        "/assets/catalogue/cake-citrus.jpg"
       ],
       "basePrice": 120000,
       "status": "available",
@@ -906,7 +906,7 @@
       "name": "Spiced Lentil Pie",
       "description": "Plant-forward filling with lentils, sweet potato, and warm spice.",
       "images": [
-        "/temp/images/cake-citrus.jpg"
+        "/assets/catalogue/cake-citrus.jpg"
       ],
       "basePrice": 110000,
       "status": "available",
@@ -964,7 +964,7 @@
       "name": "Birthday table",
       "slug": "birthday",
       "description": "Cake centrepiece, snack boxes, and soft drinks styling.",
-      "image": "/temp/images/cake-wholewheat.jpg",
+      "image": "/assets/catalogue/cake-wholewheat.jpg",
       "includes": [
         "Signature cake",
         "Chinchin jars",
@@ -989,7 +989,7 @@
       "name": "Wedding dessert bar",
       "slug": "wedding",
       "description": "Multi-tier fibre cakes and guest favour boxes.",
-      "image": "/temp/images/cake-citrus.jpg",
+      "image": "/assets/catalogue/cake-citrus.jpg",
       "includes": [
         "Celebration cake",
         "Favour cookies",

@@ -59,9 +59,15 @@ function copyDirMapped(fromDir, toDir, map) {
 rmSync(dest, { recursive: true, force: true });
 mkdirSync(dest, { recursive: true });
 
-console.log("Syncing tempData → public/temp");
+console.log("Syncing tempData → public/temp (+ assets/catalogue for Netlify)");
 copyDirMapped(join(src, "images"), join(dest, "images"), imageMap);
 copyDirMapped(join(src, "banners"), join(dest, "banners"), bannerMap);
+
+// Staging/Netlify: also mirror product photos under public/assets/catalogue
+const assetsCatalogue = join(root, "apps/customer/public/assets/catalogue");
+mkdirSync(assetsCatalogue, { recursive: true });
+copyDirMapped(join(src, "images"), assetsCatalogue, imageMap);
+console.log("  images → public/assets/catalogue");
 
 if (existsSync(join(src, "catalogue.json"))) {
   cpSync(join(src, "catalogue.json"), join(dest, "catalogue.json"));

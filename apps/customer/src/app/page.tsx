@@ -279,8 +279,8 @@ export default function HomePage() {
 
   const showUser = hydrated && !!user;
   const heroImages = [
-    "/temp/images/cake-wholewheat-nobg.png",
-    "/temp/images/cake-wholewheat2-nobg.png",
+    "/assets/catalogue/cake-wholewheat-nobg.png",
+    "/assets/catalogue/cake-wholewheat2-nobg.png",
   ];
   const isSearch = query.trim().length >= 2;
 

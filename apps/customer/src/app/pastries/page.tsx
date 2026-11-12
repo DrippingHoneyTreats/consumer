@@ -32,8 +32,8 @@ import { easeGentle } from "@/lib/motion";
 import { cn } from "@/lib/cn";
 
 const PASTRY_HERO_CUTOUTS = [
-  "/temp/images/cake-wholewheat-nobg.png",
-  "/temp/images/cake-wholewheat2-nobg.png",
+  "/assets/catalogue/cake-wholewheat-nobg.png",
+  "/assets/catalogue/cake-wholewheat2-nobg.png",
 ];
 
 const ease = easeGentle;

@@ -11,19 +11,19 @@ import { cn } from "@/lib/cn";
 
 const slides = [
   {
-    image: "/temp/images/cake-wholewheat.jpg",
+    image: "/assets/catalogue/cake-wholewheat.jpg",
     title: "Fibre-rich treats,",
     accent: "delivered sharp sharp",
     body: "Cakes, chinchin, puff-puff and more — baked fresh for Lagos.",
   },
   {
-    image: "/temp/images/chinchin.jpg",
+    image: "/assets/catalogue/chinchin.jpg",
     title: "Snack jars & party packs",
     accent: "ready when you are",
     body: "Build your order in minutes. Pay securely. Track to your door.",
   },
   {
-    image: "/temp/images/cake-carrot.jpg",
+    image: "/assets/catalogue/cake-carrot.jpg",
     title: "Celebrate with Dripping Treats",
     accent: "tables that taste good",
     body: "Birthdays, boardrooms, dessert bars — Lagos & Ibadan when booked early.",

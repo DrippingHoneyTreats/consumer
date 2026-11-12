@@ -15,8 +15,8 @@ Deploy the **`staging`** branch so the PM can QA the customer UI with **bundled 
 ## Temp / dummy data
 
 - Catalogue JSON: `apps/customer/src/data/catalogue.json` (imported by the app)
-- Product images: `apps/customer/public/temp/images/`
-- Home banners use lightweight assets under `apps/customer/public/assets/banners/` (large SVG mocks stay local-only)
+- Product images: `apps/customer/public/assets/catalogue/` (Netlify-safe; mirrored from temp sync)
+- Home banners: `apps/customer/public/assets/banners/`
 
 `NEXT_PUBLIC_USE_TEMP_CATALOGUE` defaults to **true**. When the API is ready, set it to `false` in Netlify env and point `NEXT_PUBLIC_API_URL` at staging API.
 
