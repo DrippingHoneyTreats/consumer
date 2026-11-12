@@ -14,9 +14,16 @@ uploads
 dhtcustomers-app/
 dhtcustomers-server/
 
-# Admin local mocks only — customer staging fixtures are tracked
+# Local editable mock source (sync with: npm run temp:sync)
+# apps/tempData/
 # apps/admin/public/temp/
 
-# Huge SVG banners (~169MB) — keep local; product images under temp/images are tracked
-# apps/tempData/banners/
+# Staging/QA: track customer temp images + catalogue (not huge SVG banners)
 # apps/customer/public/temp/banners/
+
+# Keep original Canva SVG exports local only (~169MB); use compressed JPGs instead
+apps/tempData/banners/*.svg
+apps/customer/public/temp/banners/*.svg
+apps/customer/public/assets/banners/*-banner.svg
+apps/customer/public/assets/banners/done.svg
+apps/admin/public/temp/

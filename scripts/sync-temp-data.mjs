@@ -28,11 +28,11 @@ const imageMap = {
 };
 
 const bannerMap = {
-  "Gold Black and White Modern New Year Sale Banner.svg": "new-year.svg",
-  "Orange Modern Catering Services Outdoor Banner.svg": "catering.svg",
-  "Purple and Yellow Dynamic Food Delivery Banner.svg": "delivery.svg",
-  "Red and Pink Modern Special Valentine Cake Sale Promotion Outdoor Banner.svg": "valentine.svg",
-  "done.svg": "done.svg",
+  "Gold Black and White Modern New Year Sale Banner.jpg": "new-year.jpg",
+  "Orange Modern Catering Services Outdoor Banner.jpg": "catering.jpg",
+  "Purple and Yellow Dynamic Food Delivery Banner.jpg": "delivery.jpg",
+  "Red and Pink Modern Special Valentine Cake Sale Promotion Outdoor Banner.jpg": "valentine.jpg",
+  "done.jpg": "done.jpg",
 };
 
 function slugify(name) {
@@ -44,12 +44,13 @@ function slugify(name) {
     .toLowerCase();
 }
 
-function copyDirMapped(fromDir, toDir, map) {
+function copyDirMapped(fromDir, toDir, map, { mappedOnly = false } = {}) {
   if (!existsSync(fromDir)) return;
   mkdirSync(toDir, { recursive: true });
   for (const name of readdirSync(fromDir)) {
     const from = join(fromDir, name);
     if (!statSync(from).isFile()) continue;
+    if (mappedOnly && !map[name]) continue;
     const out = map[name] || slugify(name);
     cpSync(from, join(toDir, out));
     console.log(`  ${name} → ${out}`);
@@ -59,15 +60,20 @@ function copyDirMapped(fromDir, toDir, map) {
 rmSync(dest, { recursive: true, force: true });
 mkdirSync(dest, { recursive: true });
 
-console.log("Syncing tempData → public/temp (+ assets/catalogue for Netlify)");
+console.log("Syncing tempData → public/temp (+ assets for Netlify)");
 copyDirMapped(join(src, "images"), join(dest, "images"), imageMap);
-copyDirMapped(join(src, "banners"), join(dest, "banners"), bannerMap);
+copyDirMapped(join(src, "banners"), join(dest, "banners"), bannerMap, { mappedOnly: true });
 
-// Staging/Netlify: also mirror product photos under public/assets/catalogue
+// Staging/Netlify: also mirror product photos + compressed banners under public/assets
 const assetsCatalogue = join(root, "apps/customer/public/assets/catalogue");
 mkdirSync(assetsCatalogue, { recursive: true });
 copyDirMapped(join(src, "images"), assetsCatalogue, imageMap);
 console.log("  images → public/assets/catalogue");
+
+const assetsBanners = join(root, "apps/customer/public/assets/banners");
+mkdirSync(assetsBanners, { recursive: true });
+copyDirMapped(join(src, "banners"), assetsBanners, bannerMap, { mappedOnly: true });
+console.log("  banners → public/assets/banners");
 
 if (existsSync(join(src, "catalogue.json"))) {
   cpSync(join(src, "catalogue.json"), join(dest, "catalogue.json"));
