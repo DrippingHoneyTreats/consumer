@@ -15,8 +15,8 @@ dhtcustomers-app/
 dhtcustomers-server/
 
 # Admin local mocks only — customer staging fixtures are tracked
-apps/admin/public/temp/
+# apps/admin/public/temp/
 
 # Huge SVG banners (~169MB) — keep local; product images under temp/images are tracked
-apps/tempData/banners/
-apps/customer/public/temp/banners/
+# apps/tempData/banners/
+# apps/customer/public/temp/banners/
