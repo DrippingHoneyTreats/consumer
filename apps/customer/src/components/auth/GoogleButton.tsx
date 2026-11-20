@@ -48,7 +48,7 @@ export function GoogleButton({
   returnTo?: string;
   label?: string;
   className?: string;
-  /** Adds an "or" divider underneath, for placing above another sign-in method. */
+  /** Adds an "or" divider above, for placing under the main sign-in option. */
   withDivider?: boolean;
 }) {
   const [enabled, setEnabled] = useState(false);
@@ -68,6 +68,13 @@ export function GoogleButton({
 
   return (
     <div className={className}>
+      {withDivider ? (
+        <div className="my-5 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-deep/35">
+          <span className="h-px flex-1 bg-deep/10" />
+          or
+          <span className="h-px flex-1 bg-deep/10" />
+        </div>
+      ) : null}
       <a
         href={href}
         onClick={() => setGoing(true)}
@@ -80,13 +87,6 @@ export function GoogleButton({
         <GoogleIcon />
         <span>{going ? "Opening Google…" : label}</span>
       </a>
-      {withDivider ? (
-        <div className="my-5 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-deep/35">
-          <span className="h-px flex-1 bg-deep/10" />
-          or
-          <span className="h-px flex-1 bg-deep/10" />
-        </div>
-      ) : null}
     </div>
   );
 }

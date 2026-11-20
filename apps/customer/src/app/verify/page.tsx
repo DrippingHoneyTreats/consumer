@@ -351,7 +351,6 @@ function VerifyForm() {
             exit={{ opacity: 0, y: -12 }}
             className="space-y-5"
           >
-            <GoogleButton returnTo={returnTo} withDivider />
             <Input
               label="Your name"
               name="fullName"
@@ -371,6 +370,7 @@ function VerifyForm() {
             >
               Continue
             </Button>
+            <GoogleButton returnTo={returnTo} withDivider className="!mt-0" />
           </motion.div>
         ) : null}
 
