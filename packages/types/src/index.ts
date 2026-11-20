@@ -73,6 +73,10 @@ export type Order = {
   notes?: string | null;
   scheduledFor?: string | null;
   addressSnapshot?: Record<string, unknown> | null;
+  /** Pickup at the kitchen, or delivery (fee paid to the rider on arrival). */
+  fulfillment?: "delivery" | "pickup";
+  /** Customer ticked "I'll pay the delivery fee on arrival". */
+  deliveryFeeAgreed?: boolean;
   distanceKm?: number | null;
   items: OrderItem[];
   createdAt: string;

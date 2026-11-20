@@ -4,9 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { ChevronRight, RotateCcw } from "lucide-react";
-import { formatNgn, statusLabel } from "@/lib/format";
+import { formatNgn } from "@/lib/format";
 import { ITEM_PLACEHOLDER } from "@/lib/placeholders";
-import { formatOrderDate, isTerminalStatus, orderProductsSummary } from "@/lib/order-status";
+import { formatOrderDate, isTerminalStatus, orderProductsSummary, orderStatusLabel } from "@/lib/order-status";
 import type { Order } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
@@ -45,7 +45,7 @@ export function RecentOrderCard({ order, index = 0, onReorder, className }: Prop
             <p className="mt-0.5 text-xs text-deep/45">{formatOrderDate(order.createdAt)}</p>
           </div>
           <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold", statusTone(order.status))}>
-            {statusLabel(order.status)}
+            {orderStatusLabel(order)}
           </span>
         </div>
 

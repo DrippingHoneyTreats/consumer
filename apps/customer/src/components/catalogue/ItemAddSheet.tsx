@@ -1,18 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, ShoppingBag } from "lucide-react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { QtyStepper } from "@/components/ui/QtyStepper";
+import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { formatNgn } from "@/lib/format";
 import { ITEM_PLACEHOLDER } from "@/lib/placeholders";
 import type { CatalogueItem } from "@/lib/catalogue-types";
 import type { Item } from "@/lib/types";
 import { cn } from "@/lib/cn";
+import { springs } from "@/lib/motion";
+import { ProductGallery } from "./ProductGallery";
 
 type Props = {
   item: Item | CatalogueItem | null;
@@ -42,7 +44,6 @@ function variantSectionLabel(categoryId: string): string {
 export function ItemAddSheet({ item, open, onClose, onConfirm }: Props) {
   const [variantId, setVariantId] = useState<string | undefined>();
   const [qty, setQty] = useState(1);
-  const [imgIdx, setImgIdx] = useState(0);
   const [openPanel, setOpenPanel] = useState<"ingredients" | "nutrition" | null>("ingredients");
 
   const price = useMemo(() => {
@@ -57,53 +58,41 @@ export function ItemAddSheet({ item, open, onClose, onConfirm }: Props) {
 
   const rich = isCatalogue(item) ? item : null;
   const images = item.images?.length ? item.images : [ITEM_PLACEHOLDER];
-  const image = images[Math.min(imgIdx, images.length - 1)];
   const hasVariants = (item.variants?.length ?? 0) > 0;
   const soldOut = item.status === "sold_out";
 
   return (
     <BottomSheet open={open} onClose={onClose} title={item.name}>
-      <div className="mb-4 flex gap-3">
-        <motion.div
-          initial={{ scale: 0.94, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 260, damping: 24, delay: 0.05 }}
-          className="relative aspect-square w-[72%] overflow-hidden rounded-[24px] bg-cream"
-        >
-          <Image src={image} alt="" fill className="object-cover" sizes="360px" unoptimized />
-          <span className="absolute left-3 top-3">
-            <Badge status={item.status} className="bg-white/90" />
-          </span>
-          {rich?.badge ? (
-            <span className="absolute bottom-3 left-3 rounded-full bg-honey px-2.5 py-1 text-[10px] font-bold uppercase text-deep">
-              {rich.badge}
-            </span>
-          ) : null}
-        </motion.div>
-        {images.length > 1 ? (
-          <div className="flex w-[26%] flex-col gap-2">
-            {images.slice(0, 3).map((src, i) => (
-              <button
-                key={src + i}
-                type="button"
-                onClick={() => setImgIdx(i)}
-                className={cn(
-                  "relative aspect-square overflow-hidden rounded-2xl ring-2 transition",
-                  imgIdx === i ? "ring-deep" : "ring-transparent opacity-80",
-                )}
-              >
-                <Image src={src} alt="" fill className="object-cover" sizes="96px" unoptimized />
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
+      <motion.div
+        initial={{ scale: 0.96, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={springs.smooth}
+        className="mb-4"
+      >
+        <ProductGallery
+          key={item.id}
+          images={images}
+          alt={item.name}
+          overlay={
+            <>
+              <span className="pointer-events-none absolute left-3 top-3">
+                <Badge status={item.status} className="bg-white/90" />
+              </span>
+              {rich?.badge ? (
+                <span className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-honey px-2.5 py-1 text-[10px] font-bold uppercase text-deep">
+                  {rich.badge}
+                </span>
+              ) : null}
+            </>
+          }
+        />
+      </motion.div>
 
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           {item.description ? <p className="text-sm leading-relaxed text-deep/65">{item.description}</p> : null}
         </div>
-        <p className="shrink-0 font-display text-xl font-semibold text-deep">{formatNgn(price)}</p>
+        <AnimatedNumber value={price} className="shrink-0 font-display text-xl font-semibold text-deep" />
       </div>
 
       {hasVariants ? (
@@ -116,12 +105,22 @@ export function ItemAddSheet({ item, open, onClose, onConfirm }: Props) {
                 key={v.id}
                 type="button"
                 onClick={() => setVariantId(v.id)}
+                aria-pressed={variantId === v.id}
                 className={cn(
-                  "rounded-full border px-4 py-2.5 text-sm font-medium transition",
-                  variantId === v.id ? "border-deep bg-deep text-white" : "border-deep/15 bg-white text-deep/80",
+                  "relative rounded-full border px-4 py-2.5 text-sm font-medium transition-colors",
+                  variantId === v.id ? "border-deep text-white" : "border-deep/15 bg-white text-deep/80",
                 )}
               >
-                {v.name} · {formatNgn(v.price)}
+                {variantId === v.id ? (
+                  <motion.span
+                    layoutId={`variant-pill-${item.id}`}
+                    className="absolute inset-0 rounded-full bg-deep"
+                    transition={springs.snappy}
+                  />
+                ) : null}
+                <span className="relative">
+                  {v.name} · {formatNgn(v.price)}
+                </span>
               </motion.button>
             ))}
           </div>
@@ -204,7 +203,6 @@ export function ItemAddSheet({ item, open, onClose, onConfirm }: Props) {
           onClose();
           setQty(1);
           setVariantId(undefined);
-          setImgIdx(0);
         }}
       >
         {soldOut ? "Sold out" : `Order now · ${formatNgn(price * qty)}`}

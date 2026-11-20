@@ -32,8 +32,10 @@ export const ADMIN_NAV: AdminNavItem[] = [
 
 export const LIVE_ORDER_STATUSES = [
   "placed",
+  "seen",
   "accepted",
   "preparing",
+  "ready_for_delivery",
   "out_for_delivery",
   "delivered",
 ] as const;

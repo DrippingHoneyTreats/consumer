@@ -1,6 +1,23 @@
 import type { NextConfig } from "next";
 import os from "os";
 import path from "path";
+import fs from "fs";
+import { parseEnv } from "util";
+
+/**
+ * Also read the monorepo-root .env (one file for both apps). Only fills
+ * variables that aren't set yet, so app-level .env files and Netlify's
+ * dashboard values always win. (@next/env can't be used here: Next has
+ * already called it and it returns a cached result.)
+ */
+function loadRootEnv() {
+  const file = path.join(__dirname, "../../.env");
+  if (!fs.existsSync(file) || typeof parseEnv !== "function") return;
+  for (const [key, value] of Object.entries(parseEnv(fs.readFileSync(file, "utf8")))) {
+    if (process.env[key] === undefined || process.env[key] === "") process.env[key] = value;
+  }
+}
+loadRootEnv();
 
 /** Current machine LAN IPs so phone testing via http://192.168… works with HMR. */
 function lanHosts(): string[] {

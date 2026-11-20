@@ -1,12 +1,12 @@
 /**
- * Fallback art from `public/assets` when the API sends no image.
- * Catalogue / promo content always comes from the API.
+ * Plain grey fill used wherever an image is missing (no photo uploaded yet,
+ * database or network down). All real images come from the API / Cloudinary.
  */
-
-export const ITEM_PLACEHOLDER = "/assets/placeholders/item-placeholder.svg";
-export const EVENT_PLACEHOLDER = "/assets/placeholders/event-placeholder.svg";
-export const AVATAR_PLACEHOLDER = "/assets/placeholders/avatar-placeholder.svg";
-export const HERO_SPLASH = "/assets/placeholders/hero-splash.svg";
+export const IMAGE_PLACEHOLDER =
+  "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 3'%3E%3Crect width='4' height='3' fill='%23e5e1db'/%3E%3C/svg%3E";
+export const ITEM_PLACEHOLDER = IMAGE_PLACEHOLDER;
+export const EVENT_PLACEHOLDER = IMAGE_PLACEHOLDER;
+export const AVATAR_PLACEHOLDER = IMAGE_PLACEHOLDER;
 /** Single DHT brand logo — use everywhere (customer + admin). */
 export const LOGO = "/assets/logo/logo.png";
 export const LOGO_ICON = LOGO;

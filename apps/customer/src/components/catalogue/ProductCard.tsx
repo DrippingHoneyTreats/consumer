@@ -1,5 +1,6 @@
 "use client";
 
+import type { Ref } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Plus, Star } from "lucide-react";
@@ -10,6 +11,8 @@ import { easeGentle, springSnappy } from "@/lib/motion";
 import { cn } from "@/lib/cn";
 
 type Props = {
+  /** Forwarded so <AnimatePresence mode="popLayout"> can measure exiting cards. */
+  ref?: Ref<HTMLElement>;
   item: CatalogueItem;
   index?: number;
   layout?: "rail" | "grid";
@@ -17,13 +20,16 @@ type Props = {
   onOpen?: () => void;
 };
 
-export function ProductCard({ item, index = 0, layout = "grid", onAdd, onOpen }: Props) {
+export function ProductCard({ ref, item, index = 0, layout = "grid", onAdd, onOpen }: Props) {
   const soldOut = item.status === "sold_out";
   const image = item.images?.[0] || ITEM_PLACEHOLDER;
   const rail = layout === "rail";
 
   return (
     <motion.article
+      ref={ref}
+      layout="position"
+      exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.18 } }}
       initial={{ opacity: 0, y: 44, scale: 0.96 }}
       whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, amount: 0.18 }}

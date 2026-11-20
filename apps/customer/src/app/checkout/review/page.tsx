@@ -2,11 +2,12 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { apiClient } from "@/lib/api";
+import { ApiRequestError, apiClient } from "@/lib/api";
 import { unwrapData } from "@/lib/data";
 import { formatNgn } from "@/lib/format";
 import type { Order } from "@/lib/types";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { deliveryLineLabel } from "@/lib/order-status";
 import { Input, textareaClass } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { toast } from "@/components/ui/Toast";
@@ -87,8 +88,8 @@ function ReviewForm() {
       } else {
         toast("Payment could not start.");
       }
-    } catch {
-      toast("Payment could not start.");
+    } catch (err) {
+      toast(err instanceof ApiRequestError ? err.message : "Payment could not start.");
     } finally {
       setLoading(false);
     }
@@ -112,6 +113,7 @@ function ReviewForm() {
   }
 
   const address = (order.addressSnapshot as { formattedAddress?: string } | null)?.formattedAddress;
+  const pickup = order.fulfillment === "pickup";
 
   return (
     <div className="page-pad-no-tab min-h-dvh pb-40">
@@ -127,7 +129,7 @@ function ReviewForm() {
             <MapPin size={18} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[11px] text-deep/55">Delivering to</span>
+            <span className="block text-[11px] text-deep/55">{pickup ? "Pickup" : "Delivering to"}</span>
             <span className="block truncate text-sm font-semibold text-deep">{address}</span>
           </span>
           <span className="text-xs font-semibold text-tea">Change</span>
@@ -155,7 +157,7 @@ function ReviewForm() {
       </ul>
 
       <label className="mb-4 block">
-        <span className="mb-1.5 block pl-1 text-sm font-semibold text-deep">Note for rider or baker</span>
+        <span className="mb-1.5 block pl-1 text-sm font-semibold text-deep">{pickup ? "Note for the baker" : "Note for rider or baker"}</span>
         <textarea
           value={orderNote}
           onChange={(e) => setOrderNote(e.target.value)}
@@ -185,7 +187,7 @@ function ReviewForm() {
         </div>
         <div className="flex justify-between">
           <span>Delivery</span>
-          <span>{formatNgn(order.deliveryFee)}</span>
+          <span>{deliveryLineLabel(order)}</span>
         </div>
         {order.discount > 0 ? (
           <div className="flex justify-between text-tea">
@@ -194,9 +196,12 @@ function ReviewForm() {
           </div>
         ) : null}
         <div className="flex items-baseline justify-between border-t border-dashed border-deep/10 pt-2 font-semibold text-deep">
-          <span>Total</span>
+          <span>Total to pay now</span>
           <span className="font-display text-xl">{formatNgn(order.total)}</span>
         </div>
+        {!pickup ? (
+          <p className="pt-1 text-xs text-deep/50">+ delivery fee, paid to the rider when your order arrives.</p>
+        ) : null}
       </div>
 
       <StickyActions>

@@ -6,6 +6,7 @@ import type { Item, Order } from "@/lib/types";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
 import { toast } from "@/components/ui/Toast";
+import { flyToCart } from "@/components/motion/CartFly";
 
 function lineName(item: Item, variantId?: string): string {
   if (!variantId || !item.variants?.length) return item.name;
@@ -41,6 +42,7 @@ export function useCartActions() {
     }
 
     if (!user) {
+      flyToCart(item.images?.[0]);
       await toast.progress(
         async () => {
           // Brief beat so the progress toast can read as loading → done
@@ -75,6 +77,7 @@ export function useCartActions() {
           });
           const order = unwrapData(res) ?? (res as Order);
           setDraft(order);
+          flyToCart(item.images?.[0]);
         },
         {
           loading: "Adding to your order…",

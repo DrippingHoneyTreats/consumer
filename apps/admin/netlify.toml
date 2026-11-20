@@ -1,0 +1,20 @@
+# DHT admin dashboard — Netlify (separate site from the customer app)
+# Site settings (UI):
+#   Base directory:     (leave empty — repo root)
+#   Package directory:  apps/admin
+#
+# Set in Site settings → Environment variables:
+#   TEMP_API_ORIGIN = https://<your-customer-site>   (no trailing slash)
+# The admin proxies /api/v1/* to that site so the login cookie is first-party.
+
+[build]
+  command = "npm ci && npm run build -w @dht/admin"
+  publish = "apps/admin/.next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NEXT_TELEMETRY_DISABLED = "1"
+  NEXT_PUBLIC_API_URL = "/api/v1"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

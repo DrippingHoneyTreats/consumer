@@ -1,27 +1,29 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { TRACKING_STEPS, trackingStepIndex } from "@/lib/order-status";
+import { trackingStepIndex, trackingSteps } from "@/lib/order-status";
+import type { Order } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
 export function OrderProgress({
   status,
+  fulfillment,
   compact,
   className,
 }: {
   status: string;
+  fulfillment?: Order["fulfillment"];
   compact?: boolean;
   className?: string;
 }) {
-  const current = trackingStepIndex(status);
-  const steps = compact
-    ? TRACKING_STEPS.filter((_, i) => i === 0 || i === 2 || i === 3 || i === 4)
-    : TRACKING_STEPS;
+  const all = trackingSteps(fulfillment);
+  const current = trackingStepIndex(status, fulfillment);
+  const steps = compact ? all.filter((_, i) => i === 0 || i === 2 || i === 3 || i === 4) : all;
 
   return (
     <ol className={cn("flex w-full items-start", className)} aria-label="Order progress">
       {steps.map((step, i) => {
-        const fullIdx = TRACKING_STEPS.findIndex((s) => s.key === step.key);
+        const fullIdx = all.findIndex((s) => s.key === step.key);
         const done = current > fullIdx;
         const active = current === fullIdx;
         const upcoming = current < fullIdx;

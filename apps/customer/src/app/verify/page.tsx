@@ -15,18 +15,19 @@ import {
   Sparkles,
   UserRound,
 } from "lucide-react";
-import { apiClient } from "@/lib/api";
+import { ApiRequestError, apiClient } from "@/lib/api";
 import type { User } from "@/lib/types";
 import { useAuthStore } from "@/store/auth-store";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { OtpInput } from "@/components/auth/OtpInput";
+import { GoogleButton } from "@/components/auth/GoogleButton";
 import { toast } from "@/components/ui/Toast";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { PageSkeleton } from "@/components/ui/ColumnLoader";
 import { cn } from "@/lib/cn";
 
-type Channel = "sms" | "email";
+type Channel = "whatsapp" | "email";
 type Step = "name" | "method" | "contact" | "otp";
 
 const stepsOrder: Step[] = ["name", "method", "contact", "otp"];
@@ -38,7 +39,7 @@ const stepNav: {
   icon: typeof UserRound;
 }[] = [
   { key: "name", title: "Your details", blurb: "Tell us what to call you", icon: UserRound },
-  { key: "method", title: "How we reach you", blurb: "Phone or email for your code", icon: Phone },
+  { key: "method", title: "How we reach you", blurb: "WhatsApp or email for your code", icon: Phone },
   { key: "contact", title: "Your contact", blurb: "Where should we send it?", icon: Mail },
   { key: "otp", title: "Verify code", blurb: "Enter the 6-digit treat code", icon: MessageSquareText },
 ];
@@ -50,7 +51,7 @@ const stepCopy: Record<Step, { title: string; subtitle: (ctx: { firstName: strin
   },
   method: {
     title: "How do we reach you?",
-    subtitle: ({ firstName }) => `Nice to meet you, ${firstName}. Pick WhatsApp/phone or email.`,
+    subtitle: ({ firstName }) => `Nice to meet you, ${firstName}. Pick WhatsApp or email.`,
   },
   contact: {
     title: "Almost there",
@@ -242,14 +243,19 @@ function VerifyForm() {
   const [useEmail, setUseEmail] = useState(false);
   const [phone, setPhone] = useState("+234");
   const [email, setEmail] = useState("");
-  const [otpChannel, setOtpChannel] = useState<Channel>("sms");
-  const [code, setCode] = useState("");
+    const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendIn, setResendIn] = useState(0);
 
   const contact = useEmail ? email.trim() : phone.trim();
   const firstName = fullName.trim().split(/\s+/)[0] || "friend";
   const copy = stepCopy[step];
+
+  useEffect(() => {
+    const err = params.get("error");
+    if (err === "google") toast("Google sign-in didn't complete. Please try again.");
+    if (err === "google_unavailable") toast("Google sign-in isn't available yet — use WhatsApp or email.");
+  }, [params]);
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -263,19 +269,20 @@ function VerifyForm() {
       try {
         await apiClient.post("/auth/otp/send", {
           contact,
-          channel: channel ?? (useEmail ? "email" : otpChannel),
+          channel: channel ?? (useEmail ? "email" : "whatsapp"),
           purpose: "register",
+          fullName: fullName.trim() || undefined,
         });
         setStep("otp");
         setResendIn(60);
-        toast("Code sent — check your messages.");
-      } catch {
-        toast("Could not send code. Try again.");
+        toast(useEmail ? "Code sent — check your inbox." : "Code sent — check WhatsApp.");
+      } catch (err) {
+        toast(err instanceof ApiRequestError ? err.message : "Could not send code. Try again.");
       } finally {
         setLoading(false);
       }
     },
-    [contact, otpChannel, useEmail],
+    [contact, fullName, useEmail],
   );
 
   async function registerAndSend() {
@@ -288,12 +295,12 @@ function VerifyForm() {
       await apiClient.post("/auth/register", {
         fullName: fullName.trim(),
         contact,
-        channel: useEmail ? "email" : "sms",
+        channel: useEmail ? "email" : "whatsapp",
         consent: true,
       });
-      await sendOtp(useEmail ? "email" : "sms");
+      await sendOtp(useEmail ? "email" : "whatsapp");
     } catch {
-      await sendOtp(useEmail ? "email" : "sms");
+      await sendOtp(useEmail ? "email" : "whatsapp");
     } finally {
       setLoading(false);
     }
@@ -303,12 +310,16 @@ function VerifyForm() {
     if (code.length < 6) return;
     setLoading(true);
     try {
-      const user = await apiClient.post<User>("/auth/otp/verify", { contact, code });
+      const user = await apiClient.post<User>("/auth/otp/verify", {
+        contact,
+        code,
+        fullName: fullName.trim() || undefined,
+      });
       setUser(user);
-      toast(`Welcome, ${user.fullName.split(/\s+/)[0]}!`);
+      toast(`Welcome, ${(user.fullName || firstName).split(/\s+/)[0]}!`);
       router.replace(returnTo);
-    } catch {
-      toast("Invalid code. Please try again.");
+    } catch (err) {
+      toast(err instanceof ApiRequestError ? err.message : "Invalid code. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -340,6 +351,7 @@ function VerifyForm() {
             exit={{ opacity: 0, y: -12 }}
             className="space-y-5"
           >
+            <GoogleButton returnTo={returnTo} withDivider />
             <Input
               label="Your name"
               name="fullName"
@@ -373,8 +385,8 @@ function VerifyForm() {
             {[
               {
                 id: "phone" as const,
-                label: "WhatsApp / Phone",
-                hint: "Fastest — most Lagos customers pick this",
+                label: "WhatsApp",
+                hint: "Fastest — we'll send your code on WhatsApp",
                 icon: Phone,
               },
               {
@@ -446,7 +458,7 @@ function VerifyForm() {
               />
             ) : (
               <Input
-                label="Phone number"
+                label="WhatsApp number"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -456,7 +468,11 @@ function VerifyForm() {
                 leftAddon={<Phone size={18} className="text-tea" />}
               />
             )}
-            <p className="text-xs text-deep/45">By continuing you agree to our Terms and Privacy Policy.</p>
+            <p className="text-xs text-deep/45">
+          By continuing you agree to our{" "}
+          <Link href="/terms" className="font-semibold underline underline-offset-2">Terms</Link> and{" "}
+          <Link href="/privacy" className="font-semibold underline underline-offset-2">Privacy Policy</Link>.
+        </p>
             <Button
               fullWidth
               variant="dark"
@@ -507,11 +523,12 @@ function VerifyForm() {
                   disabled={loading}
                   className="font-semibold text-tea disabled:opacity-40"
                   onClick={() => {
-                    setOtpChannel("sms");
-                    void sendOtp("sms");
+                    setUseEmail(true);
+                    setCode("");
+                    setStep("contact");
                   }}
                 >
-                  Send via SMS
+                  Use email instead
                 </button>
               ) : null}
               <button type="button" className="font-semibold text-deep/45" onClick={() => setStep("contact")}>

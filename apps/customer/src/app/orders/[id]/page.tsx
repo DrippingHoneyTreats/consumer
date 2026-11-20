@@ -3,14 +3,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { CreditCard, Lock, MapPin, MessageCircle, Plus } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { unwrapData } from "@/lib/data";
-import { formatNgn, statusLabel, whatsappLink } from "@/lib/format";
-import { formatOrderDate, isDraftStatus, isOngoingStatus } from "@/lib/order-status";
-import { ITEM_PLACEHOLDER } from "@/lib/placeholders";
+import { formatNgn, whatsappLink } from "@/lib/format";
+import { formatOrderDate, isDraftStatus, isOngoingStatus, deliveryLineLabel, orderStatusLabel } from "@/lib/order-status";
 import type { Order } from "@/lib/types";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StickyActions } from "@/components/layout/StickyActions";
@@ -19,10 +17,10 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
 import { PageSkeleton } from "@/components/ui/ColumnLoader";
 import { textareaClass } from "@/components/ui/Input";
+import { CartLineRow } from "@/components/orders/CartLineRow";
 import { OrderProgress } from "@/components/orders/OrderProgress";
 import { useCartActions } from "@/hooks/useCartActions";
 import { useCartStore } from "@/store/cart-store";
-import { cn } from "@/lib/cn";
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -103,7 +101,7 @@ export default function OrderDetailPage() {
   return (
     <div className="page-pad pb-[calc(var(--tab-h)+var(--safe-bottom)+150px)]">
       <PageHeader
-        eyebrow={isDraft ? "Not paid yet" : statusLabel(order.status)}
+        eyebrow={isDraft ? "Not paid yet" : orderStatusLabel(order)}
         title={isDraft ? "Current order" : `Order #${order.orderNo}`}
         subtitle={isDraft ? "Adjust items, add a note, then pay." : `Placed ${created}`}
         backHref="/orders"
@@ -132,7 +130,7 @@ export default function OrderDetailPage() {
               </div>
               <div className="text-right">
                 <span className="inline-block rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-deep ring-1 ring-deep/5">
-                  {statusLabel(order.status)}
+                  {orderStatusLabel(order)}
                 </span>
                 <p className="mt-2 font-display text-2xl font-semibold text-deep">{formatNgn(order.total)}</p>
               </div>
@@ -140,7 +138,7 @@ export default function OrderDetailPage() {
 
             {!isDraft ? (
               <div className="border-b border-deep/5 px-4 py-4 md:px-6">
-                <OrderProgress status={order.status} compact />
+                <OrderProgress status={order.status} fulfillment={order.fulfillment} compact />
                 {canTrack ? (
                   <Link
                     href={`/orders/${order.id}/track`}
@@ -154,33 +152,23 @@ export default function OrderDetailPage() {
 
             <ul>
               <AnimatePresence initial={false}>
-                {order.items.map((line, i) => (
-                  <motion.li
+                {order.items.map((line) => (
+                  <CartLineRow
                     key={line.id}
-                    layout
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className={cn("flex items-center gap-3 px-4 py-3.5 md:px-6", i > 0 && "border-t border-deep/5")}
+                    image={line.item?.images?.[0]}
+                    name={line.nameSnapshot}
+                    unitPrice={line.unitPrice}
+                    qty={line.qty}
+                    note={line.note}
+                    onRemove={
+                      isDraft
+                        ? () => {
+                            setOrder((o) => (o ? { ...o, items: o.items.filter((i) => i.id !== line.id) } : o));
+                            void setQty(order.id, line.id, 0).then(load);
+                          }
+                        : undefined
+                    }
                   >
-                    <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[16px] bg-cream">
-                      <Image
-                        src={line.item?.images?.[0] || ITEM_PLACEHOLDER}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        sizes="56px"
-                        unoptimized
-                      />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-deep">{line.nameSnapshot}</p>
-                      <p className="text-xs text-deep/50">
-                        {formatNgn(line.unitPrice)} each ·{" "}
-                        <span className="font-semibold text-deep">{formatNgn(line.unitPrice * line.qty)}</span>
-                      </p>
-                      {line.note ? <p className="mt-0.5 truncate text-[11px] italic text-tea">“{line.note}”</p> : null}
-                    </div>
                     {isDraft ? (
                       <QtyStepper
                         size="sm"
@@ -192,7 +180,7 @@ export default function OrderDetailPage() {
                     ) : (
                       <span className="rounded-full bg-off-white px-3 py-1 text-sm font-semibold">×{line.qty}</span>
                     )}
-                  </motion.li>
+                  </CartLineRow>
                 ))}
               </AnimatePresence>
             </ul>
@@ -233,11 +221,7 @@ export default function OrderDetailPage() {
               </div>
               <div className="flex justify-between text-deep/70">
                 <span>Delivery</span>
-                <span>
-                  {order.deliveryFee > 0 || order.addressSnapshot
-                    ? formatNgn(order.deliveryFee)
-                    : "Calculated at checkout"}
-                </span>
+                <span>{deliveryLineLabel(order)}</span>
               </div>
               {order.discount > 0 ? (
                 <div className="flex justify-between text-tea">

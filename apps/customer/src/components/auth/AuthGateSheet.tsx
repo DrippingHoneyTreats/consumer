@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
+import { GoogleButton } from "./GoogleButton";
 import { LOGO } from "@/lib/placeholders";
 
 type Props = {
@@ -39,6 +40,7 @@ export function AuthGateSheet({
         <p className="text-sm leading-relaxed text-white/80">{message}</p>
       </div>
       <div className="flex flex-col gap-2">
+        <GoogleButton returnTo={returnTo ?? "/"} />
         <Link href={verifyHref} onClick={onClose}>
           <Button fullWidth variant="dark">
             Get started

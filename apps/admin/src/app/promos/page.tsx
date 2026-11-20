@@ -10,6 +10,7 @@ import { Input, textareaClass } from "@/components/ui/Input";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
 import { ColumnLoader } from "@/components/ui/ColumnLoader";
 import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
+import { ImageField } from "@/components/admin/ImageField";
 import { AdminTable } from "@/components/admin/AdminTable";
 import { toast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
@@ -49,7 +50,7 @@ export default function AdminPromosPage() {
 
   const save = async () => {
     if (!form.title.trim() || !form.image.trim()) {
-      toast("Title and image URL are required");
+      toast("Title and image are required");
       return;
     }
     const body = {
@@ -102,11 +103,11 @@ export default function AdminPromosPage() {
             value={form.subtitle}
             onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
           />
-          <Input
-            label="Image URL"
-            placeholder="https://… or /assets/…"
+          <ImageField
+            label="Image"
+            folder="banners"
             value={form.image}
-            onChange={(e) => setForm({ ...form, image: e.target.value })}
+            onChange={(url) => setForm({ ...form, image: url })}
           />
           <Input
             label="Priority"

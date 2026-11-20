@@ -82,10 +82,15 @@ export function StatusActionBar({ order, onUpdated }: Props) {
         ) : null}
         {order.status === "preparing" ? (
           <Button loading={loading} onClick={() => void patchStatus("ready_for_delivery")}>
-            Ready
+            {order.fulfillment === "pickup" ? "Ready for pickup" : "Ready"}
           </Button>
         ) : null}
-        {order.status === "ready_for_delivery" ? (
+        {order.status === "ready_for_delivery" && order.fulfillment === "pickup" ? (
+          <Button loading={loading} onClick={() => void patchStatus("delivered", "Picked up by customer")}>
+            Picked up
+          </Button>
+        ) : null}
+        {order.status === "ready_for_delivery" && order.fulfillment !== "pickup" ? (
           <Button loading={loading} onClick={() => setDeliveryOpen(true)}>
             Out for delivery
           </Button>

@@ -1,5 +1,5 @@
 /* DHT customer PWA service worker */
-const CACHE = "dht-customer-v5";
+const CACHE = "dht-customer-v6";
 const PRECACHE = ["/assets/logo/logo.png", "/assets/icons/icon-192.png", "/assets/icons/icon-512.png"];
 
 function isDevOrLanHost(hostname) {
@@ -73,7 +73,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (url.pathname.startsWith("/assets/") || url.pathname.startsWith("/temp/")) {
+  if (url.pathname.startsWith("/assets/")) {
     event.respondWith(
       caches.match(request).then(
         (hit) =>

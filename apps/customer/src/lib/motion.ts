@@ -73,3 +73,46 @@ export const kenBurns = {
   animate: { scale: 1.18 },
   transition: { duration: 8, ease: "linear" as const },
 };
+
+// ───────────────────────── Interaction tokens ─────────────────────────
+// `visualDuration` = how long the spring *looks* (it may settle slightly later);
+// `bounce` 0 = no overshoot. Easier to tune than stiffness/damping.
+
+export const springs = {
+  /** Buttons, toggles, chips. */
+  snappy: { type: "spring" as const, visualDuration: 0.22, bounce: 0.25 },
+  /** Cards, sheets, layout shifts. */
+  smooth: { type: "spring" as const, visualDuration: 0.38, bounce: 0.12 },
+  /** Playful pops (cart badge, add-to-cart). */
+  pop: { type: "spring" as const, visualDuration: 0.3, bounce: 0.5 },
+};
+
+/** List rows that slide in and collapse out (cart lines, notifications). */
+export const listItem = {
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0, transition: springs.smooth },
+  exit: {
+    opacity: 0,
+    x: -48,
+    height: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    marginTop: 0,
+    marginBottom: 0,
+    transition: { duration: 0.26, ease: easeOut },
+  },
+};
+
+/** Grid cards that pop in/out when a grid re-filters (search, category). */
+export const gridItem = {
+  initial: { opacity: 0, scale: 0.94, y: 16 },
+  animate: { opacity: 1, scale: 1, y: 0 },
+  exit: { opacity: 0, scale: 0.9, transition: { duration: 0.18 } },
+};
+
+/** Slide variants for swipeable carousels; pass `custom={direction}` (1 next, -1 prev). */
+export const slideX = {
+  enter: (dir: number) => ({ x: dir > 0 ? "60%" : "-60%", opacity: 0, scale: 0.96 }),
+  center: { x: 0, opacity: 1, scale: 1 },
+  exit: (dir: number) => ({ x: dir > 0 ? "-60%" : "60%", opacity: 0, scale: 0.96 }),
+};

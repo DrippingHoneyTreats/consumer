@@ -5,10 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, GripHorizontal, ShoppingBag, X } from "lucide-react";
-import { formatNgn } from "@/lib/format";
 import { easeGentle, springSnappy } from "@/lib/motion";
 import { useCartStore } from "@/store/cart-store";
 import { cn } from "@/lib/cn";
+import { useCartBump } from "@/components/motion/CartFly";
+import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 
 const hiddenPrefixes = ["/checkout", "/payment", "/welcome", "/verify", "/orders/"];
 
@@ -19,6 +20,7 @@ export function CartBanner() {
   const count = useCartStore((s) => s.itemCount());
   const [closed, setClosed] = useState(false);
   const constraintsRef = useRef<HTMLDivElement>(null);
+  const bumpRef = useCartBump<HTMLSpanElement>();
 
   const routeHidden =
     count <= 0 ||
@@ -92,23 +94,27 @@ export function CartBanner() {
 
               <Link href={href} className="pressable block px-3 pb-3 pt-1">
                 <div className="flex items-center gap-3">
-                  <motion.span
-                    key={count}
-                    initial={{ scale: 0.7 }}
-                    animate={{ scale: 1 }}
-                    transition={springSnappy}
+                  <span
+                    ref={bumpRef}
+                    data-cart-target=""
                     className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blush text-deep"
                   >
                     <ShoppingBag size={18} />
-                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold text-deep">
+                    <motion.span
+                      key={count}
+                      initial={{ scale: 0.4 }}
+                      animate={{ scale: 1 }}
+                      transition={springSnappy}
+                      className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold text-deep"
+                    >
                       {count}
-                    </span>
-                  </motion.span>
+                    </motion.span>
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[11px] text-white/65">
                       {count} item{count === 1 ? "" : "s"}
                     </span>
-                    <span className="block font-semibold tracking-tight">{formatNgn(total)}</span>
+                    <AnimatedNumber value={total} className="block font-semibold tracking-tight" />
                   </span>
                 </div>
                 <span className="mt-2.5 flex items-center justify-center gap-1 rounded-full bg-white/10 py-2 text-xs font-semibold text-blush ring-1 ring-white/10">

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
   Heart,
@@ -30,11 +30,6 @@ import { HeroImageCycle } from "@/components/motion/HeroImageCycle";
 import { useCartActions } from "@/hooks/useCartActions";
 import { easeGentle } from "@/lib/motion";
 import { cn } from "@/lib/cn";
-
-const PASTRY_HERO_CUTOUTS = [
-  "/assets/catalogue/cake-wholewheat-nobg.png",
-  "/assets/catalogue/cake-wholewheat2-nobg.png",
-];
 
 const ease = easeGentle;
 
@@ -196,7 +191,7 @@ export default function PastriesPage() {
                 transition={{ type: "spring", stiffness: 140, damping: 18, delay: 0.06 }}
                 className="relative z-10 mx-auto h-[230px] w-full max-w-[400px] sm:h-[250px] md:mx-0 md:h-[270px] md:max-w-none lg:h-[290px]"
               >
-                <HeroImageCycle images={PASTRY_HERO_CUTOUTS} variant="pastries" className="h-full w-full" />
+                <HeroImageCycle images={categories.map((c) => c.image ?? "")} variant="pastries" className="h-full w-full" />
               </motion.div>
             </div>
 
@@ -242,16 +237,18 @@ export default function PastriesPage() {
             />
           ) : (
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
-              {searchHits.map((item, i) => (
-                <ProductCard
-                  key={item.id}
-                  item={item}
-                  index={i}
-                  layout="grid"
-                  onOpen={() => openItem(item)}
-                  onAdd={() => openItem(item)}
-                />
-              ))}
+              <AnimatePresence mode="popLayout">
+                {searchHits.map((item, i) => (
+                  <ProductCard
+                    key={item.id}
+                    item={item}
+                    index={i}
+                    layout="grid"
+                    onOpen={() => openItem(item)}
+                    onAdd={() => openItem(item)}
+                  />
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </div>

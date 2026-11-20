@@ -11,6 +11,9 @@ packages/
   ui/  types/  api-client/
 ```
 
+> **Launch mode:** the customer app ships with a temporary backend at `/api/v1`
+> (Supabase + Resend + WhatsApp + Flutterwave). Setup: [docs/temp-backend.md](docs/temp-backend.md).
+
 ## MVP product scope
 
 | Who | Can do |

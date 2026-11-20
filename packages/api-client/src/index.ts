@@ -3,7 +3,22 @@
  * Cookies carry auth; credentials are always included.
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+/**
+ * Absolute (https://api.example.com/api/v1) or same-origin relative
+ * (/api/v1 — the temporary Next.js + Supabase backend).
+ */
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
+
+function apiBase(): string {
+  if (/^https?:\/\//.test(API_URL)) return API_URL;
+  const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+  return `${origin}${API_URL}`;
+}
+
+/** Full URL for browser navigations (e.g. Google sign-in redirect). */
+export function apiUrl(path: string): string {
+  return `${apiBase()}${path}`;
+}
 
 export type ApiError = {
   code: string;
@@ -30,7 +45,7 @@ type RequestOptions = Omit<RequestInit, "body"> & {
 };
 
 function buildUrl(path: string, query?: RequestOptions["query"]): string {
-  const url = new URL(path.startsWith("http") ? path : `${API_URL}${path}`);
+  const url = new URL(path.startsWith("http") ? path : `${apiBase()}${path}`);
   if (query) {
     Object.entries(query).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== "") {
@@ -72,6 +87,18 @@ export const apiClient = {
   get: <T>(path: string, query?: RequestOptions["query"]) =>
     api<T>(path, { method: "GET", query }),
   post: <T>(path: string, body?: unknown) => api<T>(path, { method: "POST", body }),
+  /** multipart/form-data upload (browser sets the boundary header). */
+  upload: async <T>(path: string, form: FormData): Promise<T> => {
+    const res = await fetch(buildUrl(path), {
+      method: "POST",
+      body: form,
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    const data = await res.json().catch(() => ({ code: "INVALID_JSON", message: res.statusText }));
+    if (!res.ok) throw new ApiRequestError(res.status, data as ApiError);
+    return data as T;
+  },
   patch: <T>(path: string, body?: unknown) => api<T>(path, { method: "PATCH", body }),
   delete: <T>(path: string) => api<T>(path, { method: "DELETE" }),
 };
