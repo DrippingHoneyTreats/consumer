@@ -15,10 +15,15 @@
   publish = "apps/customer/.next"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
   NEXT_TELEMETRY_DISABLED = "1"
   NEXT_PUBLIC_APP_NAME = "Dripping Honey Treats"
   NEXT_PUBLIC_API_URL = "/api/v1"
+  # Netlify's secret scanner fails the build when an env var's VALUE appears in
+  # the code. These are public settings (URLs, names, provider names) that are
+  # meant to appear in the code or the browser, so don't scan for them.
+  # Real secrets (Supabase key, session secret, API keys) are still scanned.
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_API_URL,NEXT_PUBLIC_APP_NAME,NEXT_PUBLIC_WHATSAPP,NEXT_PUBLIC_USE_TEMP_CATALOGUE,APP_URL,ADMIN_APP_URL,TEMP_API_ORIGIN,PAYMENT_PROVIDER,PAYMENT_FALLBACK_EMAIL_DOMAIN,EMAIL_FROM,EMAIL_REPLY_TO,EMAIL_LOGO_URL,ADMIN_EMAILS,ADMIN_NOTIFY_EMAILS,ADMIN_NOTIFY_WHATSAPP,CLOUDINARY_CLOUD_NAME,CLOUDINARY_FOLDER,SUPABASE_URL,WHATSAPP_API_VERSION,WHATSAPP_TEMPLATE_LANG,WHATSAPP_TEMPLATE_OTP,WHATSAPP_TEMPLATE_UPDATE,WHATSAPP_TEMPLATE_ADMIN,SMTP_HOST,SMTP_PORT,SMTP_USER,GOOGLE_CLIENT_ID"
 
 # OpenNext runtime — required so public/ assets and /api routes are served
 [[plugins]]
