@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { BUSINESS, LegalPage, List, Section } from "@/components/layout/LegalPage";
 
 export const metadata: Metadata = {
@@ -8,6 +9,12 @@ export const metadata: Metadata = {
 
 const UPDATED = "20 November 2026";
 
+const mail = (
+  <a className="font-semibold text-tea" href={`mailto:${BUSINESS.email}`}>
+    {BUSINESS.email}
+  </a>
+);
+
 export default function PrivacyPage() {
   return (
     <LegalPage
@@ -16,175 +23,217 @@ export default function PrivacyPage() {
       intro={
         <>
           <p>
-            {BUSINESS.name} (&ldquo;we&rdquo;, &ldquo;us&rdquo;) bakes and delivers pastries in Lagos and caters events. This
-            policy explains what personal information we collect when you use our website and app at {BUSINESS.site}, why
-            we collect it, who we share it with, and the choices and rights you have.
+            Your privacy matters to us. This policy explains how {BUSINESS.name} (&ldquo;we&rdquo;, &ldquo;us&rdquo;,
+            &ldquo;our&rdquo;) collects, uses, shares and protects personal information when you order from us, book an
+            event, or use our website and app at {BUSINESS.site}.
           </p>
           <p>
-            We process personal data in line with the <strong>Nigeria Data Protection Act 2023</strong>. If you have any
-            question, email us at{" "}
-            <a className="font-semibold text-tea" href={`mailto:${BUSINESS.email}`}>
-              {BUSINESS.email}
-            </a>
-            .
+            We handle personal information in line with the <strong>Nigeria Data Protection Act 2023</strong> and the
+            regulations of the Nigeria Data Protection Commission (NDPC).
           </p>
         </>
       }
     >
-      <Section n={1} title="Information we collect">
+      <Section n={1} title="What is personal information and why do we collect it?">
         <p>
-          <strong>Information you give us:</strong>
+          Personal information is any information that identifies you or could reasonably be used to identify you. The
+          personal information we collect includes:
         </p>
         <List
           items={[
-            "Your name, email address and/or phone (WhatsApp) number when you sign up or sign in.",
-            "Delivery addresses, landmarks and delivery notes you enter at checkout.",
-            "Your orders: items, quantities, prices, notes for the baker or rider, and whether you chose pickup or delivery.",
-            "Event requests: event type, date, venue, number of guests, budget and any notes.",
-            "Messages you send us by email or WhatsApp.",
+            "your name, email address and phone (WhatsApp) number;",
+            "delivery addresses, landmarks and delivery instructions;",
+            "your order history, including items, quantities, prices, notes for the baker or rider, and whether you chose pickup or delivery;",
+            "event and catering requests, including the date, venue, number of guests and budget;",
+            "payment records (a payment reference, the amount and its status, never your full card details); and",
+            "messages you send us by email, WhatsApp or phone.",
           ]}
         />
         <p>
-          <strong>If you sign in with Google:</strong> we receive your name, email address and profile picture from your
-          Google account. We do not receive your Google password and we do not access your contacts, files or anything
-          else in your Google account.
+          We collect this information directly from you when you create an account, place an order, request an event,
+          or contact us. If you choose <strong>Continue with Google</strong>, Google shares your name, email address and
+          profile picture with us. We use them only to create and sign in to your account. We do not receive your Google
+          password or access anything else in your Google account, and we do not use Google data for advertising.
         </p>
-        <p>
-          <strong>Payments:</strong> card, bank transfer and USSD payments are handled by our payment provider,
-          Flutterwave. We never see or store your full card number or PIN. We keep a payment reference, the amount and
-          whether the payment succeeded.
-        </p>
-        <p>
-          <strong>Collected automatically:</strong> a single sign-in cookie that keeps you logged in, the items in your
-          cart (stored in your browser), and basic technical logs (such as IP address and browser type) kept by our
-          hosting provider for security and troubleshooting. We do not use advertising or tracking cookies.
-        </p>
-      </Section>
-
-      <Section n={2} title="How we use your information">
+        <p>We collect and use personal information to:</p>
         <List
           items={[
-            "To create and secure your account, including sending one-time sign-in codes by email or WhatsApp.",
-            "To take, prepare and deliver your orders, and to let you collect pickup orders.",
-            "To send order updates: confirmation, preparation, dispatch (with rider details), delivery and receipts.",
-            "To respond to event requests and send quotes.",
-            "To provide customer support and handle refunds.",
-            "To prevent fraud and keep our service secure.",
-            "To tell you about new products, only if you haven't opted out (see section 6).",
+            "create and secure your account, including sending one-time sign-in codes;",
+            "take, bake, and deliver your orders, or have them ready for pickup;",
+            "send order updates by email and WhatsApp, such as confirmations, dispatch and rider details, and receipts;",
+            "respond to event requests and send quotes;",
+            "provide customer support and process refunds;",
+            "prevent fraud and keep our service secure; and",
+            "tell you about new treats on our menu, unless you opt out (see section 7).",
           ]}
         />
         <p>
-          Our legal bases are: performing our contract with you (your orders and account), our legitimate interests
-          (security, improving our service, telling existing customers about similar products), your consent (where we
-          ask for it), and complying with the law (for example, keeping transaction records).
+          We rely on the following lawful bases: performing our contract with you (your orders and account), our
+          legitimate interests (running and securing our business), your consent where we ask for it, and compliance
+          with the law (for example, keeping tax records).
         </p>
       </Section>
 
-      <Section n={3} title="Who we share it with">
-        <p>We do not sell your personal information. We share it only with service providers that help us run the business, and only what each needs:</p>
+      <Section n={2} title="Sensitive information">
+        <p>
+          Some information is more sensitive, such as information about your health. The only sensitive information we
+          may hold is <strong>allergy or dietary information</strong> that you choose to include in an order note or
+          event request (for example, &ldquo;nut allergy&rdquo;).
+        </p>
+        <p>We use it only:</p>
         <List
           items={[
-            <>
-              <strong>Supabase</strong>: secure database where your account, orders and addresses are stored.
-            </>,
-            <>
-              <strong>Flutterwave</strong>: processes payments (receives your name, email, phone and order amount).
-            </>,
-            <>
-              <strong>Google</strong>: only if you choose &ldquo;Continue with Google&rdquo;.
-            </>,
-            <>
-              <strong>Resend</strong>: delivers our emails (sign-in codes, order updates).
-            </>,
-            <>
-              <strong>Meta (WhatsApp Business)</strong>: delivers WhatsApp sign-in codes and order updates.
-            </>,
-            <>
-              <strong>Cloudinary</strong>: hosts product photos (no customer data).
-            </>,
-            <>
-              <strong>Netlify</strong>: hosts the website.
-            </>,
-            <>
-              <strong>Delivery riders</strong>: receive your name, phone number and delivery address to deliver your order.
-            </>,
+            "to prepare your order or event safely, which is the reason you gave it to us;",
+            "with your consent, which you give by including it; or",
+            "where the law requires or allows it.",
           ]}
         />
         <p>
-          Some of these providers store data outside Nigeria. Where that happens we rely on their security commitments and
-          contractual safeguards, as permitted by the Nigeria Data Protection Act. We may also disclose information if the
-          law requires it or to protect our customers, staff or business.
-        </p>
-      </Section>
-
-      <Section n={4} title="How long we keep it">
-        <List
-          items={[
-            "Your account information: for as long as your account is open.",
-            "Orders and payment records: up to 6 years, for tax and accounting purposes.",
-            "One-time sign-in codes: they expire after 10 minutes and are never stored in readable form.",
-            "Event requests: up to 2 years after the event.",
-          ]}
-        />
-        <p>When you delete your account we delete or anonymise your personal information, except records we must keep by law.</p>
-      </Section>
-
-      <Section n={5} title="How we protect it">
-        <p>
-          Data is sent over encrypted connections (HTTPS). Our database can only be reached by our own servers, access is
-          limited to authorised staff who sign in with one-time codes, and passwords are never used or stored. No system
-          is perfectly secure, but if a breach affecting you ever happens we will notify you and the Nigeria Data
-          Protection Commission as required by law.
-        </p>
-      </Section>
-
-      <Section n={6} title="Marketing messages">
-        <p>
-          We may occasionally email you when something new is on the menu. Every such email has an{" "}
-          <strong>unsubscribe</strong> link, and you can also ask us to stop by emailing {BUSINESS.email}. Opting out does
-          not affect messages about your own orders or account.
-        </p>
-      </Section>
-
-      <Section n={7} title="Your rights">
-        <p>Under the Nigeria Data Protection Act 2023 you can ask us to:</p>
-        <List
-          items={[
-            "give you a copy of the personal information we hold about you;",
-            "correct information that is wrong or incomplete;",
-            "delete your information or your account;",
-            "stop or restrict certain processing, or object to it;",
-            "send your information to you or another provider in a common format;",
-            "withdraw consent at any time, where we rely on consent.",
-          ]}
-        />
-        <p>
-          Email {BUSINESS.email} from the address on your account and we will respond within 30 days. You can also
-          complain to the <strong>Nigeria Data Protection Commission (NDPC)</strong> at ndpc.gov.ng.
-        </p>
-      </Section>
-
-      <Section n={8} title="Children">
-        <p>
-          Our service is meant for adults. We do not knowingly collect information from children under 13. If you believe
-          a child has given us their information, contact us and we will delete it.
-        </p>
-      </Section>
-
-      <Section n={9} title="Changes to this policy">
-        <p>
-          We may update this policy as our service changes. We&apos;ll change the &ldquo;last updated&rdquo; date above,
-          and for significant changes we&apos;ll let you know by email or in the app.
-        </p>
-      </Section>
-
-      <Section n={10} title="Contact us">
-        <p>
-          {BUSINESS.name}, {BUSINESS.address}. Email:{" "}
-          <a className="font-semibold text-tea" href={`mailto:${BUSINESS.email}`}>
-            {BUSINESS.email}
-          </a>
+          Please don&apos;t send us any other sensitive information. Our kitchen handles common allergens, so we can&apos;t
+          guarantee any product is allergen-free. See our{" "}
+          <Link href="/terms" className="font-semibold text-tea">
+            Terms of Service
+          </Link>
           .
+        </p>
+      </Section>
+
+      <Section n={3} title="Third parties">
+        <p>
+          Where practical, we collect personal information directly from you. When we receive it from someone else, we
+          take reasonable steps to make sure you know about it. This can happen when a friend places an order for
+          delivery to you, or when you sign in with Google.
+        </p>
+        <p>
+          We use trusted service providers to run our business. Each receives only the information it needs and must keep
+          it secure:
+        </p>
+        <List
+          items={[
+            <>
+              <strong>Supabase</strong>: secure storage for accounts, orders and addresses;
+            </>,
+            <>
+              <strong>Flutterwave</strong>: payment processing (receives your name, email, phone and order amount);
+            </>,
+            <>
+              <strong>Google</strong>: only if you sign in with Google;
+            </>,
+            <>
+              <strong>Resend</strong>: sends our emails;
+            </>,
+            <>
+              <strong>Meta (WhatsApp Business)</strong>: sends WhatsApp codes and order updates;
+            </>,
+            <>
+              <strong>Cloudinary</strong> and <strong>Netlify</strong>: host our product photos and website;
+            </>,
+            <>
+              <strong>delivery riders</strong>: receive your name, phone number and address to deliver your order.
+            </>,
+          ]}
+        />
+        <p>
+          Some of these providers store data outside Nigeria. Where that happens, we rely on their security commitments
+          and contractual safeguards, as the Nigeria Data Protection Act allows.
+        </p>
+      </Section>
+
+      <Section n={4} title="Disclosure of personal information">
+        <p>
+          <strong>We never sell or rent your personal information.</strong> Apart from the service providers above, we
+          only disclose it:
+        </p>
+        <List
+          items={[
+            "with your consent;",
+            "where the law requires or allows it, for example to comply with a court order or a regulator; or",
+            "to protect our customers, staff or business from fraud or harm.",
+          ]}
+        />
+      </Section>
+
+      <Section n={5} title="Security of personal information">
+        <p>
+          We take reasonable steps to protect your personal information from misuse, loss, and unauthorised access,
+          change or disclosure. These steps include:
+        </p>
+        <List
+          items={[
+            "encrypted (HTTPS) connections;",
+            "a database that only our own servers can reach;",
+            "staff access protected by one-time sign-in codes; and",
+            "never storing passwords or card details.",
+          ]}
+        />
+        <p>
+          If a data breach is likely to affect you, we will tell you and the NDPC as the law requires.
+        </p>
+        <p>
+          When we no longer need personal information, we delete or anonymise it. We keep your account details while your
+          account is open, order and payment records for up to 6 years for tax and accounting, and event requests for up
+          to 2 years. Sign-in codes expire after 10 minutes and are never stored in readable form.
+        </p>
+      </Section>
+
+      <Section n={6} title="Cookies">
+        <p>
+          We use a single, essential cookie to keep you signed in, and your browser remembers your cart. We do not use
+          advertising or tracking cookies. Our hosting provider keeps basic technical logs, such as IP address and browser
+          type, for security.
+        </p>
+      </Section>
+
+      <Section n={7} title="Marketing">
+        <p>
+          We may occasionally email you when something new comes out of our oven. Every one of these emails has a
+          one-click <strong>unsubscribe</strong> link, or you can email {mail} to stop them. Unsubscribing won&apos;t
+          affect messages about your own orders or account.
+        </p>
+      </Section>
+
+      <Section n={8} title="Access to your personal information">
+        <p>
+          You may ask for a copy of the personal information we hold about you, and ask us to correct it, delete it or
+          your account, restrict or object to how we use it, or send it to you in a common format. You can withdraw
+          consent at any time.
+        </p>
+        <p>
+          Email {mail} from the address on your account. We may need to confirm your identity first, and we will respond
+          within 30 days. There is no charge for a request.
+        </p>
+      </Section>
+
+      <Section n={9} title="Maintaining the quality of your personal information">
+        <p>
+          We want the information we hold to be accurate, complete and up to date. You can update your name and contact
+          details in the app under <strong>Account</strong>. If anything else is wrong, please let us know and we&apos;ll
+          fix it promptly.
+        </p>
+      </Section>
+
+      <Section n={10} title="Children">
+        <p>
+          Our service is for adults. We do not knowingly collect information from children under 13. If you think a child
+          has given us their information, contact us and we will delete it.
+        </p>
+      </Section>
+
+      <Section n={11} title="Policy updates">
+        <p>
+          We may update this policy from time to time. The current version is always on this page with its &ldquo;last
+          updated&rdquo; date. If we make significant changes, we&apos;ll let you know by email or in the app.
+        </p>
+      </Section>
+
+      <Section n={12} title="Privacy complaints and enquiries">
+        <p>
+          If you have a question or complaint about this policy or how we handle your information, email {mail} or write
+          to us at {BUSINESS.address}. We aim to respond within 7 days and to resolve complaints within 30 days.
+        </p>
+        <p>
+          If you&apos;re not satisfied with our response, you can complain to the{" "}
+          <strong>Nigeria Data Protection Commission</strong> at ndpc.gov.ng.
         </p>
       </Section>
     </LegalPage>
