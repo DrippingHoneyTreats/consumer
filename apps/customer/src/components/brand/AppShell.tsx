@@ -2,21 +2,20 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { CurtainIntro } from "@/components/brand/CurtainIntro";
+import { GlassReveal } from "@/components/brand/GlassReveal";
 
 const SPLASH_KEY = "dht-app-splash-seen";
-/** Short beat with the curtains closed (lets the first screen render behind them). */
-const CLOSED_MS = 450;
-/** Safety net: never keep the app covered longer than this. */
+/** How long the frosted glass rests over the page before gliding apart. */
+const CLOSED_MS = 700;
+/** Safety net: never keep the page covered longer than this. */
 const MAX_MS = 4000;
 
 type Phase = "closed" | "opening" | "done";
 
 /**
- * Wraps the whole app shell. Starts with theatre curtains closed (same on
- * SSR + first client paint, so home never flashes), then opens them to
- * reveal the app with a gentle "walking into the room" zoom. Once per tab
- * session; reduced-motion users get a quick fade instead.
+ * Wraps the whole app shell. Starts with two frosted-glass panes over the
+ * page (same on SSR + first paint), which then glide apart left and right
+ * to reveal it. Once per tab session; reduced-motion users get a quick fade.
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [phase, setPhase] = useState<Phase>("closed");
@@ -42,7 +41,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       setPhase("done");
       return;
     }
-    const open = window.setTimeout(() => setPhase(reduce ? "done" : "opening"), reduce ? 150 : CLOSED_MS);
+    const open = window.setTimeout(() => (reduce ? finish() : setPhase("opening")), reduce ? 150 : CLOSED_MS);
     const safety = window.setTimeout(finish, MAX_MS);
     return () => {
       window.clearTimeout(open);
@@ -57,18 +56,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <AnimatePresence>
         {covered ? (
           <motion.div
-            key="curtain"
+            key="glass"
             role="dialog"
             aria-modal="true"
             aria-label="Welcome to Dripping Honey Treats"
             initial={false}
             exit={{ opacity: 0 }}
-            transition={{ duration: reduce ? 0.3 : 0.15 }}
+            transition={{ duration: reduce ? 0.3 : 0.2 }}
             className="fixed inset-0 z-[100]"
-            // Solid until the drapes start moving, so nothing peeks through on first paint.
-            style={{ background: phase === "closed" ? "#2c4532" : "transparent" }}
           >
-            <CurtainIntro opening={phase === "opening"} onDone={finish} />
+            <GlassReveal opening={phase === "opening"} onDone={finish} />
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -76,11 +73,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <motion.div
         className="app-shell"
         aria-hidden={covered || undefined}
-        // Hidden while closed; visible behind the drapes as they open.
-        style={phase === "closed" ? { visibility: "hidden" } : undefined}
         initial={false}
-        animate={phase === "opening" ? { scale: [1.06, 1], opacity: [0.75, 1] } : { scale: 1, opacity: 1 }}
-        transition={{ duration: 1.6, ease: [0.22, 1, 0.36, 1] }}
+        // The page settles gently into focus as the glass parts.
+        animate={phase === "opening" ? { scale: [1.02, 1] } : { scale: 1 }}
+        transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
       >
         {children}
       </motion.div>
