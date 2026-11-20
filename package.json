@@ -15,7 +15,9 @@
     "typecheck": "turbo run typecheck",
     "db:migrate": "npm run db:migrate -w @dht/api",
     "db:seed": "npm run db:seed -w @dht/api",
-    "temp:sync": "node scripts/sync-temp-data.mjs"
+    "images:to-cloudinary": "node scripts/images-to-cloudinary.mjs",
+    "email:preview": "node --no-warnings scripts/emails.mjs preview",
+    "email:test": "node --no-warnings scripts/emails.mjs test"
   },
   "devDependencies": {
     "turbo": "^2.5.0"

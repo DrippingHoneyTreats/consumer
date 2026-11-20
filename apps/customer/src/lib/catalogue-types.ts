@@ -29,13 +29,4 @@ export type CatalogueCategory = Category & {
   tagline?: string;
 };
 
-export type TempCatalogue = {
-  settings?: HomePayload["settings"];
-  banners: Banner[];
-  categories: CatalogueCategory[];
-  items: CatalogueItem[];
-  eventTypes: EventType[];
-  popularIds: string[];
-};
-
 export type { Banner, Category, EventType, HomePayload, Item, ItemVariant };

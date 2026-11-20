@@ -203,7 +203,7 @@ export default function EventsPage() {
             className="relative min-h-[200px] overflow-hidden rounded-[28px] shadow-[var(--shadow-card)] md:min-h-[240px]"
           >
             <Image
-              src="/assets/catalogue/cake-carrot.jpg"
+              src={types.find((t) => t.image)?.image || EVENT_PLACEHOLDER}
               alt=""
               fill
               className="object-cover"

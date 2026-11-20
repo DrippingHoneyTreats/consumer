@@ -1,10 +1,11 @@
 # Static assets
 
-| Folder | Files | Used for |
-|--------|-------|----------|
-| `logo/` | `logo.png` only | Brand mark across customer + admin (same file in both apps) |
-| `icons/` | PWA sizes (optional) | Manifest install icons — prefer regenerating from `logo.png` later |
-| `placeholders/` | item/event/avatar/hero | Empty image fallbacks |
-| `banners/` | promo / events art | Home & events visuals |
+Only brand files live in the app. **All product, category, promo and event
+photos come from the database (Cloudinary links).** Where a photo is missing
+or can't load, the UI shows a plain grey block (`IMAGE_PLACEHOLDER` in
+`src/lib/placeholders.ts`).
 
-**Logo rule:** one file — `/assets/logo/logo.png`. Do not add `logo-icon` / `logo-stacked` variants.
+| Folder | Used for |
+|--------|----------|
+| `logo/logo.png` | Brand mark across customer + admin (one file only) |
+| `icons/` | Favicons + PWA install icons |

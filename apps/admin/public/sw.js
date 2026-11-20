@@ -1,5 +1,5 @@
 /* DHT admin PWA service worker — installable shell + basic offline fallback */
-const CACHE = "dht-admin-v1";
+const CACHE = "dht-admin-v2";
 const PRECACHE = ["/", "/assets/logo/logo.png", "/assets/icons/icon-192.png", "/assets/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {

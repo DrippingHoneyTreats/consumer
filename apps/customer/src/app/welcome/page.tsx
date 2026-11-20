@@ -1,29 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/Button";
+import { GoogleButton } from "@/components/auth/GoogleButton";
 import { cn } from "@/lib/cn";
+import { getHomeCatalogue } from "@/lib/catalogue";
 
 const slides = [
   {
-    image: "/assets/catalogue/cake-wholewheat.jpg",
     title: "Fibre-rich treats,",
     accent: "delivered sharp sharp",
     body: "Cakes, chinchin, puff-puff and more — baked fresh for Lagos.",
   },
   {
-    image: "/assets/catalogue/chinchin.jpg",
     title: "Snack jars & party packs",
     accent: "ready when you are",
     body: "Build your order in minutes. Pay securely. Track to your door.",
   },
   {
-    image: "/assets/catalogue/cake-carrot.jpg",
     title: "Celebrate with Dripping Treats",
     accent: "tables that taste good",
     body: "Birthdays, boardrooms, dessert bars — Lagos & Ibadan when booked early.",
@@ -33,6 +32,14 @@ const slides = [
 export default function WelcomePage() {
   const [index, setIndex] = useState(0);
   const slide = slides[index];
+  // Real product photos from the menu; grey until (or if) they load.
+  const [photos, setPhotos] = useState<string[]>([]);
+  useEffect(() => {
+    void getHomeCatalogue()
+      .then((home) => setPhotos(home.popular.flatMap((p) => p.images?.slice(0, 1) ?? [])))
+      .catch(() => setPhotos([]));
+  }, []);
+  const photo = photos.length ? photos[index % photos.length] : null;
 
   return (
     <div className="flex min-h-dvh flex-col px-5 pb-[calc(24px+var(--safe-bottom))] pt-[calc(16px+var(--safe-top))]">
@@ -46,14 +53,18 @@ export default function WelcomePage() {
       <div className="relative flex-1 overflow-hidden rounded-[32px] bg-deep shadow-[var(--shadow-card)]">
         <AnimatePresence mode="wait">
           <motion.div
-            key={slide.image}
+            key={index}
             initial={{ opacity: 0.4, scale: 1.04 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.45 }}
             className="absolute inset-0"
           >
-            <Image src={slide.image} alt="" fill className="object-cover" sizes="100vw" unoptimized priority />
+            {photo ? (
+              <Image src={photo} alt="" fill className="object-cover" sizes="100vw" unoptimized priority />
+            ) : (
+              <div className="absolute inset-0 bg-[#e5e1db]" />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-deep via-deep/40 to-deep/10" />
           </motion.div>
         </AnimatePresence>
@@ -90,6 +101,7 @@ export default function WelcomePage() {
       </div>
 
       <div className="pt-6 space-y-2.5">
+        <GoogleButton returnTo="/" />
         <Link href="/verify?returnTo=/" className="block">
           <Button fullWidth variant="dark" rightIcon={<ArrowRight size={18} />}>
             Get started
@@ -100,7 +112,11 @@ export default function WelcomePage() {
             Continue as guest
           </Button>
         </Link>
-        <p className="pt-1 text-center text-[11px] text-deep/45">By continuing you agree to our Terms and Privacy Policy.</p>
+        <p className="pt-1 text-center text-[11px] text-deep/45">
+          By continuing you agree to our{" "}
+          <Link href="/terms" className="font-semibold underline underline-offset-2">Terms</Link> and{" "}
+          <Link href="/privacy" className="font-semibold underline underline-offset-2">Privacy Policy</Link>.
+        </p>
       </div>
     </div>
   );

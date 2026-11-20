@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { CalendarDays, Home, ShoppingBag, UserRound, UtensilsCrossed } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useCartStore } from "@/store/cart-store";
+import { useCartBump } from "@/components/motion/CartFly";
 
 const tabs = [
   { href: "/orders", label: "Orders", icon: ShoppingBag },
@@ -20,6 +21,7 @@ const hiddenPrefixes = ["/welcome", "/verify", "/checkout", "/payment"];
 export function TabBar() {
   const pathname = usePathname();
   const count = useCartStore((s) => s.itemCount());
+  const bumpRef = useCartBump<HTMLSpanElement>();
 
   if (hiddenPrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
     return null;
@@ -76,7 +78,12 @@ export function TabBar() {
                     transition={{ type: "spring", stiffness: 420, damping: 32 }}
                   />
                 ) : null}
-                <motion.span whileTap={{ scale: 0.85 }} className="relative">
+                <motion.span
+                  whileTap={{ scale: 0.85 }}
+                  className="relative"
+                  ref={tab.href === "/orders" ? bumpRef : undefined}
+                  data-cart-target={tab.href === "/orders" ? "" : undefined}
+                >
                   <Icon size={20} strokeWidth={active ? 2.4 : 1.8} className={active ? "text-white" : "text-tea"} />
                   <AnimatePresence>
                     {tab.href === "/orders" && count > 0 ? (

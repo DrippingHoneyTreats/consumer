@@ -8,8 +8,8 @@ import { motion } from "framer-motion";
 import { FileText, MapPin, MessageCircle, Phone, Truck } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { unwrapData } from "@/lib/data";
-import { formatNgn, statusLabel, whatsappLink } from "@/lib/format";
-import { formatOrderDate, isDraftStatus, isOngoingStatus, orderPlaceLabel } from "@/lib/order-status";
+import { formatNgn, whatsappLink } from "@/lib/format";
+import { formatOrderDate, isDraftStatus, isOngoingStatus, orderPlaceLabel, orderStatusLabel } from "@/lib/order-status";
 import { ITEM_PLACEHOLDER } from "@/lib/placeholders";
 import type { Order } from "@/lib/types";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -41,6 +41,17 @@ export default function OrderTrackPage() {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Live-ish tracking: refresh every 20s while the order is in progress and the tab is visible.
+  const ongoing = order ? isOngoingStatus(order.status) : false;
+  useEffect(() => {
+    if (!ongoing) return;
+    const t = window.setInterval(() => {
+      if (document.visibilityState === "visible") void load();
+    }, 20_000);
+    return () => window.clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ongoing, id]);
 
   if (loading) {
     return (
@@ -106,12 +117,12 @@ export default function OrderTrackPage() {
             <p className="mt-1 text-xs text-deep/50">Placed {formatOrderDate(order.createdAt)}</p>
           </div>
           <span className="rounded-full bg-honey-soft px-3 py-1.5 text-[11px] font-bold text-deep">
-            {statusLabel(order.status)}
+            {orderStatusLabel(order)}
           </span>
         </div>
 
         <div className="mt-5 rounded-2xl bg-off-white px-2 py-4">
-          <OrderProgress status={order.status} />
+          <OrderProgress status={order.status} fulfillment={order.fulfillment} />
         </div>
       </motion.section>
 
@@ -135,7 +146,7 @@ export default function OrderTrackPage() {
               className="rounded-[28px] bg-white p-4 shadow-[var(--shadow-card)] ring-1 ring-deep/5 md:p-5"
             >
               <h2 className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-deep/45">
-                <Truck size={13} className="text-tea" /> Delivery
+                <Truck size={13} className="text-tea" /> {order.fulfillment === "pickup" ? "Pickup" : "Delivery"}
               </h2>
               <p className="flex items-start gap-2 text-sm text-deep">
                 <MapPin size={14} className="mt-0.5 shrink-0 text-tea" />

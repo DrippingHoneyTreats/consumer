@@ -7,8 +7,10 @@ import { PwaRegister } from "@/components/pwa/PwaRegister";
 import { AppShell } from "@/components/brand/AppShell";
 import { TabBar } from "@/components/nav/TabBar";
 import { CartBanner } from "@/components/nav/CartBanner";
+import { CartFlyLayer } from "@/components/motion/CartFly";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
+import { useHideBrokenImages } from "@/hooks/useHideBrokenImages";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const refreshMe = useAuthStore((s) => s.refreshMe);
@@ -16,6 +18,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   const hydrated = useAuthStore((s) => s.hydrated);
   const mergeGuest = useCartStore((s) => s.mergeGuest);
   const setDraft = useCartStore((s) => s.setDraft);
+  useHideBrokenImages();
 
   useEffect(() => {
     void refreshMe();
@@ -35,6 +38,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         <CartBanner />
         <TabBar />
       </AppShell>
+      <CartFlyLayer />
       <PwaRegister />
       <ToastHost />
     </MotionConfig>

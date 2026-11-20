@@ -1,19 +1,18 @@
-/**
- * Fallback art from `public/assets` when the API sends no image.
- * Catalogue / promo / event content always comes from the API.
- */
 import type { Category } from "./types";
 
-export const ITEM_PLACEHOLDER = "/assets/placeholders/item-placeholder.svg";
-export const EVENT_PLACEHOLDER = "/assets/placeholders/event-placeholder.svg";
-export const AVATAR_PLACEHOLDER = "/assets/placeholders/avatar-placeholder.svg";
-export const HERO_SPLASH = "/assets/placeholders/hero-splash.svg";
-export const BANNER_PLACEHOLDER = "/assets/banners/banner-launch.svg";
+/**
+ * Plain grey fill used wherever an image is missing (no photo uploaded yet,
+ * database or network down). All real images come from the API / Cloudinary.
+ */
+export const IMAGE_PLACEHOLDER =
+  "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 3'%3E%3Crect width='4' height='3' fill='%23e5e1db'/%3E%3C/svg%3E";
+export const ITEM_PLACEHOLDER = IMAGE_PLACEHOLDER;
+export const EVENT_PLACEHOLDER = IMAGE_PLACEHOLDER;
+export const AVATAR_PLACEHOLDER = IMAGE_PLACEHOLDER;
 /** Single DHT brand logo — use everywhere (customer + admin). */
 export const LOGO = "/assets/logo/logo.png";
 export const LOGO_ICON = LOGO;
 export const LOGO_FULL = LOGO;
-export const EVENTS_BANNER = "/assets/banners/banner-events.svg";
 
 /** Event venues only. Pastry delivery is Lagos; Ibadan events need early booking. */
 export const EVENT_CITIES = ["Lagos", "Ibadan"];

@@ -1,4 +1,5 @@
 import type { Order } from "@/lib/types";
+import { formatNgn, statusLabel } from "@/lib/format";
 
 const DRAFT_STATUSES = new Set(["draft", "pending_payment"]);
 
@@ -21,6 +22,42 @@ export const TRACKING_STEPS = [
   { key: "out_for_delivery", label: "On the way", match: ["out_for_delivery"] },
   { key: "delivered", label: "Delivered", match: ["delivered", "completed"] },
 ] as const;
+
+/** Pickup orders: "Ready for pickup" replaces "On the way". */
+export const PICKUP_TRACKING_STEPS = [
+  { key: "placed", label: "Ordered", match: ["placed", "seen"] },
+  { key: "accepted", label: "Confirmed", match: ["accepted"] },
+  { key: "preparing", label: "Preparing", match: ["preparing"] },
+  { key: "ready_for_delivery", label: "Ready for pickup", match: ["ready_for_delivery", "out_for_delivery"] },
+  { key: "delivered", label: "Picked up", match: ["delivered", "completed"] },
+] as const;
+
+type Fulfillment = Order["fulfillment"];
+
+export function isPickup(order: Pick<Order, "fulfillment">): boolean {
+  return order.fulfillment === "pickup";
+}
+
+export function trackingSteps(fulfillment?: Fulfillment) {
+  return fulfillment === "pickup" ? PICKUP_TRACKING_STEPS : TRACKING_STEPS;
+}
+
+/** Status text that reads right for pickup orders too. */
+export function orderStatusLabel(order: Pick<Order, "status" | "fulfillment">): string {
+  if (order.fulfillment === "pickup") {
+    if (order.status === "ready_for_delivery") return "Ready for pickup";
+    if (order.status === "delivered") return "Picked up";
+  }
+  return statusLabel(order.status);
+}
+
+/** What to show on the "Delivery" line of a receipt. */
+export function deliveryLineLabel(order: Pick<Order, "fulfillment" | "deliveryFee" | "addressSnapshot">): string {
+  if (order.fulfillment === "pickup" && order.addressSnapshot) return "Pickup · free";
+  if (order.deliveryFee > 0) return formatNgn(order.deliveryFee);
+  if (order.addressSnapshot) return "Pay rider on arrival";
+  return "Chosen at checkout";
+}
 
 const STEP_RANK: Record<string, number> = {
   placed: 0,
@@ -49,7 +86,8 @@ export function isTerminalStatus(status: string): boolean {
   return TERMINAL_STATUSES.has(status);
 }
 
-export function trackingStepIndex(status: string): number {
+export function trackingStepIndex(status: string, fulfillment?: Fulfillment): number {
+  if (fulfillment === "pickup" && status === "ready_for_delivery") return 3;
   return STEP_RANK[status] ?? -1;
 }
 
@@ -121,7 +159,8 @@ export type TimelineEntry = {
 
 /** Build a vertical timeline from logs, or synthesize from current status. */
 export function buildOrderTimeline(order: Order): TimelineEntry[] {
-  const currentIdx = trackingStepIndex(order.status);
+  const currentIdx = trackingStepIndex(order.status, order.fulfillment);
+  const steps = trackingSteps(order.fulfillment);
   const cancelled = order.status === "cancelled" || order.status === "payment_failed";
 
   if (cancelled) {
@@ -139,9 +178,9 @@ export function buildOrderTimeline(order: Order): TimelineEntry[] {
 
   const logByStatus = new Map<string, { createdAt: string; note?: string | null }>();
   for (const log of order.statusLogs ?? []) {
-    const idx = trackingStepIndex(log.status);
+    const idx = trackingStepIndex(log.status, order.fulfillment);
     if (idx < 0) continue;
-    const step = TRACKING_STEPS[idx];
+    const step = steps[idx];
     if (!step) continue;
     // Keep earliest log for each milestone key
     if (!logByStatus.has(step.key)) {
@@ -149,7 +188,7 @@ export function buildOrderTimeline(order: Order): TimelineEntry[] {
     }
   }
 
-  return TRACKING_STEPS.map((step, idx) => {
+  return steps.map((step, idx) => {
     const log = logByStatus.get(step.key);
     const state: TimelineEntry["state"] =
       currentIdx < 0 ? "upcoming" : currentIdx > idx ? "done" : currentIdx === idx ? "current" : "upcoming";

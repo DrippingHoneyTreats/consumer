@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/cn";
 
-const STEPS = ["Address", "Review", "Pay"];
+const STEPS = ["Method", "Review", "Pay"];
 
 export function CheckoutSteps({ current }: { current: number }) {
   return (

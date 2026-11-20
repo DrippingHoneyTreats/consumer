@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api";
+import { useCartStore } from "@/store/cart-store";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { PageSkeleton } from "@/components/ui/ColumnLoader";
@@ -13,16 +14,22 @@ import { Check, Lock, X } from "lucide-react";
 
 function CallbackInner() {
   const params = useSearchParams();
-  const reference = params.get("reference") ?? params.get("trxref");
+  // Flutterwave appends tx_ref / transaction_id / status; Paystack uses reference / trxref.
+  const reference = params.get("reference") ?? params.get("tx_ref") ?? params.get("trxref");
+  const transactionId = params.get("transaction_id");
+  const gatewayStatus = params.get("status");
   const router = useRouter();
+  const refreshDraft = useCartStore((s) => s.refreshDraft);
   const [status, setStatus] = useState<string>("pending");
   const [orderId, setOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!reference) return;
     let cancelled = false;
+    let tries = 0;
 
     const poll = async () => {
+      tries += 1;
       try {
         const res = await apiClient.get<{ status: string; orderId?: string }>(
           `/payments/${reference}/status`,
@@ -30,18 +37,33 @@ function CallbackInner() {
         if (cancelled) return;
         setStatus(res.status);
         if (res.orderId) setOrderId(res.orderId);
-        if (res.status === "success" || res.status === "failed") return;
+        if (res.status === "success" || res.status === "failed") {
+          void refreshDraft();
+          return;
+        }
       } catch {
         /* retry */
       }
-      window.setTimeout(poll, 3000);
+      if (tries < 40) window.setTimeout(poll, 3000);
     };
 
-    void apiClient.post("/payments/verify", { reference }).catch(() => {});
-    void poll();
+    void apiClient
+      .post<{ status: string; orderId?: string }>("/payments/verify", {
+        reference,
+        transactionId: transactionId ?? undefined,
+        gatewayStatus: gatewayStatus ?? undefined,
+      })
+      .then((res) => {
+        if (cancelled) return;
+        setStatus(res.status);
+        if (res.orderId) setOrderId(res.orderId);
+      })
+      .catch(() => {})
+      .finally(() => void poll());
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reference]);
 
   const success = status === "success";
@@ -90,7 +112,7 @@ function CallbackInner() {
         </h1>
         <p className="mt-2 max-w-xs text-sm text-deep/60">
           {success
-            ? "Sharp sharp! Your treats are on the way to the kitchen."
+            ? "Sharp sharp! Your treats are on the way to the kitchen. We'll update you on WhatsApp."
             : failed
               ? "Your payment didn't go through. You can retry from your order when you're ready."
               : "Hold on a moment, please don't pay twice."}
@@ -103,7 +125,7 @@ function CallbackInner() {
             <Button
               fullWidth
               variant="dark"
-              onClick={() => router.push(success ? `/orders/` : `/orders/${orderId}`)}
+              onClick={() => router.push(success ? `/orders/${orderId}/track` : `/orders/${orderId}`)}
             >
               {success ? "Track order" : "View order"}
             </Button>

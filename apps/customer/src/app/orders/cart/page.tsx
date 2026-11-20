@@ -2,24 +2,23 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { CreditCard, Lock, Plus, ShoppingBag } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { formatNgn } from "@/lib/format";
-import { ITEM_PLACEHOLDER } from "@/lib/placeholders";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StickyActions } from "@/components/layout/StickyActions";
 import { AuthGateSheet } from "@/components/auth/AuthGateSheet";
+import { CartLineRow } from "@/components/orders/CartLineRow";
+import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { QtyStepper } from "@/components/ui/QtyStepper";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { textareaClass } from "@/components/ui/Input";
 import { toast } from "@/components/ui/Toast";
-import { cn } from "@/lib/cn";
 
 /** Local cart for visitors who haven't signed in. Sign-in is only asked for at payment. */
 export default function GuestCartPage() {
@@ -100,35 +99,22 @@ export default function GuestCartPage() {
                 <span className="inline-block rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-deep ring-1 ring-deep/5">
                   Draft
                 </span>
-                <p className="mt-2 font-display text-2xl font-semibold text-deep">{formatNgn(subtotal)}</p>
+                <AnimatedNumber value={subtotal} className="mt-2 block font-display text-2xl font-semibold text-deep" />
               </div>
             </header>
 
             <ul>
               <AnimatePresence initial={false}>
-                {guestItems.map((line, i) => (
-                  <motion.li
+                {guestItems.map((line) => (
+                  <CartLineRow
                     key={`${line.itemId}-${line.variantId ?? ""}`}
-                    layout
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className={cn(
-                      "flex items-center gap-3 px-4 py-3.5 md:px-6",
-                      i > 0 && "border-t border-deep/5",
-                    )}
+                    image={line.image}
+                    name={line.name}
+                    unitPrice={line.unitPrice}
+                    qty={line.qty}
+                    note={line.note}
+                    onRemove={() => updateGuestQty(line.itemId, line.variantId, 0)}
                   >
-                    <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[16px] bg-cream">
-                      <Image src={line.image || ITEM_PLACEHOLDER} alt="" fill className="object-cover" sizes="56px" unoptimized />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-deep">{line.name}</p>
-                      <p className="text-xs text-deep/50">
-                        {formatNgn(line.unitPrice)} each ·{" "}
-                        <span className="font-semibold text-deep">{formatNgn(line.unitPrice * line.qty)}</span>
-                      </p>
-                      {line.note ? <p className="mt-0.5 truncate text-[11px] italic text-tea">“{line.note}”</p> : null}
-                    </div>
                     <QtyStepper
                       size="sm"
                       value={line.qty}
@@ -136,7 +122,7 @@ export default function GuestCartPage() {
                       max={99}
                       onChange={(q) => updateGuestQty(line.itemId, line.variantId, q)}
                     />
-                  </motion.li>
+                  </CartLineRow>
                 ))}
               </AnimatePresence>
             </ul>
@@ -168,11 +154,11 @@ export default function GuestCartPage() {
               </div>
               <div className="flex justify-between text-deep/70">
                 <span>Delivery</span>
-                <span>Calculated at checkout</span>
+                <span>Pickup, or pay rider on arrival</span>
               </div>
               <div className="flex items-baseline justify-between border-t border-dashed border-deep/10 pt-2 font-semibold text-deep">
                 <span>Total amount</span>
-                <span className="font-display text-xl">{formatNgn(subtotal)}</span>
+                <AnimatedNumber value={subtotal} className="font-display text-xl" />
               </div>
             </footer>
           </motion.article>

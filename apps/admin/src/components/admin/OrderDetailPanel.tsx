@@ -17,6 +17,7 @@ export function OrderDetailPanel({
   onClose?: () => void;
 }) {
   const addr = order.addressSnapshot as Record<string, string> | null | undefined;
+  const pickup = order.fulfillment === "pickup";
 
   return (
     <div className="flex h-full flex-col">
@@ -24,6 +25,15 @@ export function OrderDetailPanel({
         <div>
           <p className="font-display text-lg font-semibold">{order.orderNo}</p>
           <p className="text-sm text-deep/60">{orderCustomerLabel(order)}</p>
+          <span
+            className={
+              pickup
+                ? "mt-1 inline-block rounded-full bg-honey/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-deep"
+                : "mt-1 inline-block rounded-full bg-sage/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-deep"
+            }
+          >
+            {pickup ? "Pickup" : "Delivery"}
+          </span>
           {order.user?.phone ? <p className="text-xs text-deep/50">{order.user.phone}</p> : null}
         </div>
         <div className="flex items-center gap-2">
@@ -55,18 +65,27 @@ export function OrderDetailPanel({
           </div>
           <div className="flex justify-between">
             <dt className="text-deep/60">Delivery</dt>
-            <dd>{formatNgn(order.deliveryFee)}</dd>
+            <dd>{pickup ? "Pickup" : order.deliveryFee > 0 ? formatNgn(order.deliveryFee) : "Customer pays rider"}</dd>
           </div>
           <div className="flex justify-between font-semibold">
-            <dt>Total</dt>
+            <dt>Paid online</dt>
             <dd>{formatNgn(order.total)}</dd>
           </div>
         </dl>
 
-        {addr?.formattedAddress || addr?.landmark ? (
+        {pickup ? (
+          <div className="mt-4 rounded-xl bg-honey/20 p-3 text-sm">
+            <p className="font-medium">Customer will pick up</p>
+            {addr?.contactPhone ? <p className="text-deep/75">Contact: {addr.contactPhone}</p> : null}
+          </div>
+        ) : addr?.formattedAddress || addr?.landmark ? (
           <div className="mt-4 rounded-xl bg-sage/15 p-3 text-sm">
             <p className="font-medium">Delivery address</p>
             <p className="text-deep/75">{addr.formattedAddress ?? addr.landmark}</p>
+            {addr.contactPhone ? <p className="text-deep/75">Contact: {addr.contactPhone}</p> : null}
+            {order.deliveryFeeAgreed ? (
+              <p className="mt-1 text-xs text-deep/55">Customer agreed to pay the delivery fee to the rider.</p>
+            ) : null}
           </div>
         ) : null}
 

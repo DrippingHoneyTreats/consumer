@@ -231,24 +231,60 @@ a[aria-disabled="true"],
 
 @keyframes shimmer {
   from {
-    background-position: 200% 0;
+    transform: translateX(-100%);
   }
   to {
-    background-position: -200% 0;
+    transform: translateX(100%);
   }
 }
 
-.skeleton {
-  background: linear-gradient(90deg, #f1ece4 0%, #faf7f2 40%, #f1ece4 80%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s linear infinite;
-  border-radius: 16px;
+@keyframes skeleton-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
+
+/* GPU shimmer: a highlight band slides across (transform only, no repaints). */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #f1ece4;
+  border-radius: 16px;
+  animation: skeleton-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
+  transform: translateX(-100%);
+  animation: shimmer 1.35s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Grid loaders cascade in, then shimmer in a gentle wave. */
+[role="status"] > .skeleton:nth-child(2) { animation-delay: 60ms; }
+[role="status"] > .skeleton:nth-child(3) { animation-delay: 120ms; }
+[role="status"] > .skeleton:nth-child(4) { animation-delay: 180ms; }
+[role="status"] > .skeleton:nth-child(5) { animation-delay: 240ms; }
+[role="status"] > .skeleton:nth-child(6) { animation-delay: 300ms; }
+[role="status"] > .skeleton:nth-child(2)::after { animation-delay: 90ms; }
+[role="status"] > .skeleton:nth-child(3)::after { animation-delay: 180ms; }
+[role="status"] > .skeleton:nth-child(4)::after { animation-delay: 270ms; }
+[role="status"] > .skeleton:nth-child(5)::after { animation-delay: 360ms; }
+[role="status"] > .skeleton:nth-child(6)::after { animation-delay: 450ms; }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-float,
   .animate-fade-up,
-  .skeleton {
+  .skeleton,
+  .skeleton::after {
     animation: none;
   }
 }

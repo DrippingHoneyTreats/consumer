@@ -4,9 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { ChevronRight, MapPin } from "lucide-react";
-import { formatNgn, statusLabel } from "@/lib/format";
+import { formatNgn } from "@/lib/format";
 import { ITEM_PLACEHOLDER } from "@/lib/placeholders";
-import { formatOrderDate, orderPlaceLabel } from "@/lib/order-status";
+import { formatOrderDate, orderPlaceLabel, orderStatusLabel } from "@/lib/order-status";
 import type { Order } from "@/lib/types";
 import { OrderProgress } from "@/components/orders/OrderProgress";
 import { cn } from "@/lib/cn";
@@ -39,7 +39,7 @@ export function OngoingOrderCard({ order, index = 0, className }: Props) {
             <p className="mt-0.5 text-xs text-deep/45">{formatOrderDate(order.createdAt)}</p>
           </div>
           <span className="shrink-0 rounded-full bg-honey-soft px-2.5 py-1 text-[11px] font-bold text-deep">
-            {statusLabel(order.status)}
+            {orderStatusLabel(order)}
           </span>
         </div>
 
@@ -52,7 +52,7 @@ export function OngoingOrderCard({ order, index = 0, className }: Props) {
         </div>
 
         <div className="mt-4 rounded-2xl bg-off-white/80 px-2 py-3">
-          <OrderProgress status={order.status} compact />
+          <OrderProgress status={order.status} fulfillment={order.fulfillment} compact />
         </div>
 
         <div className="mt-4 flex gap-2 overflow-x-auto no-scrollbar">

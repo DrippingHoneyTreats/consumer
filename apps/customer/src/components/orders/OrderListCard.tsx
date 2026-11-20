@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { MapPin, RotateCcw } from "lucide-react";
-import { formatNgn, statusLabel } from "@/lib/format";
-import { formatOrderDate, orderProductsSummary } from "@/lib/order-status";
+import { formatNgn } from "@/lib/format";
+import { formatOrderDate, orderProductsSummary, orderStatusLabel } from "@/lib/order-status";
 import type { Order } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
@@ -52,7 +52,7 @@ export function OrderListCard({ order, mode, index = 0, onReorder, className }: 
             <dt className="text-deep/45">Status</dt>
             <dd>
               <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-bold", statusTone(order.status, mode))}>
-                {statusLabel(order.status)}
+                {orderStatusLabel(order)}
               </span>
             </dd>
           </div>

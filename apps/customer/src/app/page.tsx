@@ -19,7 +19,7 @@ import {
 import { getHomeCatalogue, searchItems } from "@/lib/catalogue";
 import type { Banner, CatalogueCategory, CatalogueItem } from "@/lib/catalogue-types";
 import { greetingForNow, whatsappLink } from "@/lib/format";
-import { BANNER_PLACEHOLDER, EVENTS_BANNER, LOGO, categoryImage, toneFor } from "@/lib/placeholders";
+import { IMAGE_PLACEHOLDER, LOGO, categoryImage, toneFor } from "@/lib/placeholders";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartActions } from "@/hooks/useCartActions";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -120,7 +120,7 @@ function PromoCarousel({ banners }: { banners: Banner[] }) {
             transition={kenBurns.transition}
           >
             <Image
-              src={banner.image || BANNER_PLACEHOLDER}
+              src={banner.image || IMAGE_PLACEHOLDER}
               alt={banner.title || "Promo"}
               fill
               className="object-cover"
@@ -278,10 +278,7 @@ export default function HomePage() {
   };
 
   const showUser = hydrated && !!user;
-  const heroImages = [
-    "/assets/catalogue/cake-wholewheat-nobg.png",
-    "/assets/catalogue/cake-wholewheat2-nobg.png",
-  ];
+  const heroImages = popular.flatMap((p) => p.images?.slice(0, 1) ?? []);
   const isSearch = query.trim().length >= 2;
 
   return (
@@ -412,16 +409,18 @@ export default function HomePage() {
             />
           ) : (
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
-              {hits.map((item, i) => (
-                <ProductCard
-                  key={item.id}
-                  item={item}
-                  index={i}
-                  layout="grid"
-                  onOpen={() => openItem(item)}
-                  onAdd={() => openItem(item)}
-                />
-              ))}
+              <AnimatePresence mode="popLayout">
+                {hits.map((item, i) => (
+                  <ProductCard
+                    key={item.id}
+                    item={item}
+                    index={i}
+                    layout="grid"
+                    onOpen={() => openItem(item)}
+                    onAdd={() => openItem(item)}
+                  />
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </motion.section>
@@ -551,9 +550,10 @@ export default function HomePage() {
                     Explore events <ArrowRight size={13} />
                   </span>
                 </div>
-                <div className="absolute -right-2 bottom-0 top-4 w-[42%]">
-                  <Image src={EVENTS_BANNER} alt="" fill className="object-contain object-bottom" sizes="200px" unoptimized />
-                </div>
+                <div
+                  aria-hidden
+                  className="absolute -right-3 bottom-4 top-6 w-[36%] rotate-6 rounded-[22px] bg-white/10 ring-1 ring-white/15"
+                />
               </Link>
             </motion.div>
 

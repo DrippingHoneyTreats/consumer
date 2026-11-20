@@ -10,11 +10,13 @@ import { formatNgn } from "@/lib/format";
 import { ITEM_PLACEHOLDER, LOGO } from "@/lib/placeholders";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Input, selectClass } from "@/components/ui/Input";
+import { Input, selectClass, textareaClass } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ColumnLoader } from "@/components/ui/ColumnLoader";
 import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
 import { AdminCardList } from "@/components/admin/AdminTable";
+import { ImageField } from "@/components/admin/ImageField";
+import { ProductImagesField } from "@/components/admin/ProductImagesField";
 import { toast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
 
@@ -23,15 +25,39 @@ type ItemForm = {
   name: string;
   basePrice: string;
   description: string;
-  image: string;
+  /** First = main photo; up to 4 more for the gallery. */
+  images: string[];
+  /** One size per line: "Pack of 3 = 4000" (naira). */
+  sizes: string;
 };
+
+function sizesToText(item: Item): string {
+  return (item.variants ?? []).map((v) => `${v.name} = ${v.price / 100}`).join("\n");
+}
+
+/** Parse the sizes box; keeps existing variant ids (by name) so carts don't break. */
+function parseSizes(text: string, existing: Item["variants"] = []): { name: string; price: number; id?: string }[] | null {
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const out: { name: string; price: number; id?: string }[] = [];
+  for (const line of lines) {
+    const m = line.match(/^(.+?)\s*[=:]\s*₦?\s*([\d,.]+)$/);
+    if (!m) return null;
+    const name = m[1].trim();
+    const price = Math.round(Number(m[2].replace(/,/g, "")) * 100);
+    if (!name || !Number.isFinite(price)) return null;
+    const prev = existing?.find((v) => v.name.toLowerCase() === name.toLowerCase());
+    out.push({ name, price, ...(prev ? { id: prev.id } : {}) });
+  }
+  return out;
+}
 
 const blankItem = (categoryId = ""): ItemForm => ({
   categoryId,
   name: "",
   basePrice: "",
   description: "",
-  image: "",
+  images: [],
+  sizes: "",
 });
 
 export default function AdminCataloguePage() {
@@ -67,6 +93,24 @@ export default function AdminCataloguePage() {
     void load();
   }, [load]);
 
+  const [announcing, setAnnouncing] = useState<string | null>(null);
+
+  /** "New on the menu" email to opted-in customers (90 per press; repeat to continue). */
+  const announce = async (item: Item) => {
+    if (!window.confirm(`Email customers about "${item.name}"?\n\nIt goes to customers who haven't opted out, up to 90 per press. Nobody gets it twice.`)) return;
+    setAnnouncing(item.id);
+    try {
+      const res = await apiClient.post<{ sent: number; remaining: number; total: number }>(`/admin/items/${item.id}/announce`);
+      if (res.sent === 0 && res.remaining === 0) toast("Everyone has already been told about this one");
+      else if (res.remaining > 0) toast(`Sent to ${res.sent}. ${res.remaining} left: press Announce again tomorrow`);
+      else toast(`Announced to ${res.sent} customer${res.sent === 1 ? "" : "s"}`);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Announcement failed");
+    } finally {
+      setAnnouncing(null);
+    }
+  };
+
   const toggleSoldOut = async (item: Item) => {
     const next = item.status === "sold_out" ? "available" : "sold_out";
     try {
@@ -101,22 +145,26 @@ export default function AdminCataloguePage() {
   };
 
   const saveItem = async () => {
-    const basePrice = Math.round(Number(itemForm.basePrice) * 100);
-    if (!itemForm.name.trim() || !itemForm.categoryId || !Number.isFinite(basePrice)) {
-      toast("Name, category and price required");
+    const variants = parseSizes(itemForm.sizes, editingItem?.variants);
+    if (!variants) {
+      toast('Sizes: one per line, like "Pack of 3 = 4000"');
       return;
     }
-    const images = itemForm.image.trim()
-      ? [itemForm.image.trim()]
-      : editingItem?.images?.length
-        ? editingItem.images
-        : [];
+    const basePrice = variants.length
+      ? Math.min(...variants.map((v) => v.price))
+      : Math.round(Number(itemForm.basePrice) * 100);
+    if (!itemForm.name.trim() || !itemForm.categoryId || !Number.isFinite(basePrice) || basePrice <= 0) {
+      toast("Name, category and a price (or sizes) are required");
+      return;
+    }
+    const images = itemForm.images.filter(Boolean);
     const body = {
       categoryId: itemForm.categoryId,
       name: itemForm.name.trim(),
       description: itemForm.description.trim() || undefined,
       basePrice,
       images,
+      variants,
       status: editingItem?.status ?? "available",
     };
     try {
@@ -181,11 +229,11 @@ export default function AdminCataloguePage() {
             <Input label="Name" value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} />
             <Input label="Slug (optional)" value={catForm.slug} onChange={(e) => setCatForm({ ...catForm, slug: e.target.value })} />
             <div className="sm:col-span-2">
-              <Input
-                label="Image URL"
+              <ImageField
+                label="Image"
                 hint="Shown on the customer menu"
                 value={catForm.image}
-                onChange={(e) => setCatForm({ ...catForm, image: e.target.value })}
+                onChange={(url) => setCatForm({ ...catForm, image: url })}
               />
             </div>
           </div>
@@ -214,17 +262,28 @@ export default function AdminCataloguePage() {
               </select>
             </label>
             <Input label="Name" value={itemForm.name} onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} />
-            <Input
-              label="Price (₦)"
-              type="number"
-              value={itemForm.basePrice}
-              onChange={(e) => setItemForm({ ...itemForm, basePrice: e.target.value })}
-            />
-            <Input
-              label="Image URL"
-              hint="Product photo customers see"
-              value={itemForm.image}
-              onChange={(e) => setItemForm({ ...itemForm, image: e.target.value })}
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-deep">Sizes &amp; prices (₦)</span>
+              <textarea
+                className={textareaClass}
+                rows={4}
+                placeholder={"1 piece = 1500\nPack of 3 = 4000\nPack of 6 = 8000"}
+                value={itemForm.sizes}
+                onChange={(e) => setItemForm({ ...itemForm, sizes: e.target.value })}
+              />
+              <span className="text-xs text-deep/55">One per line. Leave empty to use a single price.</span>
+            </label>
+            {!itemForm.sizes.trim() ? (
+              <Input
+                label="Price (₦)"
+                type="number"
+                value={itemForm.basePrice}
+                onChange={(e) => setItemForm({ ...itemForm, basePrice: e.target.value })}
+              />
+            ) : null}
+            <ProductImagesField
+              value={itemForm.images}
+              onChange={(images) => setItemForm((f) => ({ ...f, images }))}
             />
             <Input
               label="Description"
@@ -298,11 +357,20 @@ export default function AdminCataloguePage() {
                           name: item.name,
                           basePrice: String(item.basePrice / 100),
                           description: item.description ?? "",
-                          image: item.images?.[0] ?? "",
+                          images: item.images ?? [],
+                          sizes: sizesToText(item),
                         });
                       }}
                     >
                       Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      loading={announcing === item.id}
+                      onClick={() => void announce(item)}
+                      title="Email customers about this product"
+                    >
+                      Announce
                     </Button>
                   </div>
                 </div>

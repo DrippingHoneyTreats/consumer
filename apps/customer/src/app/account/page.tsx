@@ -293,6 +293,11 @@ export default function AccountPage() {
           >
             <LogOut size={16} /> Log out
           </button>
+          <p className="mt-4 text-center text-xs text-deep/45">
+            <Link href="/privacy" className="font-semibold hover:text-tea">Privacy Policy</Link>
+            {" · "}
+            <Link href="/terms" className="font-semibold hover:text-tea">Terms of Service</Link>
+          </p>
         </aside>
       </div>
     </div>
@@ -349,6 +354,11 @@ function GuestAccountCard() {
             );
           })}
         </div>
+        <p className="mt-4 text-center text-xs text-deep/45">
+          <Link href="/privacy" className="font-semibold hover:text-tea">Privacy Policy</Link>
+          {" · "}
+          <Link href="/terms" className="font-semibold hover:text-tea">Terms of Service</Link>
+        </p>
       </aside>
     </div>
   );
