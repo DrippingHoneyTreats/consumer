@@ -23,6 +23,7 @@ import { useLineEditor } from "@/components/orders/LineEditor";
 import { OrderProgress } from "@/components/orders/OrderProgress";
 import { useCartActions } from "@/hooks/useCartActions";
 import { useCartStore } from "@/store/cart-store";
+import { VerifyingInline } from "@/components/ui/Verifying";
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -55,6 +56,22 @@ export default function OrderDetailPage() {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Show the new quantity straight away; the server confirms in the background.
+  const [updating, setUpdating] = useState(0);
+  async function changeQty(lineId: string, qty: number) {
+    if (!order) return;
+    setOrder((o) =>
+      o ? { ...o, items: qty <= 0 ? o.items.filter((i) => i.id !== lineId) : o.items.map((i) => (i.id === lineId ? { ...i, qty } : i)) } : o,
+    );
+    setUpdating((n) => n + 1);
+    try {
+      await setQty(order.id, lineId, qty);
+      await load();
+    } finally {
+      setUpdating((n) => n - 1);
+    }
+  }
 
   function onNoteChange(value: string) {
     setOrderNote(value);
@@ -114,7 +131,7 @@ export default function OrderDetailPage() {
   return (
     <InnerPage
       tabbed
-      className="pb-[calc(var(--tab-h)+var(--safe-bottom)+150px)] md:pb-[calc(var(--tab-h)+var(--safe-bottom)+32px)]"
+      className="pb-[calc(var(--tab-h)+var(--safe-bottom)+var(--banner-h,0px)+150px)] md:pb-[calc(var(--tab-h)+var(--safe-bottom)+var(--banner-h,0px)+32px)]"
       eyebrow={isDraft ? "Not paid yet" : orderStatusLabel(order)}
       title={isDraft ? "Current order" : `Order #${order.orderNo}`}
       subtitle={isDraft ? "Adjust items, add a note, then pay." : `Placed ${created}`}
@@ -204,16 +221,13 @@ export default function OrderDetailPage() {
                     note={line.note}
                     onEdit={
                       isDraft
-                        ? () => void editor.edit({ itemId: line.itemId, variantId: line.variantId, qty: line.qty, lineId: line.id, image: line.item?.images?.[0] })
+                        ? () => editor.edit({ itemId: line.itemId, variantId: line.variantId, qty: line.qty, lineId: line.id, image: line.item?.images?.[0] })
                         : undefined
                     }
                     editLabel={line.variantId ? "Change size" : "Edit"}
                     onRemove={
                       isDraft
-                        ? () => {
-                            setOrder((o) => (o ? { ...o, items: o.items.filter((i) => i.id !== line.id) } : o));
-                            void setQty(order.id, line.id, 0).then(load);
-                          }
+                        ? () => void changeQty(line.id, 0)
                         : undefined
                     }
                   >
@@ -223,7 +237,7 @@ export default function OrderDetailPage() {
                         value={line.qty}
                         min={0}
                         max={line.item?.maxQty ?? 99}
-                        onChange={(q) => void setQty(order.id, line.id, q).then(load)}
+                        onChange={(q) => void changeQty(line.id, q)}
                       />
                     ) : (
                       <span className="rounded-full bg-off-white px-3 py-1 text-sm font-semibold">×{line.qty}</span>
@@ -232,6 +246,7 @@ export default function OrderDetailPage() {
                 ))}
               </AnimatePresence>
             </ul>
+            <VerifyingInline show={updating > 0} text="Updating your order…" className="justify-start" />
           </PageSection>
 
           {isDraft ? (

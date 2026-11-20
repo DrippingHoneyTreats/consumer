@@ -10,6 +10,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { toast } from "@/components/ui/Toast";
+import { checkEmail, useFieldErrors } from "@/lib/validate";
 
 /** Staff sign-in: email → 6-digit code (email + WhatsApp if on file). */
 export default function AdminLoginPage() {
@@ -22,26 +23,27 @@ export default function AdminLoginPage() {
 
   const errMsg = (e: unknown, fallback: string) => (e instanceof ApiRequestError ? e.message : fallback);
 
+  const f = useFieldErrors();
+
   const sendCode = async () => {
     const contact = email.trim().toLowerCase();
-    if (!contact.includes("@")) {
-      toast.error("Enter your staff email");
-      return;
-    }
+    if (!f.validate({ email: checkEmail(contact) })) return;
     setLoading(true);
     try {
       await apiClient.post("/auth/otp/send", { contact, channel: "email", audience: "admin" });
       setStep("code");
       toast.success("Code sent — check your email");
     } catch (e) {
-      toast.error(errMsg(e, "Could not send code"));
+      const msg = errMsg(e, "Could not send code");
+      toast.error(msg);
+      f.setError("email", msg);
     } finally {
       setLoading(false);
     }
   };
 
   const verify = async () => {
-    if (code.trim().length < 6) return;
+    if (!f.validate({ code: code.trim().length === 6 ? null : "Enter the 6-digit code from your email." })) return;
     setLoading(true);
     try {
       const user = await apiClient.post<User>("/auth/otp/verify", {
@@ -52,7 +54,9 @@ export default function AdminLoginPage() {
       setUser(user);
       router.replace("/orders");
     } catch (e) {
-      toast.error(errMsg(e, "Invalid code"));
+      const msg = errMsg(e, "Invalid code");
+      toast.error(msg);
+      f.setError("code", msg);
     } finally {
       setLoading(false);
     }
@@ -90,7 +94,11 @@ export default function AdminLoginPage() {
             autoComplete="email"
             autoFocus
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              f.clear("email");
+            }}
+            error={f.errors.email ?? undefined}
             placeholder="you@drippinghoneytreats.com"
           />
         ) : (
@@ -101,11 +109,15 @@ export default function AdminLoginPage() {
             autoFocus
             maxLength={6}
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+            onChange={(e) => {
+              setCode(e.target.value.replace(/\D/g, ""));
+              f.clear("code");
+            }}
+            error={f.errors.code ?? undefined}
             placeholder="123456"
           />
         )}
-        <Button type="submit" fullWidth loading={loading} disabled={step === "code" && code.length < 6}>
+        <Button type="submit" fullWidth loading={loading}>
           {step === "email" ? "Send code" : "Sign in"}
         </Button>
         {step === "code" ? (

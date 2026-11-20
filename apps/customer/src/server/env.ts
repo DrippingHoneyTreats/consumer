@@ -5,7 +5,12 @@ import "server-only";
  * under /api/v1 + Supabase). Nothing here is ever sent to the browser.
  */
 function str(name: string, fallback = ""): string {
-  return (process.env[name] ?? fallback).trim();
+  let v = (process.env[name] ?? fallback).trim();
+  // Forgive a common paste mistake: FLW_PUBLIC_KEY=FLW_PUBLIC_KEY=FLWPUBK…
+  while (v.startsWith(`${name}=`)) v = v.slice(name.length + 1).trim();
+  // …and stray quotes around the value.
+  if (v.length >= 2 && (v[0] === '"' || v[0] === "'") && v.at(-1) === v[0]) v = v.slice(1, -1).trim();
+  return v;
 }
 
 function list(name: string): string[] {
@@ -90,7 +95,11 @@ export const env = {
     /** Used when a customer has no email (phone-only sign-up) — gateways require one. */
     fallbackEmailDomain: str("PAYMENT_FALLBACK_EMAIL_DOMAIN", "drippinghoneytreats.com"),
     flutterwave: {
+      /** FLWPUBK_TEST-… / FLWPUBK-… — safe to send to the browser (inline checkout). */
+      publicKey: str("FLW_PUBLIC_KEY"),
+      /** FLWSECK_TEST-… / FLWSECK-… — server only. */
       secretKey: str("FLW_SECRET_KEY"),
+      /** Any random string; paste the same value in Dashboard → Settings → Webhooks. */
       secretHash: str("FLW_SECRET_HASH"),
     },
     paystack: {

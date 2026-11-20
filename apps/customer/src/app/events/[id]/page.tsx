@@ -74,7 +74,7 @@ export default function EventDetailPage() {
         </Button>
       </a>
       {!["cancelled", "completed", "confirmed"].includes(event.status) ? (
-        <Button variant="ghost" fullWidth className="text-danger" onClick={() => void cancel()}>
+        <Button variant="ghost" fullWidth className="text-danger" onClick={() => cancel()}>
           Cancel request
         </Button>
       ) : null}

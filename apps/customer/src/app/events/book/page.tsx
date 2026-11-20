@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { CalendarDays, Check, MapPin, PartyPopper, Users } from "lucide-react";
-import { apiClient } from "@/lib/api";
+import { ApiRequestError, apiClient } from "@/lib/api";
+import { checkRequired, useFieldErrors } from "@/lib/validate";
 import { asArray } from "@/lib/data";
 import { EVENT_CITIES, EVENT_PLACEHOLDER } from "@/lib/placeholders";
 import type { EventType } from "@/lib/types";
@@ -53,6 +54,7 @@ function BookEventForm() {
   const [budget, setBudget] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const f = useFieldErrors();
   const [typesState, setTypesState] = useState<"loading" | "ready" | "error">("loading");
   const [authOpen, setAuthOpen] = useState(false);
   const user = useAuthStore((s) => s.user);
@@ -91,6 +93,13 @@ function BookEventForm() {
   }, [loadTypes]);
 
   async function submit() {
+    // Re-check every step: a draft restored after sign-in could be incomplete.
+    for (const i of [0, 1, 2]) {
+      if (!validateStep(i)) {
+        setStep(i);
+        return;
+      }
+    }
     if (!user) {
       sessionStorage.setItem(
         DRAFT_KEY,
@@ -115,21 +124,65 @@ function BookEventForm() {
       });
       toast.success("Request sent — we will be in touch.");
       router.push(`/events/${ev.id}`);
-    } catch {
-      toast.error("Could not submit. Try again or WhatsApp us.");
+    } catch (err) {
+      const msg = err instanceof ApiRequestError ? err.message : "Could not submit. Try again or WhatsApp us.";
+      toast.error(msg);
+      if (/date|notice/i.test(msg)) {
+        setStep(1);
+        f.setError("date", msg);
+      } else if (/venue/i.test(msg)) {
+        setStep(1);
+        f.setError("venue", msg);
+      } else if (/guest/i.test(msg)) f.setError("guests", msg);
+      else if (/type/i.test(msg)) {
+        setStep(0);
+        f.setError("typeId", msg);
+      }
     } finally {
       setLoading(false);
     }
   }
 
-  const canContinue = step === 0 ? !!typeId : step === 1 ? !!date && date >= minEventDate(city) && !!venue : true;
+  /** Check the fields on the current step; shows messages under each one. */
+  function validateStep(which = step): boolean {
+    const checks =
+      which === 0
+        ? { typeId: typeId ? null : "Please choose the type of event." }
+        : which === 1
+          ? {
+              date: !date
+                ? "Please pick the date of your event."
+                : date < minEventDate(city)
+                  ? `${city} events need at least ${city === "Ibadan" ? "3 weeks" : `${noticeDays(city)} days`} notice. Please pick a later date.`
+                  : null,
+              venue: checkRequired(venue, "Please enter the venue address.") ?? (venue.trim().length < 5 ? "Add a bit more detail: street and area." : null),
+            }
+          : {
+              guests:
+                !guests.trim()
+                  ? "How many guests are you expecting?"
+                  : !/^\d+$/.test(guests.trim()) || Number(guests) < 1
+                    ? "Enter the number of guests, e.g. 50."
+                    : Number(guests) > 5000
+                      ? "For more than 5,000 guests, please chat with us on WhatsApp."
+                      : null,
+              budget: budget.trim() && (!/^\d+$/.test(budget.trim()) || Number(budget) < 0) ? "Enter your budget as a number, e.g. 150000." : null,
+            };
+    const ok = f.validate(checks);
+    if (!ok) toast.error("Please fix the highlighted fields.");
+    return ok;
+  }
+
+  function next() {
+    if (validateStep()) setStep((s) => s + 1);
+  }
   const showSticky =
     step > 0 || (step === 0 && typesState === "ready" && types.length > 0);
 
   return (
     <InnerPage
       tabbed
-      className={cn(showSticky && "pb-[calc(var(--tab-h)+var(--safe-bottom)+110px)] md:pb-[calc(var(--tab-h)+var(--safe-bottom)+24px)]")}
+      className={cn(showSticky && "pb-[calc(var(--tab-h)+var(--safe-bottom)+var(--banner-h,0px)+110px)] md:pb-[calc(var(--tab-h)+var(--safe-bottom)+var(--banner-h,0px)+24px)]")}
       eyebrow={`Step ${step + 1} of ${STEPS.length}`}
       title={STEPS[step]}
       subtitle="Tell us about your event and we'll send a quote on WhatsApp."
@@ -179,6 +232,12 @@ function BookEventForm() {
               description="Chat with us on WhatsApp and we'll plan it together."
             />
           ) : step === 0 ? (
+            <div>
+            {f.errors.typeId ? (
+              <p role="alert" data-invalid="true" className="mb-3 rounded-2xl border border-danger/35 bg-[#fdecea] px-4 py-3 text-sm font-semibold text-[#7a1a12]">
+                {f.errors.typeId}
+              </p>
+            ) : null}
             <div className="grid grid-cols-2 gap-3">
               {types.map((t) => {
                 const active = typeId === t.id;
@@ -187,7 +246,10 @@ function BookEventForm() {
                     whileTap={{ scale: 0.96 }}
                     key={t.id}
                     type="button"
-                    onClick={() => setTypeId(t.id)}
+                    onClick={() => {
+                      setTypeId(t.id);
+                      f.clear("typeId");
+                    }}
                     className={cn(
                       "relative overflow-hidden rounded-[24px] border-2 bg-white p-2 text-left shadow-[var(--shadow-card)] transition-colors",
                       active ? "border-deep" : "border-transparent",
@@ -213,13 +275,24 @@ function BookEventForm() {
                 );
               })}
             </div>
+            </div>
           ) : null}
 
           {step === 1 ? (
             <div className="space-y-4">
               <Input label="Event title (optional)" placeholder="e.g. Tolu's 30th" value={title} onChange={(e) => setTitle(e.target.value)} />
               <div className="grid grid-cols-2 gap-3">
-                <Input label="Date" type="date" min={minEventDate(city)} value={date} onChange={(e) => setDate(e.target.value)} />
+                <Input
+                  label="Date"
+                  type="date"
+                  min={minEventDate(city)}
+                  value={date}
+                  onChange={(e) => {
+                    setDate(e.target.value);
+                    f.clear("date");
+                  }}
+                  error={f.errors.date ?? undefined}
+                />
                 <Input label="Time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
               </div>
               <div>
@@ -231,6 +304,7 @@ function BookEventForm() {
                       type="button"
                       onClick={() => {
                         setCity(c);
+                        f.clear("date");
                         // A date that was fine for Lagos may be too soon for Ibadan.
                         if (date && date < minEventDate(c)) {
                           setDate("");
@@ -247,7 +321,16 @@ function BookEventForm() {
                   ))}
                 </div>
               </div>
-              <Input label="Venue address" placeholder="Street, area" value={venue} onChange={(e) => setVenue(e.target.value)} />
+              <Input
+                label="Venue address"
+                placeholder="Street, area"
+                value={venue}
+                onChange={(e) => {
+                  setVenue(e.target.value);
+                  f.clear("venue");
+                }}
+                error={f.errors.venue ?? undefined}
+              />
               <p className="pl-1 text-xs text-deep/50">
                 {city === "Ibadan"
                   ? "We travel to Ibadan for events, so please book at least 3 weeks ahead."
@@ -259,8 +342,30 @@ function BookEventForm() {
           {step === 2 ? (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <Input label="Expected guests" type="number" inputMode="numeric" value={guests} onChange={(e) => setGuests(e.target.value)} />
-                <Input label="Budget (₦, optional)" type="number" inputMode="numeric" value={budget} onChange={(e) => setBudget(e.target.value)} />
+                <Input
+                  label="Expected guests"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  value={guests}
+                  onChange={(e) => {
+                    setGuests(e.target.value);
+                    f.clear("guests");
+                  }}
+                  error={f.errors.guests ?? undefined}
+                />
+                <Input
+                  label="Budget (₦, optional)"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={budget}
+                  onChange={(e) => {
+                    setBudget(e.target.value);
+                    f.clear("budget");
+                  }}
+                  error={f.errors.budget ?? undefined}
+                />
               </div>
               <label className="block text-sm">
                 <span className="mb-1.5 block pl-1 font-semibold text-deep">Special requests</span>
@@ -286,11 +391,11 @@ function BookEventForm() {
               </Button>
             ) : null}
             {step < STEPS.length - 1 ? (
-              <Button variant="dark" className="px-8" disabled={!canContinue} onClick={() => setStep((s) => s + 1)}>
+              <Button variant="dark" className="px-8" onClick={next}>
                 Continue
               </Button>
             ) : (
-              <Button variant="dark" className="px-8" loading={loading} onClick={() => void submit()}>
+              <Button variant="dark" className="px-8" loading={loading} onClick={() => submit()}>
                 Submit request
               </Button>
             )}

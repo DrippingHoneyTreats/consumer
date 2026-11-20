@@ -2,7 +2,7 @@ import "server-only";
 import { camel, db, maybe, must } from "../db";
 import { HttpError, badRequest, int, notFound, optStr, str } from "../http";
 import { NextResponse } from "next/server";
-import { autocomplete, lagosFromText, mapsEnabled, placeDetails, staticMap } from "../places";
+import { autocomplete, isOsmPlace, lagosFromText, mapsEnabled, osmAutocomplete, osmDetails, placeDetails, staticMap } from "../places";
 import { isPhone, normalizePhone } from "../contact";
 import { route } from "../router";
 import { requireUser } from "../session";
@@ -182,7 +182,14 @@ route("POST", "/orders/:id/address", async ({ req, params, body }) => {
       let lng = 0;
       let state: string | null = null;
       let placeId: string | null = null;
-      if (typeof body.placeId === "string" && body.placeId && mapsEnabled()) {
+      if (typeof body.placeId === "string" && isOsmPlace(body.placeId)) {
+        const d = osmDetails(body.placeId);
+        if (!d) throw badRequest("We couldn't confirm that address. Please pick it again from the list.");
+        if (!d.inLagos) throw notInLagos(d.state);
+        formattedAddress = d.formattedAddress;
+        ({ lat, lng, state } = d);
+        placeId = null;
+      } else if (typeof body.placeId === "string" && body.placeId && mapsEnabled()) {
         const d = await placeDetails(body.placeId, optStr(body.sessionToken, 100)).catch((e: Error) => {
           console.warn("[places] details failed", e.message);
           throw badRequest("We couldn't confirm that address. Please pick it again from the list.");
@@ -208,18 +215,26 @@ route("POST", "/orders/:id/address", async ({ req, params, body }) => {
         state,
         place_id: placeId,
       };
-      const existing = maybe(
-        await db()
-          .from("addresses")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("formatted_address", formattedAddress)
-          .limit(1)
-          .maybeSingle(),
-        "find address",
-      );
-      const saved = await saveAddress(fields, existing?.id as string | undefined);
-      snapshot = camel(saved);
+      if (body.saveAddress === true) {
+        // Customer ticked "Save this address for next time".
+        const existing = maybe(
+          await db()
+            .from("addresses")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("formatted_address", formattedAddress)
+            .limit(1)
+            .maybeSingle(),
+          "find address",
+        );
+        const saved = await saveAddress(fields, existing?.id as string | undefined);
+        snapshot = camel(saved);
+      } else {
+        // Used for this order only: kept on the order, not in their saved addresses.
+        const { user_id: _u, ...forOrder } = fields;
+        void _u;
+        snapshot = camel(forOrder);
+      }
     }
   }
 
@@ -293,15 +308,22 @@ route("GET", "/places/autocomplete", async ({ req, query }) => {
   await requireUser(req); // protects the Google quota
   const q = (query.get("q") ?? "").trim().slice(0, 200);
   if (q.length < 3) return { data: [], google: mapsEnabled() };
+  const description = /lagos|ibadan/i.test(q) ? q : `${q}, Lagos`;
+  // Always offer "use what I typed": not every estate or close is on the map.
+  const typed = { placeId: `typed:${description}`, description, mainText: `Use “${description}”`, secondaryText: "Exactly as you typed it" };
   if (mapsEnabled()) {
     try {
-      return { data: await autocomplete(q, query.get("session") ?? undefined), google: true };
+      return { data: [...(await autocomplete(q, query.get("session") ?? undefined)), typed], google: true };
     } catch (e) {
       console.warn("[places] autocomplete failed", (e as Error).message);
     }
   }
-  const description = /lagos|ibadan/i.test(q) ? q : `${q}, Lagos`;
-  return { data: [{ placeId: `typed:${description}`, description, mainText: description, secondaryText: "" }], google: false };
+  try {
+    return { data: [...(await osmAutocomplete(q)), typed], google: false };
+  } catch (e) {
+    console.warn("[places] osm search failed", (e as Error).message);
+  }
+  return { data: [typed], google: false };
 });
 
 /** Full address + coordinates + whether it's in Lagos, for the picked suggestion. */
@@ -311,7 +333,12 @@ route("GET", "/places/details", async ({ req, query }) => {
   if (!placeId || placeId.startsWith("typed:")) {
     const text = placeId.replace(/^typed:/, "");
     const check = lagosFromText(text);
-    return { placeId: null, formattedAddress: text, lat: 0, lng: 0, state: check.state, inLagos: check.inLagos !== false };
+    return { placeId: null, provider: "typed", formattedAddress: text, lat: 0, lng: 0, state: check.state, inLagos: check.inLagos !== false };
+  }
+  if (isOsmPlace(placeId)) {
+    const d = osmDetails(placeId);
+    if (!d) throw badRequest("We couldn't load that address. Please pick it again.");
+    return d;
   }
   if (!mapsEnabled()) throw badRequest("Address lookup isn't available right now.");
   try {

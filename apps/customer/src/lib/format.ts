@@ -10,12 +10,12 @@ export function formatNgn(kobo: number): string {
   }).format(naira);
 }
 
+/** "Morning Mart" / "Afternoon Mart" / "Evening Mart" — or "Good evening" with no name. */
 export function greetingForNow(name?: string | null): string {
   const hour = new Date().getHours();
-  const part =
-    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const part = hour < 12 ? "Morning" : hour < 17 ? "Afternoon" : "Evening";
   const first = name?.trim().split(/\s+/)[0];
-  return first ? `${part}, ${first}` : part;
+  return first ? `${part} ${first}` : `Good ${part.toLowerCase()}`;
 }
 
 export function titleFromSlug(slug: string): string {

@@ -41,6 +41,8 @@ export class ApiRequestError extends Error {
 
 type RequestOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
+  /** Give up after this many ms (default 30s) so nothing can spin forever. */
+  timeoutMs?: number;
   query?: Record<string, string | number | boolean | undefined | null>;
 };
 
@@ -57,24 +59,44 @@ function buildUrl(path: string, query?: RequestOptions["query"]): string {
 }
 
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { body, query, headers, ...rest } = options;
-  const res = await fetch(buildUrl(path, query), {
-    ...rest,
-    credentials: "include",
-    headers: {
-      Accept: "application/json",
-      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
-      ...headers,
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  const { body, query, headers, timeoutMs = 30_000, signal, ...rest } = options;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  signal?.addEventListener("abort", () => controller.abort(), { once: true });
 
-  if (res.status === 204) return undefined as T;
-
-  const data = await res.json().catch(() => ({
-    code: "INVALID_JSON",
-    message: res.statusText || "Unexpected response",
-  }));
+  let res: Response;
+  let data: unknown;
+  try {
+    res = await fetch(buildUrl(path, query), {
+      ...rest,
+      signal: controller.signal,
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...headers,
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    if (res.status === 204) return undefined as T;
+    data = await res.json().catch(() => ({
+      code: "INVALID_JSON",
+      message: res.statusText || "Unexpected response",
+    }));
+  } catch (err) {
+    if (controller.signal.aborted && !signal?.aborted) {
+      throw new ApiRequestError(0, {
+        code: "TIMEOUT",
+        message: "This is taking too long. Please check your connection and try again.",
+      });
+    }
+    throw new ApiRequestError(0, {
+      code: "NETWORK",
+      message: "We couldn't reach DHT. Please check your connection and try again.",
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     throw new ApiRequestError(res.status, data as ApiError);

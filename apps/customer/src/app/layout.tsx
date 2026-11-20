@@ -4,6 +4,7 @@ import { AppProviders } from "@/components/providers/AppProviders";
 import { BUSINESS, SEO_KEYWORDS, SITE_URL } from "@/lib/site";
 import { JsonLd, bakeryJsonLd, websiteJsonLd } from "@/lib/jsonld";
 import "./globals.css";
+import { NavProgress } from "@/components/nav/NavProgress";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -100,6 +101,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="dht-pane dht-pane-left" />
           <div className="dht-pane dht-pane-right" />
         </div>
+        <NavProgress />
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

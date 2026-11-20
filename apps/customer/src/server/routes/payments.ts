@@ -182,14 +182,15 @@ route("POST", "/payments/initiate", async ({ req, body }) => {
     .catch(async (err: Error) => {
       console.error("[payments] initialize failed", err.message);
       await db().from("payments").update({ status: "failed" }).eq("reference", reference);
-      throw badRequest("Payment could not start. Please try again.");
+      // Pass the gateway's own reason through.
+      throw badRequest(err.message?.trim() || "Cannot proceed with payment, try again.");
     });
 
   must(
     await db().from("orders").update({ status: "pending_payment" }).eq("id", fresh.id).in("status", DRAFT_STATUSES),
     "pending payment",
   );
-  return { authorizationUrl: init.checkoutUrl, reference, provider: provider.name };
+  return { authorizationUrl: init.checkoutUrl, reference, provider: provider.name, inline: init.inline ?? null };
 });
 
 route("POST", "/payments/verify", async ({ req, body }) => {

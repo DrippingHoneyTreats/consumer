@@ -68,7 +68,7 @@ export function AdminShell({
           )}
         </nav>
         <div className="border-t border-deep/10 p-3">
-          <Button variant="ghost" fullWidth className="justify-start" onClick={() => void logout()}>
+          <Button variant="ghost" fullWidth className="justify-start" onClick={() => logout()}>
             Sign out
           </Button>
         </div>

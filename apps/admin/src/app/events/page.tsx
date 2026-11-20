@@ -11,10 +11,12 @@ import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
 import { AdminTable } from "@/components/admin/AdminTable";
 import { toast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
+import { checkLink, useFieldErrors } from "@/lib/validate";
 
 const STATUSES = ["submitted", "reviewing", "quote_sent", "confirmed", "completed", "cancelled"];
 
 export default function AdminEventsPage() {
+  const f = useFieldErrors();
   const [events, setEvents] = useState<EventRequest[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [selected, setSelected] = useState<EventRequest | null>(null);
@@ -42,6 +44,15 @@ export default function AdminEventsPage() {
 
   const saveQuote = async () => {
     if (!selected) return;
+    const amount = quoteAmount.trim();
+    const ok = f.validate({
+      quoteAmount: amount && (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) ? "Enter the quote in naira, e.g. 150000." : null,
+      quoteLink: checkLink(quoteLink),
+    });
+    if (!ok) {
+      toast.error("Please fix the highlighted fields.");
+      return;
+    }
     try {
       await apiClient.patch(`/admin/events/${selected.id}`, {
         status: newStatus || undefined,
@@ -132,12 +143,31 @@ export default function AdminEventsPage() {
               </select>
             </label>
             <div className="mt-3 grid gap-2">
-              <Input label="Quote (₦)" type="number" value={quoteAmount} onChange={(e) => setQuoteAmount(e.target.value)} />
+              <Input
+                label="Quote (₦)"
+                type="number"
+                min={0}
+                value={quoteAmount}
+                onChange={(e) => {
+                  setQuoteAmount(e.target.value);
+                  f.clear("quoteAmount");
+                }}
+                error={f.errors.quoteAmount ?? undefined}
+              />
               <Input label="Quote note" value={quoteNote} onChange={(e) => setQuoteNote(e.target.value)} />
-              <Input label="Quote link" value={quoteLink} onChange={(e) => setQuoteLink(e.target.value)} />
+              <Input
+                label="Quote link"
+                placeholder="https://…"
+                value={quoteLink}
+                onChange={(e) => {
+                  setQuoteLink(e.target.value);
+                  f.clear("quoteLink");
+                }}
+                error={f.errors.quoteLink ?? undefined}
+              />
             </div>
             <div className="mt-4 flex gap-2">
-              <Button onClick={() => void saveQuote()}>Save</Button>
+              <Button onClick={() => saveQuote()}>Save</Button>
               <Button variant="ghost" onClick={() => setSelected(null)}>
                 Close
               </Button>

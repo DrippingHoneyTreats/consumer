@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import { loadFlutterwave, payWithFlutterwave, type InlineCheckout, type InlineOutcome } from "@/lib/flutterwave";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ApiRequestError, apiClient } from "@/lib/api";
 import { unwrapData } from "@/lib/data";
@@ -24,6 +25,8 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { Bike, Lock, MapPin, ShieldCheck, ShoppingBag, Store, Tag } from "lucide-react";
 
+const PAY_FALLBACK = "Cannot proceed with payment, try again.";
+
 function ReviewForm() {
   const params = useSearchParams();
   const orderId = params.get("orderId");
@@ -37,6 +40,11 @@ function ReviewForm() {
 
   const [failed, setFailed] = useState(false);
   const [nonce, setNonce] = useState(0);
+
+  // Warm up Flutterwave's script so the popup opens instantly when they tap Pay.
+  useEffect(() => {
+    void loadFlutterwave().catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!orderId) return;
@@ -52,16 +60,25 @@ function ReviewForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, nonce]);
 
+  const [promoError, setPromoError] = useState<string | null>(null);
+
   async function applyPromo() {
-    if (!orderId || !promo.trim()) return;
+    if (!orderId) return;
+    if (!promo.trim()) {
+      setPromoError("Enter a promo code first.");
+      return;
+    }
     try {
       const res = await apiClient.post<Order | { data: Order }>(`/orders/${orderId}/promo`, {
         code: promo.trim(),
       });
       setOrder(unwrapData(res) ?? (res as Order));
+      setPromoError(null);
       toast.success("Promo applied.");
-    } catch {
-      toast.error("Promo code did not work.");
+    } catch (err) {
+      const msg = err instanceof ApiRequestError ? err.message : "That promo code didn't work.";
+      setPromoError(msg);
+      toast.error(msg);
     }
   }
 
@@ -76,21 +93,60 @@ function ReviewForm() {
           /* continue to payment */
         }
       }
-      const res = await apiClient.post<{ authorizationUrl?: string; url?: string; reference?: string }>(
-        "/payments/initiate",
-        { orderId },
-      );
+      const res = await apiClient.post<{
+        authorizationUrl?: string;
+        url?: string;
+        reference?: string;
+        inline?: InlineCheckout | null;
+      }>("/payments/initiate", { orderId });
       const url = res.authorizationUrl ?? res.url;
       const ref = res.reference;
+
+      // Preferred: Flutterwave's popup right here on the page.
+      if (res.inline?.provider === "flutterwave" && ref) {
+        let outcome: InlineOutcome | null = null;
+        try {
+          setLoading(false);
+          outcome = await payWithFlutterwave(res.inline);
+        } catch (e) {
+          // Popup couldn't load (ad blocker, slow network): use Flutterwave's own page instead.
+          console.warn("[pay] inline unavailable, redirecting", e);
+          if (url) {
+            window.location.href = url;
+            return;
+          }
+          throw e;
+        }
+        if (outcome.kind === "finished") {
+          const q = new URLSearchParams({ reference: ref, status: outcome.status });
+          if (outcome.transactionId) q.set("transaction_id", outcome.transactionId);
+          router.push(`/payment/callback?${q.toString()}`);
+          return;
+        }
+        // Closed without finishing. Ask the server (a bank transfer may still have gone through),
+        // which also unlocks the order so they can try again.
+        const check = await apiClient
+          .post<{ status: string }>("/payments/verify", { reference: ref, gatewayStatus: "cancelled" })
+          .catch(() => null);
+        if (check?.status === "success") {
+          router.push(`/payment/callback?reference=${encodeURIComponent(ref)}`);
+          return;
+        }
+        toast.info("Payment cancelled. Your order is saved. Tap Pay now when you're ready.");
+        return;
+      }
+
       if (url) {
         window.location.href = url;
       } else if (ref) {
         router.push(`/payment/callback?reference=${encodeURIComponent(ref)}`);
       } else {
-        toast.error("Payment could not start.");
+        toast.error(PAY_FALLBACK);
       }
     } catch (err) {
-      toast.error(err instanceof ApiRequestError ? err.message : "Payment could not start.");
+      // Show the exact reason; only fall back when there isn't one.
+      const reason = err instanceof Error ? err.message.trim() : "";
+      toast.error(reason && reason !== "Request failed" ? reason : PAY_FALLBACK);
     } finally {
       setLoading(false);
     }
@@ -119,7 +175,7 @@ function ReviewForm() {
 
   const itemCount = order.items.reduce((n, l) => n + l.qty, 0);
   const payButton = (
-    <Button fullWidth variant="dark" loading={loading} leftIcon={<Lock size={16} />} onClick={() => void payNow()}>
+    <Button fullWidth variant="dark" loading={loading} leftIcon={<Lock size={16} />} onClick={() => payNow()}>
       Pay now · {formatNgn(order.total)}
     </Button>
   );
@@ -134,7 +190,7 @@ function ReviewForm() {
       title="Review & pay"
       subtitle="Check your order, then pay securely."
       backHref={`/checkout/address?orderId=${orderId}`}
-      className="min-h-dvh pb-40 md:pb-12"
+      className="min-h-dvh pb-[calc(170px+var(--safe-bottom))] md:pb-12"
       hero={
         <div>
           <p className="text-xs text-white/70">Total to pay now</p>
@@ -214,16 +270,20 @@ function ReviewForm() {
       </PageSection>
 
       <PageSection title="Promo code">
-        <div className="flex items-end gap-2 sm:max-w-md">
+        <div className="flex items-start gap-2 sm:max-w-md">
           <Input
             placeholder="Enter code"
             aria-label="Promo code"
             value={promo}
-            onChange={(e) => setPromo(e.target.value)}
+            onChange={(e) => {
+              setPromo(e.target.value);
+              setPromoError(null);
+            }}
+            error={promoError ?? undefined}
             leftAddon={<Tag size={16} className="text-tea" />}
             className="uppercase"
           />
-          <Button variant="secondary" className="min-h-13 shrink-0" onClick={() => void applyPromo()}>
+          <Button variant="secondary" className="min-h-13 shrink-0" onClick={() => applyPromo()}>
             Apply
           </Button>
         </div>

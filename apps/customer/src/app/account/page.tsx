@@ -38,9 +38,6 @@ function initials(name: string) {
     .join("");
 }
 
-function firstName(name: string) {
-  return name.trim().split(/\s+/)[0] || "friend";
-}
 
 export default function AccountPage() {
   const user = useAuthStore((s) => s.user);
@@ -112,8 +109,8 @@ export default function AccountPage() {
     <InnerPage
       tabbed
       help={false}
-      eyebrow={greetingForNow()}
-      title={`Hey, ${firstName(user.fullName)}!`}
+      eyebrow="Your account"
+      title={greetingForNow(user.fullName)}
       subtitle="Manage your profile and preferences."
       right={
         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-blush font-display text-xl text-deep ring-4 ring-white/40">
@@ -131,7 +128,7 @@ export default function AccountPage() {
           <Button fullWidth variant="dark" leftIcon={<Pencil size={15} />} onClick={edit}>
             Edit profile
           </Button>
-          <Button fullWidth variant="tertiary" leftIcon={<LogOut size={15} />} className="text-danger" onClick={() => void logout()}>
+          <Button fullWidth variant="tertiary" leftIcon={<LogOut size={15} />} className="text-danger" onClick={() => logout()}>
             Log out
           </Button>
         </>
@@ -206,13 +203,14 @@ export default function AccountPage() {
             {" · "}
             <Link href="/terms" className="font-semibold hover:text-tea">Terms</Link>
           </p>
-          <button
-            type="button"
-            onClick={() => void logout()}
-            className="pressable inline-flex items-center gap-2 rounded-full border border-danger/20 px-4 py-2 text-sm font-semibold text-danger md:hidden"
+          <Button
+            variant="tertiary"
+            leftIcon={<LogOut size={15} />}
+            onClick={() => logout()}
+            className="min-h-10 border-danger/25 px-4 py-2 text-danger md:hidden"
           >
-            <LogOut size={15} /> Log out
-          </button>
+            Log out
+          </Button>
         </div>
       </PageSection>
     </InnerPage>
@@ -229,7 +227,7 @@ const ACCOUNT_PERKS: Feature[] = [
 ];
 
 function GuestAccount() {
-  const signIn = "/verify?returnTo=/account";
+  const signIn = "/verify?returnTo=/";
   return (
     <InnerPage
       tabbed

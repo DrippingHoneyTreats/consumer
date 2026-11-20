@@ -61,12 +61,20 @@ export function InnerPage({
   children: ReactNode;
 }) {
   return (
-    <div className={cn(tabbed ? "page-pad" : "page-pad-no-tab", className)}>
+    <div
+      className={cn(
+        tabbed ? "page-pad" : "page-pad-no-tab",
+        // Desktop/tablet: room at the top, and short pages sit in the middle of the screen
+        // instead of hugging the top with empty space below.
+        "md:flex md:min-h-dvh md:flex-col md:justify-center md:pt-10 lg:pt-12",
+        className,
+      )}
+    >
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="mx-auto max-w-6xl space-y-4 md:grid md:grid-cols-[280px_minmax(0,1fr)] md:space-y-0 md:overflow-clip md:rounded-[32px] md:bg-white md:shadow-[var(--shadow-card)] md:ring-1 md:ring-deep/5 lg:grid-cols-[330px_minmax(0,1fr)]"
+        className="mx-auto w-full max-w-6xl space-y-4 md:grid md:grid-cols-[280px_minmax(0,1fr)] md:space-y-0 md:overflow-clip md:rounded-[32px] md:bg-white md:shadow-[var(--shadow-card)] md:ring-1 md:ring-deep/5 lg:grid-cols-[330px_minmax(0,1fr)]"
       >
         {/* —— Side panel —— */}
         <aside className="md:border-r md:border-deep/5 md:bg-[#f7f4ef]">

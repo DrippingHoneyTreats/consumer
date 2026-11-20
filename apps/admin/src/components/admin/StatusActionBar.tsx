@@ -71,22 +71,22 @@ export function StatusActionBar({ order, onUpdated }: Props) {
     <div className="flex flex-col gap-3 border-t border-deep/10 pt-4">
       <div className="flex flex-wrap gap-2">
         {order.status === "seen" || order.status === "placed" ? (
-          <Button loading={loading} onClick={() => void patchStatus("accepted")}>
+          <Button loading={loading} onClick={() => patchStatus("accepted")}>
             Accept
           </Button>
         ) : null}
         {order.status === "accepted" ? (
-          <Button loading={loading} onClick={() => void patchStatus("preparing")}>
+          <Button loading={loading} onClick={() => patchStatus("preparing")}>
             Preparing
           </Button>
         ) : null}
         {order.status === "preparing" ? (
-          <Button loading={loading} onClick={() => void patchStatus("ready_for_delivery")}>
+          <Button loading={loading} onClick={() => patchStatus("ready_for_delivery")}>
             {order.fulfillment === "pickup" ? "Ready for pickup" : "Ready"}
           </Button>
         ) : null}
         {order.status === "ready_for_delivery" && order.fulfillment === "pickup" ? (
-          <Button loading={loading} onClick={() => void patchStatus("delivered", "Picked up by customer")}>
+          <Button loading={loading} onClick={() => patchStatus("delivered", "Picked up by customer")}>
             Picked up
           </Button>
         ) : null}
@@ -96,7 +96,7 @@ export function StatusActionBar({ order, onUpdated }: Props) {
           </Button>
         ) : null}
         {order.status === "out_for_delivery" ? (
-          <Button loading={loading} onClick={() => void patchStatus("delivered")}>
+          <Button loading={loading} onClick={() => patchStatus("delivered")}>
             Delivered
           </Button>
         ) : null}
@@ -122,7 +122,7 @@ export function StatusActionBar({ order, onUpdated }: Props) {
             />
           </div>
           <div className="mt-3 flex gap-2">
-            <Button loading={loading} onClick={() => void submitDelivery()}>
+            <Button loading={loading} onClick={() => submitDelivery()}>
               Dispatch
             </Button>
             <Button variant="ghost" onClick={() => setDeliveryOpen(false)}>
@@ -144,7 +144,7 @@ export function StatusActionBar({ order, onUpdated }: Props) {
             <Button
               variant="danger"
               loading={loading}
-              onClick={() => void patchStatus("cancelled", rejectReason.trim() || "Rejected by admin")}
+              onClick={() => patchStatus("cancelled", rejectReason.trim() || "Rejected by admin")}
             >
               Confirm reject
             </Button>

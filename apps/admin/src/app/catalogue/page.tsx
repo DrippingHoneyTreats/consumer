@@ -19,6 +19,7 @@ import { ImageField } from "@/components/admin/ImageField";
 import { ProductImagesField } from "@/components/admin/ProductImagesField";
 import { toast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
+import { checkRequired, useFieldErrors } from "@/lib/validate";
 
 type ItemForm = {
   categoryId: string;
@@ -61,6 +62,8 @@ const blankItem = (categoryId = ""): ItemForm => ({
 });
 
 export default function AdminCataloguePage() {
+  const f = useFieldErrors();
+  const cf = useFieldErrors();
   const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,7 +132,7 @@ export default function AdminCataloguePage() {
   };
 
   const saveCategory = async () => {
-    if (!catForm.name.trim()) return;
+    if (!cf.validate({ catName: checkRequired(catForm.name, "Give the category a name.") })) return;
     try {
       await apiClient.post("/admin/categories", {
         name: catForm.name.trim(),
@@ -146,15 +149,20 @@ export default function AdminCataloguePage() {
 
   const saveItem = async () => {
     const variants = parseSizes(itemForm.sizes, editingItem?.variants);
-    if (!variants) {
-      toast.error('Sizes: one per line, like "Pack of 3 = 4000"');
-      return;
-    }
-    const basePrice = variants.length
+    const basePrice = variants?.length
       ? Math.min(...variants.map((v) => v.price))
       : Math.round(Number(itemForm.basePrice) * 100);
-    if (!itemForm.name.trim() || !itemForm.categoryId || !Number.isFinite(basePrice) || basePrice <= 0) {
-      toast.error("Name, category and a price (or sizes) are required");
+    const ok = f.validate({
+      categoryId: itemForm.categoryId ? null : "Choose a category.",
+      name: checkRequired(itemForm.name, "Give the product a name."),
+      sizes: !variants ? 'Write one size per line, like "Pack of 3 = 4000".' : null,
+      basePrice:
+        variants && !variants.length && (!itemForm.basePrice.trim() || !Number.isFinite(basePrice) || basePrice <= 0)
+          ? "Enter a price in naira, e.g. 2500 (or add sizes above)."
+          : null,
+    });
+    if (!ok || !variants) {
+      toast.error("Please fix the highlighted fields.");
       return;
     }
     const images = itemForm.images.filter(Boolean);
@@ -226,7 +234,15 @@ export default function AdminCataloguePage() {
             />
           )}
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <Input label="Name" value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} />
+            <Input
+              label="Name"
+              value={catForm.name}
+              onChange={(e) => {
+                setCatForm({ ...catForm, name: e.target.value });
+                cf.clear("catName");
+              }}
+              error={cf.errors.catName ?? undefined}
+            />
             <Input label="Slug (optional)" value={catForm.slug} onChange={(e) => setCatForm({ ...catForm, slug: e.target.value })} />
             <div className="sm:col-span-2">
               <ImageField
@@ -237,7 +253,7 @@ export default function AdminCataloguePage() {
               />
             </div>
           </div>
-          <Button className="mt-3" onClick={() => void saveCategory()}>
+          <Button className="mt-3" onClick={() => saveCategory()}>
             Add category
           </Button>
         </section>
@@ -250,7 +266,11 @@ export default function AdminCataloguePage() {
               <select
                 className={cn(selectClass, "mt-1")}
                 value={itemForm.categoryId}
-                onChange={(e) => setItemForm({ ...itemForm, categoryId: e.target.value })}
+                onChange={(e) => {
+                  setItemForm({ ...itemForm, categoryId: e.target.value });
+                  f.clear("categoryId");
+                }}
+                aria-invalid={f.errors.categoryId ? true : undefined}
                 disabled={!categories.length}
               >
                 {!categories.length ? <option value="">Add a category first</option> : null}
@@ -261,7 +281,16 @@ export default function AdminCataloguePage() {
                 ))}
               </select>
             </label>
-            <Input label="Name" value={itemForm.name} onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} />
+            {f.errors.categoryId ? <p role="alert" data-invalid="true" className="text-xs font-semibold text-danger">{f.errors.categoryId}</p> : null}
+            <Input
+              label="Name"
+              value={itemForm.name}
+              onChange={(e) => {
+                setItemForm({ ...itemForm, name: e.target.value });
+                f.clear("name");
+              }}
+              error={f.errors.name ?? undefined}
+            />
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-deep">Sizes &amp; prices (₦)</span>
               <textarea
@@ -269,16 +298,29 @@ export default function AdminCataloguePage() {
                 rows={4}
                 placeholder={"1 piece = 1500\nPack of 3 = 4000\nPack of 6 = 8000"}
                 value={itemForm.sizes}
-                onChange={(e) => setItemForm({ ...itemForm, sizes: e.target.value })}
+                aria-invalid={f.errors.sizes ? true : undefined}
+                onChange={(e) => {
+                  setItemForm({ ...itemForm, sizes: e.target.value });
+                  f.clear("sizes");
+                  f.clear("basePrice");
+                }}
               />
-              <span className="text-xs text-deep/55">One per line. Leave empty to use a single price.</span>
+              {f.errors.sizes ? (
+                <span role="alert" className="text-xs font-semibold text-danger">{f.errors.sizes}</span>
+              ) : (
+                <span className="text-xs text-deep/55">One per line. Leave empty to use a single price.</span>
+              )}
             </label>
             {!itemForm.sizes.trim() ? (
               <Input
                 label="Price (₦)"
                 type="number"
                 value={itemForm.basePrice}
-                onChange={(e) => setItemForm({ ...itemForm, basePrice: e.target.value })}
+                onChange={(e) => {
+                  setItemForm({ ...itemForm, basePrice: e.target.value });
+                  f.clear("basePrice");
+                }}
+                error={f.errors.basePrice ?? undefined}
               />
             ) : null}
             <ProductImagesField
@@ -292,7 +334,7 @@ export default function AdminCataloguePage() {
             />
           </div>
           <div className="mt-3 flex gap-2">
-            <Button onClick={() => void saveItem()} disabled={!categories.length}>
+            <Button onClick={() => saveItem()} disabled={!categories.length}>
               {editingItem ? "Save changes" : "Upload product"}
             </Button>
             {editingItem ? (
@@ -345,7 +387,7 @@ export default function AdminCataloguePage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge status={item.status} />
-                    <Button variant="secondary" onClick={() => void toggleSoldOut(item)}>
+                    <Button variant="secondary" onClick={() => toggleSoldOut(item)}>
                       {item.status === "sold_out" ? "Restock" : "Sold out"}
                     </Button>
                     <Button
@@ -367,7 +409,7 @@ export default function AdminCataloguePage() {
                     <Button
                       variant="ghost"
                       loading={announcing === item.id}
-                      onClick={() => void announce(item)}
+                      onClick={() => announce(item)}
                       title="Email customers about this product"
                     >
                       Announce

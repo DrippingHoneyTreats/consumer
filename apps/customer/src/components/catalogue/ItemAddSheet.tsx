@@ -20,7 +20,8 @@ type Props = {
   item: Item | CatalogueItem | null;
   open: boolean;
   onClose: () => void;
-  onConfirm: (opts: { variantId?: string; qty: number }) => void;
+  /** May return a promise: the button spins until it settles; resolving to `false` keeps the sheet open. */
+  onConfirm: (opts: { variantId?: string; qty: number }) => void | Promise<unknown>;
   /** Editing a cart line: start from its current size and quantity. */
   initialVariantId?: string;
   initialQty?: number;
@@ -55,7 +56,9 @@ export function ItemAddSheet({ item, open, onClose, onConfirm, initialVariantId,
     if (!open) return;
     setVariantId(initialVariantId);
     setQty(initialQty ?? 1);
+    setSizeError(null);
   }, [open, item?.id, initialVariantId, initialQty]);
+  const [sizeError, setSizeError] = useState<string | null>(null);
   const [openPanel, setOpenPanel] = useState<"ingredients" | "nutrition" | null>("ingredients");
 
   const price = useMemo(() => {
@@ -110,13 +113,19 @@ export function ItemAddSheet({ item, open, onClose, onConfirm, initialVariantId,
       {hasVariants ? (
         <div className="mb-4 space-y-2">
           <p className="text-sm font-semibold text-deep">{variantSectionLabel(item.categoryId)}</p>
-          <div className="flex flex-wrap gap-2">
+          <div
+            className={cn("flex flex-wrap gap-2", sizeError && "rounded-[22px] bg-[#fdecea] p-2 ring-1 ring-danger/30")}
+            data-invalid={sizeError ? "true" : undefined}
+          >
             {item.variants!.map((v) => (
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 key={v.id}
                 type="button"
-                onClick={() => setVariantId(v.id)}
+                onClick={() => {
+                  setVariantId(v.id);
+                  setSizeError(null);
+                }}
                 aria-pressed={variantId === v.id}
                 className={cn(
                   "relative rounded-full border px-4 py-2.5 text-sm font-medium transition-colors",
@@ -136,6 +145,11 @@ export function ItemAddSheet({ item, open, onClose, onConfirm, initialVariantId,
               </motion.button>
             ))}
           </div>
+          {sizeError ? (
+            <p role="alert" className="pl-1 text-xs font-semibold text-danger">
+              {sizeError}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -209,12 +223,24 @@ export function ItemAddSheet({ item, open, onClose, onConfirm, initialVariantId,
         fullWidth
         variant="dark"
         leftIcon={<ShoppingBag size={18} />}
-        disabled={soldOut || (hasVariants && !variantId)}
+        disabled={soldOut}
         onClick={() => {
-          onConfirm({ variantId, qty });
-          onClose();
-          setQty(1);
-          setVariantId(undefined);
+          if (hasVariants && !variantId) {
+            setSizeError(`Please ${variantSectionLabel(item.categoryId).toLowerCase()} first.`);
+            return;
+          }
+          const finish = () => {
+            onClose();
+            setQty(1);
+            setVariantId(undefined);
+          };
+          const result = onConfirm({ variantId, qty });
+          if (result && typeof (result as Promise<unknown>).then === "function") {
+            return (result as Promise<unknown>).then((ok) => {
+              if (ok !== false) finish();
+            });
+          }
+          finish();
         }}
       >
         {soldOut ? "Sold out" : `${confirmLabel ?? "Order now"} · ${formatNgn(price * qty)}`}

@@ -131,22 +131,36 @@ export default function OrdersPage() {
     updateGuestQty(line.itemId, line.variantId, qty);
   }
 
+  // Show the new quantity at once; the server confirms in the background.
+  const [qtyOverride, setQtyOverride] = useState<Record<string, number>>({});
+  const [updatingQty, setUpdatingQty] = useState(0);
   async function onDraftQty(lineId: string, qty: number) {
     if (!activeDraft) return;
-    await setQty(activeDraft.id, lineId, qty);
-    await refreshDraft();
-    setNonce((n) => n + 1);
+    setQtyOverride((m) => ({ ...m, [lineId]: qty }));
+    setUpdatingQty((n) => n + 1);
+    try {
+      await setQty(activeDraft.id, lineId, qty);
+      await refreshDraft();
+      setNonce((n) => n + 1);
+    } finally {
+      setUpdatingQty((n) => n - 1);
+      setQtyOverride((m) => {
+        const next = { ...m };
+        delete next[lineId];
+        return next;
+      });
+    }
   }
 
   /** Change a line's size/options in the details sheet. */
-  function editLine(key: string) {
+  function editLine(key: string): Promise<void> | void {
     if (showGuestCart) {
       const l = guestItems.find((g) => `${g.itemId}-${g.variantId ?? ""}` === key);
-      if (l) void editor.edit({ itemId: l.itemId, variantId: l.variantId, qty: l.qty, image: l.image });
+      if (l) return editor.edit({ itemId: l.itemId, variantId: l.variantId, qty: l.qty, image: l.image });
       return;
     }
     const l = activeDraft?.items.find((i) => i.id === key);
-    if (l) void editor.edit({ itemId: l.itemId, variantId: l.variantId, qty: l.qty, lineId: l.id, orderId: activeDraft?.id, image: l.item?.images?.[0] });
+    if (l) return editor.edit({ itemId: l.itemId, variantId: l.variantId, qty: l.qty, lineId: l.id, orderId: activeDraft?.id, image: l.item?.images?.[0] });
   }
 
   async function startCheckout() {
@@ -196,17 +210,19 @@ export default function OrdersPage() {
         image: l.image,
       }))
     : activeDraft
-      ? activeDraft.items.map((l) => ({
+      ? activeDraft.items
+          .filter((l) => qtyOverride[l.id] !== 0)
+          .map((l) => ({
           key: l.id,
           name: l.nameSnapshot,
-          qty: l.qty,
+          qty: qtyOverride[l.id] ?? l.qty,
           unitPrice: l.unitPrice,
           image: l.item?.images?.[0],
         }))
       : [];
 
   return (
-    <EditorialPage className="pb-[calc(var(--tab-h)+var(--safe-bottom)+24px)]">
+    <EditorialPage className="pb-[calc(var(--tab-h)+var(--safe-bottom)+var(--banner-h,0px)+24px)]">
       <EditorialHero
         className="md:pt-4"
         pill={<><ShoppingBag size={13} /> Your treats</>}
@@ -273,6 +289,7 @@ export default function OrdersPage() {
                   total={checkoutTotal}
                   onQtyChange={showGuestCart ? onGuestQty : (key, qty) => void onDraftQty(key, qty)}
                   onEdit={editLine}
+                  updating={updatingQty > 0}
                   onPayNow={() => void startCheckout()}
                   paying={paying}
                   userHint={user?.fullName || user?.phone || user?.email || null}
@@ -316,7 +333,7 @@ export default function OrdersPage() {
                   tone="none"
                   label="Completed orders"
                   items={buckets.recent.map((order, i) => (
-                    <OrderListCard key={order.id} order={order} mode="completed" index={i} onReorder={() => void reorder(order.id)} />
+                    <OrderListCard key={order.id} order={order} mode="completed" index={i} onReorder={() => reorder(order.id)} />
                   ))}
                 />
                 <div className="hidden gap-3 md:grid md:grid-cols-2 md:gap-4">
@@ -326,7 +343,7 @@ export default function OrdersPage() {
                       order={order}
                       mode="completed"
                       index={i}
-                      onReorder={() => void reorder(order.id)}
+                      onReorder={() => reorder(order.id)}
                     />
                   ))}
                 </div>

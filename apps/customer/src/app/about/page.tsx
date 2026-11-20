@@ -21,7 +21,7 @@ export default async function AboutPage() {
   const faqs = getFaqs({ pickupAddress, pickupHours, categories });
 
   return (
-    <div className="page-pad pb-[calc(var(--tab-h)+var(--safe-bottom)+48px)]">
+    <div className="page-pad pb-[calc(var(--tab-h)+var(--safe-bottom)+var(--banner-h,0px)+48px)]">
       <JsonLd data={faqJsonLd(faqs)} />
       <JsonLd data={breadcrumbJsonLd([{ name: "Home", path: "/" }, { name: "About", path: "/about" }])} />
 

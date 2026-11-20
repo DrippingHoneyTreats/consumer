@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   CalendarDays,
   LayoutDashboard,
+  ShoppingCart,
   Megaphone,
   Shield,
   ShoppingBag,
@@ -27,6 +28,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
     icon: LayoutDashboard,
     match: (p) => p === "/orders" || p.startsWith("/orders/"),
   },
+  { href: "/abandoned", label: "Unfinished", icon: ShoppingCart },
   { href: "/events", label: "Events", icon: CalendarDays },
 ];
 

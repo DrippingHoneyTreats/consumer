@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "./cn";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type MouseEvent, type ReactNode } from "react";
 
 type Variant = "primary" | "secondary" | "tertiary" | "ghost" | "danger" | "dark";
 
@@ -15,7 +15,12 @@ const styles: Record<Variant, string> = {
   dark: "bg-deep text-white hover:bg-deep-soft shadow-[0_10px_24px_-10px_rgba(63,95,70,0.7)]",
 };
 
-type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
+type Props = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick"> & {
+  /**
+   * Return a promise (e.g. `onClick={() => save()}`) and the button shows its
+   * spinner and blocks double taps until it settles. No extra state needed.
+   */
+  onClick?: (e: MouseEvent<HTMLButtonElement>) => void | Promise<unknown>;
   variant?: Variant;
   loading?: boolean;
   leftIcon?: ReactNode;
@@ -32,20 +37,51 @@ export function Button({
   className,
   children,
   disabled,
+  onClick,
   ...props
 }: Props) {
+  const [pending, setPending] = useState(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    // Set on every mount: React (dev/StrictMode) mounts, unmounts and re-mounts,
+    // and a stale `false` would leave the spinner on forever.
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const busy = Boolean(loading || pending);
+
+  function handleClick(e: MouseEvent<HTMLButtonElement>) {
+    if (busy) return;
+    const result = onClick?.(e);
+    if (result && typeof (result as Promise<unknown>).then === "function") {
+      setPending(true);
+      (result as Promise<unknown>)
+        .catch(() => {
+          /* the caller shows its own error */
+        })
+        .finally(() => {
+          if (mounted.current) setPending(false);
+        });
+    }
+  }
+
   return (
     <button
       className={cn(
         "inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100",
         styles[variant],
         fullWidth && "w-full",
+        busy && "cursor-progress disabled:opacity-80",
         className,
       )}
-      disabled={disabled || loading}
+      disabled={disabled || busy}
+      aria-busy={busy || undefined}
+      onClick={handleClick}
       {...props}
     >
-      {loading ? (
+      {busy ? (
         <span
           className={cn(
             "h-4 w-4 animate-spin rounded-full border-2",
@@ -56,7 +92,7 @@ export function Button({
         leftIcon
       )}
       {children}
-      {!loading ? rightIcon : null}
+      {!busy ? rightIcon : null}
     </button>
   );
 }

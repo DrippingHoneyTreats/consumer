@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 import { SlidersHorizontal, Trash2 } from "lucide-react";
+import { usePending, spinnerClass } from "@/hooks/usePending";
 import { formatNgn } from "@/lib/format";
 import { listItem } from "@/lib/motion";
 import { ITEM_PLACEHOLDER } from "@/lib/placeholders";
@@ -35,11 +36,12 @@ export function CartLineRow({
   /** Enables swipe-to-remove. */
   onRemove?: () => void;
   /** Shows an "Edit" link to change size/options. */
-  onEdit?: () => void;
+  onEdit?: () => void | Promise<unknown>;
   editLabel?: string;
   /** Right-hand control (QtyStepper or ×qty). */
   children?: ReactNode;
 }) {
+  const [editing, trackEdit] = usePending();
   const x = useMotionValue(0);
   const bgOpacity = useTransform(x, [-REVEAL, -16, 0], [1, 0.4, 0]);
   const iconScale = useTransform(x, [-REVEAL, -TRIGGER, -24], [1.15, 1, 0.6]);
@@ -92,10 +94,12 @@ export function CartLineRow({
           {onEdit ? (
             <button
               type="button"
-              onClick={onEdit}
+              onClick={() => trackEdit(onEdit())}
+              disabled={editing}
+              aria-busy={editing || undefined}
               className="mt-1 inline-flex items-center gap-1 rounded-full bg-sage-soft px-2.5 py-1 text-[11px] font-semibold text-deep transition hover:bg-sage/40"
             >
-              <SlidersHorizontal size={11} /> {editLabel}
+              {editing ? <span className={spinnerClass} /> : <SlidersHorizontal size={11} />} {editing ? "Opening…" : editLabel}
             </button>
           ) : null}
         </div>

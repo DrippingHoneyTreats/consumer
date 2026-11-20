@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { OtpInput } from "@/components/auth/OtpInput";
 import { toast } from "@/components/ui/Toast";
+import { checkCode, checkEmail, checkName, checkPhone, checkPin, checkPinConfirm, normalizeNgPhone, useFieldErrors } from "@/lib/validate";
 import { VerifyingInline } from "@/components/ui/Verifying";
 
 const errMsg = (e: unknown, fallback: string) => (e instanceof ApiRequestError ? e.message : fallback);
@@ -31,15 +32,25 @@ export function ProfileEditor({ user, onDone }: { user: User; onDone: () => void
   const [phone, setPhone] = useState(localPhone(user.phone));
   const [email, setEmail] = useState(user.email ?? "");
   const [saving, setSaving] = useState(false);
+  const f = useFieldErrors();
 
   async function saveDetails() {
     const name = fullName.trim();
-    if (name.length < 2) return void toast.error("Enter your name (at least 2 characters).");
+    const ok = f.validate({
+      name: checkName(fullName),
+      // A number is needed to sign in with a PIN, so keep it once it's set.
+      phone: checkPhone(phone, { required: Boolean(user.phone || user.hasPin) }),
+      email: checkEmail(email, { required: false }),
+    });
+    if (!ok) {
+      toast.error("Please fix the highlighted fields.");
+      return;
+    }
     setSaving(true);
     try {
       const updated = await apiClient.patch<User>("/me", {
         fullName: name,
-        phone: phone.trim() || undefined,
+        phone: phone.replace(/\D/g, "") ? normalizeNgPhone(phone) : undefined,
         email: email.trim() || undefined,
       });
       setUser(updated);
@@ -50,7 +61,12 @@ export function ProfileEditor({ user, onDone }: { user: User; onDone: () => void
         onDone();
       }
     } catch (e) {
-      toast.error(errMsg(e, "Couldn't save your profile. Try again."));
+      const msg = errMsg(e, "Couldn't save your profile. Try again.");
+      toast.error(msg);
+      // Put the server's message under the field it's about.
+      if (/email/i.test(msg)) f.setError("email", msg);
+      else if (/phone|number|whatsapp/i.test(msg)) f.setError("phone", msg);
+      else if (/name/i.test(msg)) f.setError("name", msg);
     } finally {
       setSaving(false);
     }
@@ -69,7 +85,11 @@ export function ProfileEditor({ user, onDone }: { user: User; onDone: () => void
         <Input
           label="Full name"
           value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
+          onChange={(e) => {
+            setFullName(e.target.value);
+            f.clear("name");
+          }}
+          error={f.errors.name ?? undefined}
           placeholder="Your name"
           autoComplete="name"
           leftAddon={<UserRound size={18} className="text-tea" />}
@@ -79,7 +99,11 @@ export function ProfileEditor({ user, onDone }: { user: User; onDone: () => void
           type="tel"
           inputMode="tel"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => {
+            setPhone(e.target.value);
+            f.clear("phone");
+          }}
+          error={f.errors.phone ?? undefined}
           placeholder="0803 123 4567"
           autoComplete="tel"
           hint="Used to sign in with your PIN and for order updates."
@@ -89,14 +113,18 @@ export function ProfileEditor({ user, onDone }: { user: User; onDone: () => void
           label="Email (optional)"
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            f.clear("email");
+          }}
+          error={f.errors.email ?? undefined}
           placeholder="you@example.com"
           autoComplete="email"
           hint="For receipts and to reset your PIN if you forget it."
           leftAddon={<Mail size={18} className="text-tea" />}
         />
         <div className="flex flex-wrap gap-2">
-          <Button variant="dark" loading={saving} onClick={() => void saveDetails()}>
+          <Button variant="dark" loading={saving} onClick={() => saveDetails()}>
             Save changes
           </Button>
           <Button variant="ghost" disabled={saving} onClick={onDone}>
@@ -117,8 +145,11 @@ function VerifyEmail({ email }: { email: string }) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const [sending, setSending] = useState(false);
+
   async function send() {
     setBusy(true);
+    setSending(true);
     try {
       const res = await apiClient.post<{ sentTo?: string; alreadyVerified?: boolean }>("/me/email/send-code", {});
       if (res.alreadyVerified) {
@@ -131,18 +162,27 @@ function VerifyEmail({ email }: { email: string }) {
       toast.error(errMsg(e, "We couldn't send the code. Try again."));
     } finally {
       setBusy(false);
+      setSending(false);
     }
   }
 
+  const [codeError, setCodeError] = useState<string | null>(null);
+
   async function verify(value = code) {
-    if (value.length !== 6) return;
+    const problem = checkCode(value);
+    if (problem) {
+      setCodeError(problem);
+      return;
+    }
     setBusy(true);
     try {
       const updated = await apiClient.post<User>("/me/email/verify", { code: value });
       setUser(updated);
       toast.success("Email verified.");
     } catch (e) {
-      toast.error(errMsg(e, "That code didn't work. Try again."));
+      const msg = errMsg(e, "That code didn't work. Try again.");
+      toast.error(msg);
+      setCodeError(msg);
       setCode("");
     } finally {
       setBusy(false);
@@ -161,20 +201,22 @@ function VerifyEmail({ email }: { email: string }) {
             value={code}
             onChange={(v) => {
               setCode(v);
+              setCodeError(null);
               if (v.length === 6) void verify(v);
             }}
+            error={codeError}
             disabled={busy}
             autoFocus
           />
-          <VerifyingInline show={busy} text="Verifying your code…" />
-          <button type="button" onClick={() => void send()} disabled={busy} className="text-xs font-semibold text-tea">
-            Send a new code
+          <VerifyingInline show={busy} text={sending ? "Sending a new code…" : "Verifying your code…"} />
+          <button type="button" onClick={() => void send()} disabled={busy} className="text-xs font-semibold text-tea disabled:opacity-60">
+            {sending ? "Sending…" : "Send a new code"}
           </button>
         </div>
       ) : (
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <p className="flex-1 text-xs text-deep/60">We&apos;ll email you a code to confirm it&apos;s yours.</p>
-          <Button variant="dark" className="h-10 px-4 text-sm" loading={busy} onClick={() => void send()}>
+          <Button variant="dark" className="h-10 px-4 text-sm" loading={busy} onClick={() => send()}>
             Send code
           </Button>
         </div>
@@ -189,6 +231,7 @@ function PinSettings({ hasPin }: { hasPin: boolean }) {
   const [currentPin, setCurrentPin] = useState("");
   const [pin, setPin] = useState("");
   const [confirm, setConfirm] = useState("");
+  const f = useFieldErrors();
   const [busy, setBusy] = useState(false);
 
   function reset() {
@@ -198,9 +241,15 @@ function PinSettings({ hasPin }: { hasPin: boolean }) {
   }
 
   async function save() {
-    if (hasPin && currentPin.length !== 4) return void toast.error("Enter your current PIN.");
-    if (pin.length !== 4) return void toast.error("Choose a 4-digit PIN.");
-    if (pin !== confirm) return void toast.error("The PINs don't match.");
+    const ok = f.validate({
+      currentPin: hasPin ? (currentPin.length === 4 ? null : "Enter your current 4-digit PIN.") : null,
+      pin: checkPin(pin, "new PIN"),
+      confirm: checkPinConfirm(pin, confirm),
+    });
+    if (!ok) {
+      toast.error("Please fix the highlighted fields.");
+      return;
+    }
     setBusy(true);
     try {
       const updated = await apiClient.post<User>("/me/pin", { pin, currentPin: hasPin ? currentPin : undefined });
@@ -209,7 +258,9 @@ function PinSettings({ hasPin }: { hasPin: boolean }) {
       reset();
       setOpen(false);
     } catch (e) {
-      toast.error(errMsg(e, "Couldn't save your PIN. Try again."));
+      const msg = errMsg(e, "Couldn't save your PIN. Try again.");
+      toast.error(msg);
+      f.setError(/current/i.test(msg) ? "currentPin" : "pin", msg);
     } finally {
       setBusy(false);
     }
@@ -237,12 +288,14 @@ function PinSettings({ hasPin }: { hasPin: boolean }) {
       </div>
       {open ? (
         <div className="mt-4 space-y-4">
-          {hasPin ? <PinField label="Current PIN" value={currentPin} onChange={setCurrentPin} /> : null}
-          <PinField label="New PIN" value={pin} onChange={setPin} />
-          <PinField label="Confirm new PIN" value={confirm} onChange={setConfirm} />
+          {hasPin ? (
+            <PinField label="Current PIN" value={currentPin} error={f.errors.currentPin} onChange={(v) => { setCurrentPin(v); f.clear("currentPin"); }} />
+          ) : null}
+          <PinField label="New PIN" value={pin} error={f.errors.pin} onChange={(v) => { setPin(v); f.clear("pin"); }} />
+          <PinField label="Confirm new PIN" value={confirm} error={f.errors.confirm} onChange={(v) => { setConfirm(v); f.clear("confirm"); }} />
           <VerifyingInline show={busy} text="Saving your PIN…" />
           <div className="flex flex-wrap gap-2">
-            <Button variant="dark" loading={busy} onClick={() => void save()}>
+            <Button variant="dark" loading={busy} onClick={() => save()}>
               Save PIN
             </Button>
             <Button
@@ -262,11 +315,21 @@ function PinSettings({ hasPin }: { hasPin: boolean }) {
   );
 }
 
-function PinField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function PinField({
+  label,
+  value,
+  onChange,
+  error,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  error?: string | null;
+}) {
   return (
     <div>
       <p className="mb-2 text-center text-xs font-semibold text-deep/60">{label}</p>
-      <OtpInput value={value} onChange={onChange} length={4} mask label={label} />
+      <OtpInput value={value} onChange={onChange} length={4} mask label={label} error={error} />
     </div>
   );
 }

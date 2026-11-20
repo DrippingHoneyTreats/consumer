@@ -20,7 +20,7 @@ export function Input({ label, hint, error, leftAddon, className, id, ...props }
         className={cn(
           "flex min-h-10 items-center gap-2 rounded-lg border bg-white px-3 transition",
           error
-            ? "border-danger"
+            ? "border-danger/70 bg-[#fdecea]/50 ring-2 ring-danger/10"
             : "border-deep/20 focus-within:border-tea focus-within:ring-2 focus-within:ring-sage/30",
         )}
       >
@@ -31,10 +31,15 @@ export function Input({ label, hint, error, leftAddon, className, id, ...props }
             "w-full bg-transparent py-2 text-sm text-deep outline-none placeholder:text-deep/40",
             className,
           )}
+          aria-invalid={error ? true : undefined}
           {...props}
         />
       </span>
-      {error ? <span className="text-xs text-danger">{error}</span> : null}
+      {error ? (
+        <span role="alert" className="text-xs font-semibold text-danger">
+          {error}
+        </span>
+      ) : null}
       {!error && hint ? <span className="text-xs text-deep/55">{hint}</span> : null}
     </label>
   );

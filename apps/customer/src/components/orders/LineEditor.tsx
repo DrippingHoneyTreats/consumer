@@ -46,8 +46,8 @@ export function useLineEditor({ orderId, onSaved }: { orderId?: string | null; o
     setOpen(true);
   }
 
-  async function save({ variantId, qty }: { variantId?: string; qty: number }) {
-    if (!line || !item) return;
+  async function save({ variantId, qty }: { variantId?: string; qty: number }): Promise<boolean> {
+    if (!line || !item) return false;
     try {
       const oid = line.orderId ?? orderId;
       if (line.lineId && oid) {
@@ -67,8 +67,10 @@ export function useLineEditor({ orderId, onSaved }: { orderId?: string | null; o
       }
       toast.success("Item updated.");
       onSaved?.();
+      return true;
     } catch (err) {
       toast.error(err instanceof ApiRequestError ? err.message : "Couldn't update this item. Please try again.");
+      return false;
     }
   }
 
@@ -77,7 +79,7 @@ export function useLineEditor({ orderId, onSaved }: { orderId?: string | null; o
       item={item}
       open={open}
       onClose={() => setOpen(false)}
-      onConfirm={(opts) => void save(opts)}
+      onConfirm={(opts) => save(opts)}
       initialVariantId={line?.variantId ?? undefined}
       initialQty={line?.qty}
       confirmLabel="Update item"

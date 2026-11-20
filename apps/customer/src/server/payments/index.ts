@@ -17,10 +17,14 @@ const providers: Record<string, PaymentProvider> = {
 /** Gateway used for NEW payments (PAYMENT_PROVIDER, default flutterwave). */
 export function activeProvider(): PaymentProvider {
   const p = providers[env.payments.provider];
-  if (!p || !p.isConfigured()) {
-    throw new HttpError(503, "PAYMENTS_UNAVAILABLE", "Payments are not available right now. Please try again shortly.");
+  const problem = !p
+    ? `Payment provider "${env.payments.provider}" is not supported. Use one of: ${Object.keys(providers).join(", ")}.`
+    : (p.configProblem?.() ?? (p.isConfigured() ? null : `${p.name} payment keys are not set.`));
+  if (problem) {
+    console.error(`[payments] ${problem}`);
+    throw new HttpError(503, "PAYMENTS_UNAVAILABLE", problem);
   }
-  return p;
+  return p!;
 }
 
 /** Gateway that created an existing payment row (so switching never strands old payments). */

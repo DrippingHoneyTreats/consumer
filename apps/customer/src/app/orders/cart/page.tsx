@@ -66,7 +66,7 @@ export default function GuestCartPage() {
   }
 
   const payButton = (
-    <Button fullWidth variant="dark" loading={syncing} leftIcon={<Lock size={16} />} onClick={() => void proceed()}>
+    <Button fullWidth variant="dark" loading={syncing} leftIcon={<Lock size={16} />} onClick={() => proceed()}>
       {syncing ? "Saving your order…" : `Proceed to pay · ${formatNgn(subtotal)}`}
     </Button>
   );
@@ -74,7 +74,7 @@ export default function GuestCartPage() {
   return (
     <InnerPage
       tabbed
-      className="pb-[calc(var(--tab-h)+var(--safe-bottom)+160px)] md:pb-[calc(var(--tab-h)+var(--safe-bottom)+32px)]"
+      className="pb-[calc(var(--tab-h)+var(--safe-bottom)+var(--banner-h,0px)+160px)] md:pb-[calc(var(--tab-h)+var(--safe-bottom)+var(--banner-h,0px)+32px)]"
       eyebrow="Not paid yet"
       title="Current order"
       subtitle="Adjust quantities, add a note, then pay."
@@ -132,7 +132,7 @@ export default function GuestCartPage() {
                     qty={line.qty}
                     note={line.note}
                     onRemove={() => updateGuestQty(line.itemId, line.variantId, 0)}
-                    onEdit={() => void editor.edit({ itemId: line.itemId, variantId: line.variantId, qty: line.qty, image: line.image })}
+                    onEdit={() => editor.edit({ itemId: line.itemId, variantId: line.variantId, qty: line.qty, image: line.image })}
                     editLabel={line.variantId ? "Change size" : "Edit"}
                   >
                     <QtyStepper

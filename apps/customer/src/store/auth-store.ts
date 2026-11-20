@@ -43,8 +43,10 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "dht-auth",
       partialize: (s) => ({ user: s.user }),
+      // localStorage restores synchronously, i.e. before `useAuthStore` exists:
+      // defer the flag so it is never lost.
       onRehydrateStorage: () => () => {
-        useAuthStore.setState({ hydrated: true });
+        setTimeout(() => useAuthStore.setState({ hydrated: true }), 0);
       },
     },
   ),

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Briefcase, Home, Inbox, MapPin, Plus, Truck } from "lucide-react";
+import { Briefcase, Home, Inbox, MapPin, Plus, Trash2, Truck } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { asArray } from "@/lib/data";
 import type { Address } from "@/lib/types";
@@ -12,6 +12,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { InnerPage, PageSection } from "@/components/layout/InnerPage";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { toast } from "@/components/ui/Toast";
+import { usePending, spinnerClass } from "@/hooks/usePending";
 
 export default function AddressesPage() {
   const user = useAuthStore((s) => s.user);
@@ -32,7 +34,7 @@ export default function AddressesPage() {
         <EmptyState
           title="Uh-oh! 👀"
           message="Looks like there's nothing here yet."
-          actionHref="/verify?returnTo=/account/addresses"
+          actionHref="/verify?returnTo=/"
           actionLabel="Sign in"
           icon={<Inbox size={56} strokeWidth={1.4} />}
         />
@@ -96,6 +98,18 @@ export default function AddressesPage() {
                   <p className="mt-1 text-sm leading-relaxed text-deep/60">{a.formattedAddress}</p>
                   {a.landmark ? <p className="mt-1 text-xs text-deep/45">Landmark: {a.landmark}</p> : null}
                 </div>
+                <RemoveAddress
+                  label={a.label}
+                  onRemove={async () => {
+                    try {
+                      await apiClient.delete(`/me/addresses/${a.id}`);
+                      setAddresses((list) => list.filter((x) => x.id !== a.id));
+                      toast.success("Address removed.");
+                    } catch {
+                      toast.error("Couldn't remove that address. Please try again.");
+                    }
+                  }}
+                />
               </motion.li>
             );
           })}
@@ -113,5 +127,39 @@ export default function AddressesPage() {
         </div>
       </PageSection>
     </InnerPage>
+  );
+}
+
+function RemoveAddress({ label, onRemove }: { label: string; onRemove: () => Promise<void> }) {
+  const [confirming, setConfirming] = useState(false);
+  const [pending, track] = usePending();
+  if (pending) {
+    return <span className={`${spinnerClass} mt-1 shrink-0 text-danger`} aria-label="Removing" />;
+  }
+  if (confirming) {
+    return (
+      <span className="flex shrink-0 flex-col items-end gap-1.5">
+        <button
+          type="button"
+          onClick={() => track(onRemove())}
+          className="rounded-full bg-danger px-3 py-1.5 text-xs font-semibold text-white"
+        >
+          Remove
+        </button>
+        <button type="button" onClick={() => setConfirming(false)} className="text-xs font-semibold text-deep/55">
+          Keep
+        </button>
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      aria-label={`Remove ${label} address`}
+      onClick={() => setConfirming(true)}
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-danger/8 text-danger ring-1 ring-danger/20 transition hover:bg-danger/15"
+    >
+      <Trash2 size={15} />
+    </button>
   );
 }

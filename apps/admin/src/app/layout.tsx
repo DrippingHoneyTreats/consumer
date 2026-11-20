@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { AdminRoot } from "@/components/admin/AdminRoot";
+import { NavProgress } from "@/components/nav/NavProgress";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-off-white antialiased" suppressHydrationWarning>
+        <NavProgress />
         <AdminRoot>{children}</AdminRoot>
       </body>
     </html>

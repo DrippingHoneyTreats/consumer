@@ -4,13 +4,34 @@ import { env } from "../env";
 import type { PaymentProvider, VerifyResult } from "./types";
 
 /**
- * Flutterwave Standard (v3) — hosted checkout.
- * Docs: https://developer.flutterwave.com/docs/collecting-payments/standard
+ * Flutterwave (v3).
+ *  - Inline: the browser opens Flutterwave's popup on our page (needs FLW_PUBLIC_KEY).
+ *    Docs: https://developer.flutterwave.com/docs/collecting-payments/inline
+ *  - Standard: hosted checkout page, used as the fallback (e.g. popup blocked).
+ *    Docs: https://developer.flutterwave.com/docs/collecting-payments/standard
+ * Either way the server verifies the transaction with Flutterwave before
+ * marking anything paid — the browser's word is never trusted.
  *
- * Env: FLW_SECRET_KEY (FLWSECK_TEST-… or FLWSECK-…)
+ * Env: FLW_PUBLIC_KEY (FLWPUBK_TEST-… / FLWPUBK-…)
+ *      FLW_SECRET_KEY (FLWSECK_TEST-… / FLWSECK-…)
  *      FLW_SECRET_HASH (any string; paste the same into Dashboard → Settings → Webhooks)
  */
 const BASE = "https://api.flutterwave.com/v3";
+
+/** Exact reason Flutterwave can't be used, or null when the keys look right. */
+function configProblem(): string | null {
+  const { publicKey, secretKey } = env.payments.flutterwave;
+  // Show only the first few characters of what was found, never the key itself.
+  const peek = (v: string) => `"${v.slice(0, 8)}…"`;
+  if (!secretKey) return "Flutterwave secret key (FLW_SECRET_KEY) is not set.";
+  if (!secretKey.startsWith("FLWSECK")) {
+    return `FLW_SECRET_KEY is not a Flutterwave secret key (it should start with FLWSECK, but starts with ${peek(secretKey)}).`;
+  }
+  if (publicKey && !publicKey.startsWith("FLWPUBK")) {
+    return `FLW_PUBLIC_KEY is not a Flutterwave public key (it should start with FLWPUBK, but starts with ${peek(publicKey)}).`;
+  }
+  return null;
+}
 
 async function flw<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
@@ -52,7 +73,8 @@ function toResult(tx: FlwTx): VerifyResult {
 export const flutterwave: PaymentProvider = {
   name: "flutterwave",
 
-  isConfigured: () => Boolean(env.payments.flutterwave.secretKey),
+  isConfigured: () => configProblem() === null,
+  configProblem,
 
   async initialize(input) {
     const res = await flw<{ data: { link: string } }>("/payments", {
@@ -75,7 +97,24 @@ export const flutterwave: PaymentProvider = {
         meta: input.meta,
       }),
     });
-    return { checkoutUrl: res.data.link };
+    const { publicKey } = env.payments.flutterwave;
+    return {
+      checkoutUrl: res.data.link,
+      inline: publicKey
+        ? {
+            provider: "flutterwave",
+            publicKey,
+            reference: input.reference,
+            amount: input.amount / 100,
+            currency: input.currency,
+            customer: input.customer,
+            title: "Dripping Honey Treats",
+            description: input.description,
+            logo: `${env.appUrl}/assets/icons/icon-192.png`,
+            meta: input.meta,
+          }
+        : undefined,
+    };
   },
 
   async verify(reference, hints) {

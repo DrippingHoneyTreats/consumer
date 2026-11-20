@@ -293,6 +293,53 @@ route("GET", "/admin/orders", async ({ req, query }) => {
   return { items: await withUsers(await hydrateOrders(rows)), total: res.count ?? rows.length, page: p, limit };
 });
 
+/**
+ * Unfinished orders: carts saved by signed-in customers who haven't paid.
+ * Lets the team follow up on WhatsApp/email ("did something go wrong?").
+ * Visitors who never signed in aren't here: their cart only lives in their browser.
+ */
+route("GET", "/admin/abandoned", async ({ req, query }) => {
+  await requireStaff(req);
+  // Ignore carts touched in the last N minutes (they may still be shopping). Default 30.
+  const quietMinutes = Math.max(0, Math.min(Number(query.get("quietMinutes") ?? 30) || 0, 7 * 24 * 60));
+  const before = new Date(Date.now() - quietMinutes * 60_000).toISOString();
+  const rows = must(
+    await db()
+      .from("orders")
+      .select("*")
+      .in("status", ["draft", "pending_payment"])
+      .gt("total", 0)
+      .lte("updated_at", before)
+      .order("updated_at", { ascending: false })
+      .limit(200),
+    "abandoned orders",
+  ) as Row[];
+  const orders = (await withUsers(await hydrateOrders(rows))).filter((o) => o.items.length > 0);
+
+  const ids = orders.map((o) => o.id);
+  const pays = ids.length
+    ? (must(await db().from("payments").select("order_id, status, created_at").in("order_id", ids), "abandoned payments") as Row[])
+    : [];
+  const payInfo = new Map<string, { tries: number; failed: number }>();
+  for (const p of pays) {
+    const k = p.order_id as string;
+    const cur = payInfo.get(k) ?? { tries: 0, failed: 0 };
+    cur.tries += 1;
+    if (p.status === "failed") cur.failed += 1;
+    payInfo.set(k, cur);
+  }
+
+  return {
+    items: orders.map((o) => {
+      const pay = payInfo.get(o.id) ?? { tries: 0, failed: 0 };
+      // How far they got: cart → checkout (address chosen) → tried to pay.
+      const stage = pay.tries > 0 || o.status === "pending_payment" ? "payment" : o.addressSnapshot ? "checkout" : "cart";
+      return { ...o, stage, paymentTries: pay.tries, paymentsFailed: pay.failed };
+    }),
+    quietMinutes,
+  };
+});
+
 route("GET", "/admin/orders/:id", async ({ req, params }) => {
   await requireStaff(req);
   const [o] = await withUsers([await getOrder(params.id)]);

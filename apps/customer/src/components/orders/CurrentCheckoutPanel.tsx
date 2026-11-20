@@ -6,6 +6,8 @@ import { CreditCard, Lock, MapPin, ShieldCheck, SlidersHorizontal, Trash2, Truck
 import { formatNgn } from "@/lib/format";
 import { ITEM_PLACEHOLDER } from "@/lib/placeholders";
 import { QtyStepper } from "@/components/ui/QtyStepper";
+import { usePending, spinnerClass } from "@/hooks/usePending";
+import { VerifyingInline } from "@/components/ui/Verifying";
 import { Button } from "@/components/ui/Button";
 
 export type CurrentOrderLine = {
@@ -22,7 +24,9 @@ type Props = {
   total: number;
   onQtyChange: (key: string, qty: number) => void;
   /** Change a line's size/options. */
-  onEdit?: (key: string) => void;
+  onEdit?: (key: string) => void | Promise<unknown>;
+  /** Show "Updating your order…" while quantity changes are saving. */
+  updating?: boolean;
   onPayNow: () => void;
   paying?: boolean;
   userHint?: string | null;
@@ -57,6 +61,7 @@ export function CurrentCheckoutPanel({
   total,
   onQtyChange,
   onEdit,
+  updating,
   onPayNow,
   paying,
   userHint,
@@ -100,13 +105,7 @@ export function CurrentCheckoutPanel({
                   <p className="truncate text-sm font-semibold text-deep md:text-base">{line.name}</p>
                   <p className="text-xs text-deep/45">{formatNgn(line.unitPrice)} each</p>
                   {onEdit ? (
-                    <button
-                      type="button"
-                      onClick={() => onEdit(line.key)}
-                      className="mt-1 inline-flex items-center gap-1 rounded-full bg-sage-soft px-2.5 py-1 text-[11px] font-semibold text-deep transition hover:bg-sage/40"
-                    >
-                      <SlidersHorizontal size={11} /> {line.name.includes(" · ") ? "Change size" : "Edit"}
-                    </button>
+                    <EditPill label={line.name.includes(" · ") ? "Change size" : "Edit"} onClick={() => onEdit(line.key)} />
                   ) : null}
                 </div>
               </div>
@@ -129,6 +128,7 @@ export function CurrentCheckoutPanel({
             </li>
           ))}
         </ul>
+        <VerifyingInline show={Boolean(updating)} text="Updating your order…" className="justify-start" />
 
         <div className="mt-4 space-y-1.5 border-t border-deep/10 pt-4 text-sm md:ml-auto md:max-w-xs">
           <div className="flex justify-between text-deep/60">
@@ -198,5 +198,20 @@ export function CurrentCheckoutPanel({
         </motion.div>
       </aside>
     </div>
+  );
+}
+
+function EditPill({ label, onClick }: { label: string; onClick: () => void | Promise<unknown> }) {
+  const [pending, track] = usePending();
+  return (
+    <button
+      type="button"
+      onClick={() => track(onClick())}
+      disabled={pending}
+      aria-busy={pending || undefined}
+      className="mt-1 inline-flex items-center gap-1 rounded-full bg-sage-soft px-2.5 py-1 text-[11px] font-semibold text-deep transition hover:bg-sage/40"
+    >
+      {pending ? <span className={spinnerClass} /> : <SlidersHorizontal size={11} />} {pending ? "Opening…" : label}
+    </button>
   );
 }

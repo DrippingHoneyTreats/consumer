@@ -100,7 +100,7 @@ export default function OrderTrackPage() {
   return (
     <InnerPage
       tabbed
-      className="pb-[calc(var(--tab-h)+var(--safe-bottom)+140px)] md:pb-[calc(var(--tab-h)+var(--safe-bottom)+32px)]"
+      className="pb-[calc(var(--tab-h)+var(--safe-bottom)+var(--banner-h,0px)+140px)] md:pb-[calc(var(--tab-h)+var(--safe-bottom)+var(--banner-h,0px)+32px)]"
       eyebrow="Live update"
       title="Track your order"
       subtitle={`#${order.orderNo} · ${formatOrderDate(order.createdAt)}`}

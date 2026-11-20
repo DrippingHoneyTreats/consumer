@@ -14,6 +14,8 @@ type Props = {
   label?: string;
   /** When every box is filled, move focus to the next field/button (default true). */
   focusNextOnComplete?: boolean;
+  /** Validation message shown under the boxes (boxes turn red). */
+  error?: string | null;
 };
 
 const FOCUSABLE = 'input:not([disabled]):not([type="hidden"]), button:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href]';
@@ -27,6 +29,7 @@ export function OtpInput({
   autoFocus,
   label,
   focusNextOnComplete = true,
+  error,
 }: Props) {
   const refs = useRef<(HTMLInputElement | null)[]>([]);
   const groupRef = useRef<HTMLDivElement>(null);
@@ -69,6 +72,7 @@ export function OtpInput({
   }
 
   return (
+    <div>
     <div ref={groupRef} className="flex justify-center gap-2" onPaste={onPaste} role="group" aria-label={label ?? (mask ? "PIN" : "Code")}>
       {Array.from({ length }).map((_, i) => (
         <input
@@ -79,6 +83,7 @@ export function OtpInput({
           type={mask ? "password" : "text"}
           inputMode="numeric"
           aria-label={`${mask ? "PIN" : "Code"} digit ${i + 1}`}
+          aria-invalid={error ? true : undefined}
           autoFocus={autoFocus && i === 0}
           autoComplete={mask ? "off" : i === 0 ? "one-time-code" : "off"}
           maxLength={length}
@@ -103,17 +108,28 @@ export function OtpInput({
           }}
           onFocus={() => {
             // Always type into the first empty box, so digits can't land out of order.
-            const firstEmpty = Math.min(value.length, length - 1);
-            if (i > firstEmpty) refs.current[firstEmpty]?.focus();
+            // Read the boxes themselves: the value prop can be one keystroke behind here.
+            const firstEmpty = refs.current.findIndex((el) => !el?.value);
+            if (firstEmpty !== -1 && i > firstEmpty) refs.current[firstEmpty]?.focus();
           }}
           onKeyDown={(e) => onKeyDown(i, e)}
           className={cn(
             "h-14 w-12 rounded-2xl border bg-white text-center font-display text-2xl font-semibold text-deep shadow-[var(--shadow-card)] outline-none transition focus:-translate-y-0.5 focus:border-tea focus:ring-4 focus:ring-sage/25",
-            digits[i]?.trim() ? "border-tea bg-sage-soft/50" : "border-deep/10",
+            error
+              ? "border-danger/60 bg-[#fdecea]/60"
+              : digits[i]?.trim()
+                ? "border-tea bg-sage-soft/50"
+                : "border-deep/10",
             disabled && "opacity-50",
           )}
         />
       ))}
+    </div>
+    {error ? (
+      <p role="alert" className="mt-2 text-center text-xs font-semibold text-danger">
+        {error}
+      </p>
+    ) : null}
     </div>
   );
 }

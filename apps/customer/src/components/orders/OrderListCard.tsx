@@ -7,6 +7,7 @@ import { formatNgn } from "@/lib/format";
 import { formatOrderDate, orderProductsSummary, orderStatusLabel } from "@/lib/order-status";
 import type { Order } from "@/lib/types";
 import { cn } from "@/lib/cn";
+import { usePending, spinnerClass } from "@/hooks/usePending";
 
 type Mode = "ongoing" | "completed";
 
@@ -14,7 +15,7 @@ type Props = {
   order: Order;
   mode: Mode;
   index?: number;
-  onReorder?: () => void;
+  onReorder?: () => void | Promise<unknown>;
   className?: string;
 };
 
@@ -26,6 +27,7 @@ function statusTone(status: string, mode: Mode) {
 }
 
 export function OrderListCard({ order, mode, index = 0, onReorder, className }: Props) {
+  const [reordering, trackReorder] = usePending();
   const products = orderProductsSummary(order, 4);
   const canReorder = mode === "completed" && (order.status === "delivered" || order.status === "completed");
 
@@ -91,10 +93,12 @@ export function OrderListCard({ order, mode, index = 0, onReorder, className }: 
             {canReorder && onReorder ? (
               <button
                 type="button"
-                onClick={onReorder}
-                className="pressable flex flex-1 items-center justify-center gap-2 rounded-full bg-honey py-3 text-xs font-semibold text-deep"
+                onClick={() => trackReorder(onReorder())}
+                disabled={reordering}
+                aria-busy={reordering || undefined}
+                className="pressable flex flex-1 items-center justify-center gap-2 rounded-full bg-honey py-3 text-xs font-semibold text-deep disabled:opacity-80"
               >
-                <RotateCcw size={14} /> Reorder
+                {reordering ? <span className={spinnerClass} /> : <RotateCcw size={14} />} {reordering ? "Adding…" : "Reorder"}
               </button>
             ) : null}
             <Link

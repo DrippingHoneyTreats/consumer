@@ -12,6 +12,7 @@ import { Input, selectClass } from "@/components/ui/Input";
 import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
 import { AdminCardList, AdminTable } from "@/components/admin/AdminTable";
 import { toast } from "@/components/ui/Toast";
+import { checkEmail, useFieldErrors } from "@/lib/validate";
 
 type StaffUser = User & {
   createdAt?: string;
@@ -37,6 +38,7 @@ function roleLabel(role: Role) {
 }
 
 export default function AdminStaffPage() {
+  const f = useFieldErrors();
   const [staff, setStaff] = useState<StaffUser[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [email, setEmail] = useState("");
@@ -67,10 +69,7 @@ export default function AdminStaffPage() {
 
   const invite = async () => {
     const contact = email.trim().toLowerCase();
-    if (!contact.includes("@")) {
-      toast.error("Enter a valid email");
-      return;
-    }
+    if (!f.validate({ email: checkEmail(contact) })) return;
     setInviting(true);
     try {
       await apiClient.post("/admin/staff/invite", {
@@ -132,7 +131,11 @@ export default function AdminStaffPage() {
             type="email"
             autoComplete="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              f.clear("email");
+            }}
+            error={f.errors.email ?? undefined}
             placeholder="name@drippinghoneytreats.com"
           />
           <Input
@@ -155,7 +158,7 @@ export default function AdminStaffPage() {
               <option value="SUPER_ADMIN">Super admin</option>
             </select>
           </label>
-          <Button loading={inviting} onClick={() => void invite()} className="sm:ml-auto">
+          <Button loading={inviting} onClick={() => invite()} className="sm:ml-auto">
             Send invite
           </Button>
         </div>

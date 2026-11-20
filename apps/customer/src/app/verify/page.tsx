@@ -17,7 +17,7 @@ import { VerifyingOverlay } from "@/components/ui/Verifying";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { PageSkeleton } from "@/components/ui/ColumnLoader";
 import { contactLink, greetingForNow } from "@/lib/format";
-import { cn } from "@/lib/cn";
+import { checkCode, checkEmail, checkName, checkPhone, checkPin, checkPinConfirm, normalizeNgPhone, useFieldErrors } from "@/lib/validate";
 
 /**
  * Phone-first sign-in.
@@ -138,10 +138,13 @@ function SignInFlow() {
   const [done, setDone] = useState(false);
   const doneRef = useRef(false);
 
+  const f = useFieldErrors();
+
   const go = (next: Step) => {
     setPin("");
     setPin2("");
     setCode("");
+    f.reset();
     setStep(next);
   };
 
@@ -155,13 +158,16 @@ function SignInFlow() {
     }, 900);
   }
 
-  async function run(fn: () => Promise<void>, fallback: string, busyText = "Verifying…") {
+  /** Run an API step. A server error is shown as a toast and under `field`. */
+  async function run(fn: () => Promise<void>, fallback: string, busyText = "Verifying…", field?: string) {
     setLoading(true);
     setBusy(busyText);
     try {
       await fn();
     } catch (e) {
-      toast.error(errText(e, fallback));
+      const msg = errText(e, fallback);
+      toast.error(msg);
+      if (field) f.setError(field, msg);
     } finally {
       setLoading(false);
       // Keep the overlay up (as a tick) when we're signing in and navigating away.
@@ -170,90 +176,109 @@ function SignInFlow() {
   }
 
   // ── Phone + PIN ──
-  const startPhone = () =>
-    run(async () => {
+  const startPhone = () => {
+    if (!f.validate({ phone: checkPhone(phone) })) return;
+    return run(async () => {
       const res = await apiClient.post<{ next: "pin" | "create" | "create_with_code"; name?: string | null; sentTo?: string }>(
         "/auth/phone/start",
-        { phone },
+        { phone: normalizeNgPhone(phone) },
       );
       setKnownName(res.name ?? null);
       setCodeSentTo(res.next === "create_with_code" ? (res.sentTo ?? null) : null);
       go(res.next === "pin" ? "pin" : "create");
-    }, "Couldn't continue. Check the number and try again.", "Checking your number…");
+    }, "Couldn't continue. Check the number and try again.", "Checking your number…", "phone");
+  };
 
-  const loginPin = (value: string) =>
-    run(async () => {
-      finish(await apiClient.post<User>("/auth/pin/login", { phone, pin: value }));
-    }, "Couldn't sign you in.", "Verifying your PIN…");
+  const loginPin = (value: string) => {
+    if (!f.validate({ pin: value.length === 4 ? null : "Enter your 4-digit PIN." })) return;
+    return run(
+      async () => {
+        finish(await apiClient.post<User>("/auth/pin/login", { phone: normalizeNgPhone(phone), pin: value }));
+      },
+      "Couldn't sign you in.",
+      "Verifying your PIN…",
+      "pin",
+    ).then(() => {
+      if (!doneRef.current) setPin("");
+    });
+  };
 
   const register = () => {
-    if (createMissing) {
-      toast.error(createMissing);
+    const ok = f.validate({
+      name: checkName(fullName),
+      pin: checkPin(pin),
+      pin2: checkPinConfirm(pin, pin2),
+      code: codeSentTo ? checkCode(code) : null,
+    });
+    if (!ok) {
+      toast.error("Please fix the highlighted fields.");
       return;
     }
     return run(async () => {
-      if (pin !== pin2) throw new ApiRequestError(400, { code: "PIN_MISMATCH", message: "The two PINs don't match." });
       finish(
-        await apiClient.post<User>("/auth/pin/register", { phone, pin, fullName: fullName.trim(), code: codeSentTo ? code : undefined }),
+        await apiClient.post<User>("/auth/pin/register", {
+          phone: normalizeNgPhone(phone),
+          pin,
+          fullName: fullName.trim(),
+          code: codeSentTo ? code : undefined,
+        }),
       );
     }, "Couldn't create your account.", "Creating your account…");
   };
 
   const forgot = () =>
     run(async () => {
-      const res = await apiClient.post<{ method: "email" | "whatsapp"; sentTo?: string }>("/auth/pin/forgot", { phone });
+      const res = await apiClient.post<{ method: "email" | "whatsapp"; sentTo?: string }>("/auth/pin/forgot", { phone: normalizeNgPhone(phone) });
       setForgotByWhatsapp(res.method === "whatsapp");
       setCodeSentTo(res.sentTo ?? null);
       go("forgot");
     }, "Couldn't start the reset.", "Sending your reset code…");
 
   const resetPin = () => {
-    const missing =
-      code.length < 6
-        ? "Enter the 6-digit code we emailed you."
-        : pin.length < 4
-          ? "Choose a new 4-digit PIN."
-          : pin2.length < 4
-            ? "Type your new PIN again to confirm it."
-            : pin !== pin2
-              ? "The two PINs don't match. Please re-type them."
-              : null;
-    if (missing) {
-      toast.error(missing);
+    const ok = f.validate({ code: checkCode(code), pin: checkPin(pin), pin2: checkPinConfirm(pin, pin2) });
+    if (!ok) {
+      toast.error("Please fix the highlighted fields.");
       return;
     }
     return run(async () => {
-      if (pin !== pin2) throw new ApiRequestError(400, { code: "PIN_MISMATCH", message: "The two PINs don't match." });
-      finish(await apiClient.post<User>("/auth/pin/reset", { phone, code, pin }));
+      finish(await apiClient.post<User>("/auth/pin/reset", { phone: normalizeNgPhone(phone), code, pin }));
     }, "Couldn't reset your PIN.", "Resetting your PIN…");
   };
 
   // ── Email + code ──
-  const sendEmailCode = () =>
-    run(async () => {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-        throw new ApiRequestError(400, { code: "BAD_EMAIL", message: "Enter a valid email address." });
-      }
+  const sendEmailCode = () => {
+    if (!f.validate({ email: checkEmail(email) })) return;
+    return run(async () => {
       await apiClient.post("/auth/otp/send", { contact: email.trim(), channel: "email", purpose: "login" });
       setResendIn(60);
       go("emailCode");
       toast.success("Code sent. Check your inbox.");
-    }, "Couldn't send the code. Try again.", "Sending your code…");
+    }, "Couldn't send the code. Try again.", "Sending your code…", "email");
+  };
 
-  const verifyEmail = (value: string) =>
-    run(async () => {
+  const verifyEmail = (value: string) => {
+    if (!f.validate({ code: checkCode(value) })) return;
+    return run(async () => {
       const user = await apiClient.post<User>("/auth/otp/verify", { contact: email.trim(), code: value });
       if (user.fullName?.trim()) finish(user);
       else {
         setUser(user);
         go("name");
       }
-    }, "Invalid code. Please try again.", "Verifying your code…");
+    }, "Invalid code. Please try again.", "Verifying your code…", "code");
+  };
 
-  const saveName = () =>
-    run(async () => {
-      finish(await apiClient.patch<User>("/me", { fullName: fullName.trim() }));
-    }, "Couldn't save your name.", "Saving your name…");
+  const saveName = () => {
+    if (!f.validate({ name: checkName(fullName) })) return;
+    return run(
+      async () => {
+        finish(await apiClient.patch<User>("/me", { fullName: fullName.trim() }));
+      },
+      "Couldn't save your name.",
+      "Saving your name…",
+      "name",
+    );
+  };
 
   const back = () => {
     if (step === "pin" || step === "create") go("phone");
@@ -263,23 +288,10 @@ function SignInFlow() {
   };
 
   const copy = COPY[step];
-  // What's still missing on the create-account step (shown under the button).
-  const createMissing =
-    fullName.trim().length < 2
-      ? "Enter your name to continue."
-      : pin.length < 4
-        ? "Choose a 4-digit PIN."
-        : pin2.length < 4
-          ? "Type your PIN again to confirm it."
-          : pin !== pin2
-            ? "The two PINs don't match. Please re-type them."
-            : codeSentTo && code.length < 6
-              ? "Enter the 6-digit code we emailed you."
-              : null;
+
   // WhatsApp and email are two tabs of the same first screen.
   const entry = step === "phone" || step === "email";
-  const title = step === "pin" && knownName ? `Welcome back, ${knownName}` : copy.title;
-  const phoneOk = phone.replace(/\D/g, "").length >= 13 || /^0\d{10}$/.test(phone.replace(/\s/g, ""));
+  const title = step === "pin" && knownName ? greetingForNow(knownName) : copy.title;
 
   return (
     <Shell onBack={back} showBack={!entry && step !== "name"}>
@@ -329,14 +341,18 @@ function SignInFlow() {
                     type="tel"
                     inputMode="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+234 801 234 5678"
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      f.clear("phone");
+                    }}
+                    error={f.errors.phone ?? undefined}
+                    placeholder="0803 123 4567"
                     autoComplete="tel"
                     autoFocus
                     leftAddon={<Phone size={18} className="text-tea" />}
                     hint="We'll send order updates here."
                   />
-                  <Button type="submit" fullWidth variant="dark" loading={loading} disabled={!phoneOk} rightIcon={<ArrowRight size={18} />}>
+                  <Button type="submit" fullWidth variant="dark" loading={loading} rightIcon={<ArrowRight size={18} />}>
                     Continue
                   </Button>
                 </form>
@@ -352,7 +368,11 @@ function SignInFlow() {
                     label="Email"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      f.clear("email");
+                    }}
+                    error={f.errors.email ?? undefined}
                     placeholder="you@example.com"
                     autoComplete="email"
                     autoFocus
@@ -391,8 +411,10 @@ function SignInFlow() {
                   mask
                   autoFocus
                   disabled={loading}
+                  error={f.errors.pin}
                   onChange={(v) => {
                     setPin(v);
+                    f.clear("pin");
                     if (v.length === 4) void loginPin(v);
                   }}
                 />
@@ -403,7 +425,7 @@ function SignInFlow() {
                   </button>
                 </p>
               </div>
-              <Button fullWidth variant="dark" loading={loading} disabled={pin.length < 4} onClick={() => void loginPin(pin)}>
+              <Button fullWidth variant="dark" loading={loading} onClick={() => loginPin(pin)}>
                 Sign in
               </Button>
               <button type="button" onClick={() => void forgot()} className="mx-auto flex items-center gap-1.5 text-sm font-semibold text-deep/55">
@@ -423,7 +445,11 @@ function SignInFlow() {
               <Input
                 label="Your name"
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                onChange={(e) => {
+                  setFullName(e.target.value);
+                  f.clear("name");
+                }}
+                error={f.errors.name ?? undefined}
                 placeholder="Chioma Okafor"
                 autoComplete="name"
                 autoFocus
@@ -431,16 +457,16 @@ function SignInFlow() {
               />
               <div>
                 <p className="mb-2 pl-1 text-sm font-semibold text-deep">Create a 4-digit PIN</p>
-                <OtpInput value={pin} onChange={setPin} length={4} mask label="New PIN" />
+                <OtpInput value={pin} onChange={(v) => { setPin(v); f.clear("pin"); }} length={4} mask label="New PIN" error={f.errors.pin} />
               </div>
               <div>
                 <p className="mb-2 pl-1 text-sm font-semibold text-deep">Confirm your PIN</p>
-                <OtpInput value={pin2} onChange={setPin2} length={4} mask label="Confirm PIN" />
+                <OtpInput value={pin2} onChange={(v) => { setPin2(v); f.clear("pin2"); }} length={4} mask label="Confirm PIN" error={f.errors.pin2} />
               </div>
               {codeSentTo ? (
                 <div>
                   <p className="mb-2 pl-1 text-sm font-semibold text-deep">Code sent to {codeSentTo}</p>
-                  <OtpInput value={code} onChange={setCode} length={6} label="Email code" />
+                  <OtpInput value={code} onChange={(v) => { setCode(v); f.clear("code"); }} length={6} label="Email code" error={f.errors.code} />
                   <p className="mt-2 pl-1 text-xs text-deep/50">This number already has an account, so we need to confirm it&apos;s you.</p>
                 </div>
               ) : null}
@@ -448,11 +474,6 @@ function SignInFlow() {
               <Button type="submit" fullWidth variant="dark" loading={loading} rightIcon={<ArrowRight size={18} />}>
                 Create account
               </Button>
-              {createMissing ? (
-                <p className={cn("text-center text-xs font-semibold", pin2.length === 4 && pin !== pin2 ? "text-danger" : "text-deep/50")}>
-                  {createMissing}
-                </p>
-              ) : null}
             </form>
           ) : null}
 
@@ -479,15 +500,15 @@ function SignInFlow() {
               >
                 <div>
                   <p className="mb-2 pl-1 text-sm font-semibold text-deep">Code sent to {codeSentTo}</p>
-                  <OtpInput value={code} onChange={setCode} length={6} autoFocus label="Email code" />
+                  <OtpInput value={code} onChange={(v) => { setCode(v); f.clear("code"); }} length={6} autoFocus label="Email code" error={f.errors.code} />
                 </div>
                 <div>
                   <p className="mb-2 pl-1 text-sm font-semibold text-deep">New 4-digit PIN</p>
-                  <OtpInput value={pin} onChange={setPin} length={4} mask label="New PIN" />
+                  <OtpInput value={pin} onChange={(v) => { setPin(v); f.clear("pin"); }} length={4} mask label="New PIN" error={f.errors.pin} />
                 </div>
                 <div>
                   <p className="mb-2 pl-1 text-sm font-semibold text-deep">Confirm new PIN</p>
-                  <OtpInput value={pin2} onChange={setPin2} length={4} mask label="Confirm PIN" />
+                  <OtpInput value={pin2} onChange={(v) => { setPin2(v); f.clear("pin2"); }} length={4} mask label="Confirm PIN" error={f.errors.pin2} />
                 </div>
                 <Button type="submit" fullWidth variant="dark" loading={loading}>
                   Reset PIN & sign in
@@ -503,8 +524,10 @@ function SignInFlow() {
                   value={code}
                   autoFocus
                   disabled={loading}
+                  error={f.errors.code}
                   onChange={(v) => {
                     setCode(v);
+                    f.clear("code");
                     if (v.length === 6) void verifyEmail(v);
                   }}
                 />
@@ -520,7 +543,7 @@ function SignInFlow() {
                   </button>
                 </p>
               </div>
-              <Button fullWidth variant="dark" loading={loading} disabled={code.length < 6} onClick={() => void verifyEmail(code)}>
+              <Button fullWidth variant="dark" loading={loading} onClick={() => verifyEmail(code)}>
                 Continue
               </Button>
             </>
@@ -537,13 +560,17 @@ function SignInFlow() {
               <Input
                 label="Your name"
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                onChange={(e) => {
+                  setFullName(e.target.value);
+                  f.clear("name");
+                }}
+                error={f.errors.name ?? undefined}
                 placeholder="Chioma Okafor"
                 autoComplete="name"
                 autoFocus
                 leftAddon={<UserRound size={18} className="text-tea" />}
               />
-              <Button type="submit" fullWidth variant="dark" loading={loading} disabled={fullName.trim().length < 2} rightIcon={<ArrowRight size={18} />}>
+              <Button type="submit" fullWidth variant="dark" loading={loading} rightIcon={<ArrowRight size={18} />}>
                 Continue
               </Button>
             </form>

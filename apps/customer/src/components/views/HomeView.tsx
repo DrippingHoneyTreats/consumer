@@ -7,7 +7,6 @@ import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 import {
   ArrowRight,
   Bell,
-  ChevronDown,
   MapPin,
   MessageCircle,
   PartyPopper,
@@ -235,7 +234,7 @@ export function HomeView() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!hydrated) return;
+    // Show straight away; it updates to include the name once we know who's signed in.
     setGreeting(greetingForNow(user?.fullName));
   }, [user?.fullName, hydrated]);
 
@@ -310,14 +309,10 @@ export function HomeView() {
                 <BrandLogo size="sm" href={null} />
               )}
             </motion.span>
-            <Link
-              href="/account/addresses"
-              className="inline-flex min-w-0 items-center gap-1 text-[12px] font-semibold text-deep md:text-sm"
-            >
+            <p className="inline-flex min-w-0 items-center gap-1 text-[12px] font-semibold text-deep md:text-sm">
               <MapPin size={14} className="shrink-0 text-tea" />
               <span className="truncate">Delivering in Lagos</span>
-              <ChevronDown size={14} className="shrink-0 text-deep/40" />
-            </Link>
+            </p>
           </div>
           <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.92 }}>
             <Link
@@ -339,7 +334,21 @@ export function HomeView() {
         >
           <div className="relative z-10 grid items-center gap-4 p-5 md:grid-cols-[minmax(0,1fr)_minmax(260px,1.15fr)] md:gap-3 md:p-7 lg:gap-4 lg:p-8">
             <div className="relative z-20 max-w-md lg:max-w-lg">
-              <p className="min-h-[1.25em] text-xs font-semibold uppercase tracking-[0.14em] text-tea md:text-[13px]">{greeting}</p>
+              <p className="flex min-h-[1.75em] items-center gap-1.5 font-display text-lg font-semibold text-tea md:text-xl">
+                {greeting ? (
+                  <>
+                    {greeting}
+                    <motion.span
+                      aria-hidden
+                      className="inline-block origin-[70%_70%]"
+                      animate={{ rotate: [0, 16, -8, 16, 0] }}
+                      transition={{ duration: 1.4, delay: 0.6 }}
+                    >
+                      👋
+                    </motion.span>
+                  </>
+                ) : null}
+              </p>
               <h1 className="mt-2 font-display text-[30px] leading-[1.08] text-deep md:text-[40px] lg:text-[48px]">
                 Freshly baked{" "}
                 <span className="inline-block text-honey">drips</span>

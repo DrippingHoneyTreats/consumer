@@ -24,7 +24,7 @@ export default async function MenuPage() {
   const withItems = categories.filter((c) => c.items.length);
 
   return (
-    <div className="page-pad pb-[calc(var(--tab-h)+var(--safe-bottom)+48px)]">
+    <div className="page-pad pb-[calc(var(--tab-h)+var(--safe-bottom)+var(--banner-h,0px)+48px)]">
       {withItems.length ? <JsonLd data={menuJsonLd(withItems)} /> : null}
       <JsonLd data={breadcrumbJsonLd([{ name: "Home", path: "/" }, { name: "Menu", path: "/menu" }])} />
 

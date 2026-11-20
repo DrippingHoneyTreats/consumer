@@ -22,7 +22,7 @@ export function LegalPage({
   children: ReactNode;
 }) {
   return (
-    <div className="page-pad pb-[calc(var(--tab-h)+var(--safe-bottom)+48px)]">
+    <div className="page-pad pb-[calc(var(--tab-h)+var(--safe-bottom)+var(--banner-h,0px)+48px)]">
       <PageHeader title={title} subtitle={`Last updated ${updated}`} backHref="/account" />
       <article className="mx-auto max-w-2xl rounded-[28px] bg-white p-5 text-[15px] leading-relaxed text-deep/80 shadow-[var(--shadow-card)] ring-1 ring-deep/5 md:p-8">
         <div className="space-y-3">{intro}</div>

@@ -1,9 +1,10 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, Bike, Briefcase, Check, Clock, Home, Landmark, MapPin, Phone, Search, Store, X } from "lucide-react";
+import { AlertTriangle, Bike, Briefcase, Check, Clock, Home, Landmark, MapPin, Pencil, Phone, Search, Store, X } from "lucide-react";
 import { ApiRequestError, apiClient, apiUrl } from "@/lib/api";
 import { asArray } from "@/lib/data";
 import type { Address } from "@/lib/types";
@@ -12,6 +13,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { toast } from "@/components/ui/Toast";
 import { VerifyingInline } from "@/components/ui/Verifying";
+import { checkPhone, normalizeNgPhone, useFieldErrors } from "@/lib/validate";
 import { cn } from "@/lib/cn";
 import { CheckoutSteps } from "@/components/layout/CheckoutSteps";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
@@ -27,6 +29,7 @@ type PlaceDetails = {
   lng: number;
   state: string | null;
   inLagos: boolean;
+  provider?: "google" | "osm" | "typed";
 };
 
 const newSessionToken = () =>
@@ -54,17 +57,22 @@ function FulfillmentForm() {
   const [mode, setMode] = useState<Fulfillment>("delivery");
   const [agreeFee, setAgreeFee] = useState(false);
   const [contactPhone, setContactPhone] = useState("+234");
-  const phoneOk = contactPhone.replace(/\D/g, "").length >= 10;
 
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [searchingPlaces, setSearchingPlaces] = useState(false);
   const [selected, setSelected] = useState<PlaceDetails | null>(null);
   const [resolving, setResolving] = useState(false);
   const [landmark, setLandmark] = useState("");
+  // Only kept in "Saved addresses" if the customer says so.
+  const [saveAddress, setSaveAddress] = useState(false);
+  const [addressLabel, setAddressLabel] = useState("Home");
   // One Google "session" per address search keeps autocomplete + details billed as one lookup.
   const [sessionToken, setSessionToken] = useState(newSessionToken);
   const [saved, setSaved] = useState<Address[]>([]);
   const [loading, setLoading] = useState(false);
+  const [usingAddressId, setUsingAddressId] = useState<string | null>(null);
+  const f = useFieldErrors();
 
   useEffect(() => {
     void apiClient
@@ -77,20 +85,47 @@ function FulfillmentForm() {
       .catch(() => {});
   }, []);
 
+  // Only the newest search may update the list (older, slower replies are ignored).
+  const searchSeq = useRef(0);
+
   useEffect(() => {
     const q = query.trim();
-    if (q.length < 3 || q === selected?.formattedAddress) {
+    const seq = ++searchSeq.current;
+    if (q.length < 3 || q === selected?.formattedAddress || resolving) {
       setSuggestions([]);
+      setSearchingPlaces(false);
       return;
     }
+    setSearchingPlaces(true);
     const t = window.setTimeout(() => {
       void apiClient
         .get<PlaceSuggestion[] | { data: PlaceSuggestion[] }>("/places/autocomplete", { q, session: sessionToken })
-        .then((res) => setSuggestions(asArray(res)))
-        .catch(() => setSuggestions([]));
-    }, 300);
+        .then((res) => {
+          if (seq !== searchSeq.current) return;
+          // "Use what you typed" is built locally (below) so it always matches the box.
+          setSuggestions(asArray<PlaceSuggestion>(res).filter((x) => !x.placeId.startsWith("typed:")));
+        })
+        .catch(() => {
+          if (seq === searchSeq.current) setSuggestions([]);
+        })
+        .finally(() => {
+          if (seq === searchSeq.current) setSearchingPlaces(false);
+        });
+    }, 200);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `resolving` only pauses searching
   }, [query, selected, sessionToken]);
+
+  // Always offer exactly what's in the box right now, as the last option.
+  const typedOption = useMemo<PlaceSuggestion | null>(() => {
+    const q = query.trim();
+    if (q.length < 3 || selected || resolving) return null;
+    const description = /lagos|ibadan/i.test(q) ? q : `${q}, Lagos`;
+    return { placeId: `typed:${description}`, description, mainText: `Use “${description}”`, secondaryText: "Exactly as you typed it" };
+  }, [query, selected, resolving]);
+  const placeOptions = typedOption ? [...suggestions, typedOption] : suggestions;
+  // Searched, found nothing on the map: say so, and point to the typed option + landmark.
+  const noMatches = Boolean(typedOption) && !searchingPlaces && suggestions.length === 0;
 
   async function choose(s: PlaceSuggestion) {
     setSuggestions([]);
@@ -122,15 +157,24 @@ function FulfillmentForm() {
       toast.error("Missing order.");
       return;
     }
-    if (needsPhone && !phoneOk) {
-      toast.error("Add your WhatsApp number so we can send you updates.");
+    const delivery = mode === "delivery";
+    const ok = f.validate({
+      address:
+        delivery && !addressId && !selected
+          ? query.trim()
+            ? "Choose your address from the suggestions below the box."
+            : "Please enter your delivery address."
+          : delivery && !addressId && selected && !selected.inLagos
+            ? notInLagosMessage(selected.state)
+            : null,
+      agreeFee: delivery && !agreeFee ? "Please tick this box to agree to pay the delivery fee on arrival." : null,
+      contactPhone: needsPhone ? checkPhone(contactPhone) : null,
+    });
+    if (!ok) {
+      toast.error("Please fix the highlighted fields.");
       return;
     }
-    if (mode === "delivery" && !agreeFee) {
-      toast.error("Please tick the box to agree to pay the delivery fee on arrival.");
-      return;
-    }
-    const phone = needsPhone ? { contactPhone: contactPhone.trim() } : {};
+    const phone = needsPhone ? { contactPhone: normalizeNgPhone(contactPhone) } : {};
     const body =
       mode === "pickup"
         ? { fulfillment: "pickup", ...phone }
@@ -146,6 +190,8 @@ function FulfillmentForm() {
                 lat: selected.lat,
                 lng: selected.lng,
                 landmark: landmark.trim() || undefined,
+                saveAddress,
+                label: saveAddress ? addressLabel : undefined,
                 ...phone,
               }
             : null;
@@ -163,15 +209,17 @@ function FulfillmentForm() {
       if (needsPhone) void useAuthStore.getState().refreshMe();
       router.push(`/checkout/review?orderId=${orderId}`);
     } catch (err) {
-      toast.error(err instanceof ApiRequestError ? err.message : "Could not save. Please try again.");
+      const msg = err instanceof ApiRequestError ? err.message : "Could not save. Please try again.";
+      toast.error(msg);
+      if (err instanceof ApiRequestError && err.code === "NOT_IN_LAGOS") f.setError("address", msg);
+      else if (/phone|number|whatsapp/i.test(msg)) f.setError("contactPhone", msg);
+      else if (/address/i.test(msg)) f.setError("address", msg);
     } finally {
       setLoading(false);
     }
   }
 
   const outsideLagos = mode === "delivery" && !!selected && !selected.inLagos;
-  const canContinue =
-    (!needsPhone || phoneOk) && (mode === "pickup" ? pickupEnabled : agreeFee && !!selected && selected.inLagos);
 
   const choices = [
     { id: "delivery" as const, label: "Delivery", hint: "Pay rider on arrival", icon: Bike },
@@ -183,7 +231,7 @@ function FulfillmentForm() {
       title="Pickup or delivery?"
       subtitle="Tell us how you'd like to get your treats."
       backHref={orderId ? `/orders/${orderId}` : "/orders"}
-      className="min-h-dvh pb-32 md:pb-12"
+      className="min-h-dvh pb-[calc(140px+var(--safe-bottom))] md:pb-12"
       facts={[
         { icon: MapPin, value: "Anywhere in Lagos", label: "Where we deliver" },
         { icon: Bike, value: "Paid to the rider", label: "Delivery fee, on arrival" },
@@ -203,7 +251,10 @@ function FulfillmentForm() {
               key={opt.id}
               type="button"
               whileTap={{ scale: 0.97 }}
-              onClick={() => setMode(opt.id)}
+              onClick={() => {
+                setMode(opt.id);
+                f.reset();
+              }}
               aria-pressed={active}
               className={cn(
                 "flex items-center gap-3 rounded-[22px] border bg-white p-3.5 text-left shadow-[var(--shadow-card)] transition",
@@ -271,38 +322,40 @@ function FulfillmentForm() {
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
+                f.clear("address");
                 if (selected) setSelected(null);
               }}
+              error={f.errors.address ?? undefined}
               placeholder="Start typing your street or estate"
               autoComplete="off"
               leftAddon={<Search size={18} className="text-tea" />}
             />
             <AnimatePresence>
-              {suggestions.length ? (
+              {placeOptions.length ? (
                 <motion.ul
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   className="mt-2 overflow-hidden rounded-[20px] border border-deep/5 bg-white shadow-[var(--shadow-card)]"
                 >
-                  {suggestions.map((s) => (
+                  {placeOptions.map((s) => (
                     <li key={s.placeId} className="border-b border-deep/5 last:border-0">
                       <button
                         type="button"
                         className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-deep transition hover:bg-off-white active:bg-off-white"
                         onClick={() => void choose(s)}
                       >
-                        <MapPin size={16} className="shrink-0 text-tea" />
                         {s.placeId.startsWith("typed:") ? (
-                          <span>Use “{s.description}”</span>
+                          <Pencil size={15} className="shrink-0 text-deep/45" />
                         ) : (
-                          <span className="min-w-0">
-                            <span className="block truncate font-semibold">{s.mainText || s.description}</span>
-                            {s.secondaryText ? (
-                              <span className="block truncate text-xs text-deep/50">{s.secondaryText}</span>
-                            ) : null}
-                          </span>
+                          <MapPin size={16} className="shrink-0 text-tea" />
                         )}
+                        <span className="min-w-0">
+                          <span className={cn("block truncate", s.placeId.startsWith("typed:") ? "text-deep/80" : "font-semibold")}>
+                            {s.mainText || s.description}
+                          </span>
+                          {s.secondaryText ? <span className="block truncate text-xs text-deep/50">{s.secondaryText}</span> : null}
+                        </span>
                       </button>
                     </li>
                   ))}
@@ -310,6 +363,12 @@ function FulfillmentForm() {
               ) : null}
             </AnimatePresence>
 
+            <VerifyingInline show={searchingPlaces} text="Searching addresses…" className="justify-start pl-1" />
+            {noMatches ? (
+              <p className="mt-2 pl-1 text-xs text-deep/55">
+                We couldn&apos;t find that on the map. Try your street name or area (e.g. &ldquo;Admiralty Way&rdquo;), or use it exactly as typed and add a landmark.
+              </p>
+            ) : null}
             <VerifyingInline show={resolving} text="Checking your address on the map…" className="justify-start pl-1" />
 
             <AnimatePresence>
@@ -339,13 +398,22 @@ function FulfillmentForm() {
                   ) : null}
                   <div className="overflow-hidden rounded-[22px] border border-deep/5 bg-white shadow-[var(--shadow-card)]">
                     {selected.lat && selected.lng ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={apiUrl(`/places/map?lat=${selected.lat}&lng=${selected.lng}`)}
-                        alt="Map of your delivery address"
-                        className="h-40 w-full bg-off-white object-cover"
-                        onError={(e) => (e.currentTarget.style.display = "none")}
-                      />
+                      selected.provider === "google" ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={apiUrl(`/places/map?lat=${selected.lat}&lng=${selected.lng}`)}
+                          alt="Map of your delivery address"
+                          className="h-40 w-full bg-off-white object-cover"
+                          onError={(e) => (e.currentTarget.style.display = "none")}
+                        />
+                      ) : (
+                        <iframe
+                          title="Map of your delivery address"
+                          loading="lazy"
+                          className="pointer-events-none h-40 w-full border-0 bg-off-white"
+                          src={`https://www.openstreetmap.org/export/embed.html?bbox=${selected.lng - 0.006},${selected.lat - 0.004},${selected.lng + 0.006},${selected.lat + 0.004}&layer=mapnik&marker=${selected.lat},${selected.lng}`}
+                        />
+                      )
                     ) : null}
                     <p className="flex items-start gap-2.5 p-3.5 text-sm text-deep">
                       <MapPin size={17} className={cn("mt-0.5 shrink-0", outsideLagos ? "text-danger" : "text-tea")} />
@@ -375,14 +443,70 @@ function FulfillmentForm() {
                       leftAddon={<Landmark size={18} className="text-tea" />}
                     />
                   ) : null}
+                  {!outsideLagos ? (
+                    <div className="rounded-[20px] bg-off-white p-3.5">
+                      <button
+                        type="button"
+                        role="checkbox"
+                        aria-checked={saveAddress}
+                        onClick={() => setSaveAddress((v) => !v)}
+                        className="flex w-full items-start gap-3 text-left"
+                      >
+                        <span
+                          className={cn(
+                            "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors",
+                            saveAddress ? "border-tea bg-tea text-white" : "border-deep/30 bg-white",
+                          )}
+                        >
+                          {saveAddress ? <Check size={13} strokeWidth={3} /> : null}
+                        </span>
+                        <span className="text-sm leading-snug text-deep">
+                          <span className="font-semibold">Save this address for next time</span>
+                          <span className="mt-0.5 block text-xs text-deep/55">
+                            Optional. You can remove saved addresses any time in your account.
+                          </span>
+                        </span>
+                      </button>
+                      <AnimatePresence initial={false}>
+                        {saveAddress ? (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="flex flex-wrap gap-2 pl-8 pt-3">
+                              {["Home", "Work", "Other"].map((l) => (
+                                <button
+                                  key={l}
+                                  type="button"
+                                  aria-pressed={addressLabel === l}
+                                  onClick={() => setAddressLabel(l)}
+                                  className={cn(
+                                    "rounded-full px-3.5 py-1.5 text-xs font-semibold transition",
+                                    addressLabel === l ? "bg-deep text-white" : "bg-white text-deep ring-1 ring-deep/10",
+                                  )}
+                                >
+                                  {l}
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        ) : null}
+                      </AnimatePresence>
+                    </div>
+                  ) : null}
                 </motion.div>
               ) : null}
             </AnimatePresence>
 
             {saved.length > 0 ? (
               <div className="mt-5 space-y-2">
-                <p className="pl-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-deep/45">
+                <p className="flex items-center justify-between pl-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-deep/45">
                   Saved addresses
+                  <Link href="/account/addresses" className="normal-case tracking-normal text-tea">
+                    Manage
+                  </Link>
                 </p>
                 {saved.map((a, i) => (
                   <motion.button
@@ -392,7 +516,12 @@ function FulfillmentForm() {
                     transition={{ delay: i * 0.05 }}
                     whileTap={{ scale: 0.98 }}
                     type="button"
-                    onClick={() => void submit(a.id)}
+                    onClick={() => {
+                      if (usingAddressId) return;
+                      setUsingAddressId(a.id);
+                      void submit(a.id).finally(() => setUsingAddressId(null));
+                    }}
+                    aria-busy={usingAddressId === a.id || undefined}
                     className="flex w-full items-center gap-3 rounded-[22px] border border-deep/5 bg-white p-3 text-left text-sm shadow-[var(--shadow-card)]"
                   >
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blush-soft text-deep">
@@ -402,7 +531,11 @@ function FulfillmentForm() {
                       <span className="block font-semibold text-deep">{a.label}</span>
                       <span className="block truncate text-deep/55">{a.formattedAddress}</span>
                     </span>
-                    <span className="text-xs font-semibold text-tea">Use</span>
+                    {usingAddressId === a.id ? (
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-tea/30 border-t-tea" aria-label="Saving" />
+                    ) : (
+                      <span className="text-xs font-semibold text-tea">Use</span>
+                    )}
                   </motion.button>
                 ))}
               </div>
@@ -412,10 +545,18 @@ function FulfillmentForm() {
               type="button"
               role="checkbox"
               aria-checked={agreeFee}
-              onClick={() => setAgreeFee((v) => !v)}
+              aria-invalid={f.errors.agreeFee ? true : undefined}
+              onClick={() => {
+                setAgreeFee((v) => !v);
+                f.clear("agreeFee");
+              }}
               className={cn(
                 "mt-5 flex w-full items-start gap-3 rounded-[20px] border p-3.5 text-left transition-colors",
-                agreeFee ? "border-tea bg-sage-soft" : "border-honey/60 bg-honey-soft",
+                agreeFee
+                  ? "border-tea bg-sage-soft"
+                  : f.errors.agreeFee
+                    ? "border-danger/70 bg-[#fdecea] ring-4 ring-danger/10"
+                    : "border-honey/60 bg-honey-soft",
               )}
             >
               <motion.span
@@ -436,6 +577,11 @@ function FulfillmentForm() {
                 </span>
               </span>
             </button>
+            {f.errors.agreeFee ? (
+              <p role="alert" className="mt-1.5 pl-1 text-xs font-semibold text-danger">
+                {f.errors.agreeFee}
+              </p>
+            ) : null}
           </motion.div>
         )}
       </AnimatePresence>
@@ -446,8 +592,12 @@ function FulfillmentForm() {
             label="WhatsApp number for order updates"
             type="tel"
             value={contactPhone}
-            onChange={(e) => setContactPhone(e.target.value)}
-            placeholder="+234 801 234 5678"
+            onChange={(e) => {
+              setContactPhone(e.target.value);
+              f.clear("contactPhone");
+            }}
+            error={f.errors.contactPhone ?? undefined}
+            placeholder="0803 123 4567"
             autoComplete="tel"
             leftAddon={<Phone size={18} className="text-tea" />}
           />
@@ -455,7 +605,7 @@ function FulfillmentForm() {
       ) : null}
 
       <StickyActions>
-        <Button fullWidth variant="dark" loading={loading} disabled={!canContinue} onClick={() => void submit()}>
+        <Button fullWidth variant="dark" loading={loading} onClick={() => submit()}>
           Continue to review
         </Button>
       </StickyActions>

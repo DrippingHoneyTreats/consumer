@@ -14,6 +14,7 @@ import { ImageField } from "@/components/admin/ImageField";
 import { AdminTable } from "@/components/admin/AdminTable";
 import { toast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
+import { checkLink, checkRequired, useFieldErrors } from "@/lib/validate";
 
 const emptyForm = {
   title: "",
@@ -27,6 +28,7 @@ const emptyForm = {
 };
 
 export default function AdminPromosPage() {
+  const f = useFieldErrors();
   const [banners, setBanners] = useState<AdminBanner[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
@@ -49,8 +51,15 @@ export default function AdminPromosPage() {
   }, [load]);
 
   const save = async () => {
-    if (!form.title.trim() || !form.image.trim()) {
-      toast.error("Title and image are required");
+    const ok = f.validate({
+      title: checkRequired(form.title, "Give the promo a title."),
+      image: checkRequired(form.image, "Upload an image for the promo."),
+      priority: form.priority.trim() && !/^-?\d+$/.test(form.priority.trim()) ? "Priority must be a whole number." : null,
+      ctaTarget: checkLink(form.ctaTarget),
+      ctaLabel: form.ctaTarget.trim() && !form.ctaLabel.trim() ? "Add button text for the link, e.g. Order now." : null,
+    });
+    if (!ok) {
+      toast.error("Please fix the highlighted fields.");
       return;
     }
     const body = {
@@ -96,37 +105,63 @@ export default function AdminPromosPage() {
       <div className="mb-6 rounded-2xl border border-deep/10 bg-white p-4">
         <h2 className="font-semibold text-deep">{editId ? "Edit promo" : "New promo"}</h2>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <Input label="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          <Input
+            label="Title"
+            value={form.title}
+            onChange={(e) => {
+              setForm({ ...form, title: e.target.value });
+              f.clear("title");
+            }}
+            error={f.errors.title ?? undefined}
+          />
           <Input
             label="Subtitle"
             placeholder="Short line under the title"
             value={form.subtitle}
             onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
           />
-          <ImageField
-            label="Image"
-            folder="banners"
-            value={form.image}
-            onChange={(url) => setForm({ ...form, image: url })}
-          />
+          <div className="space-y-1">
+            <ImageField
+              label="Image"
+              folder="banners"
+              value={form.image}
+              onChange={(url) => {
+                setForm({ ...form, image: url });
+                f.clear("image");
+              }}
+            />
+            {f.errors.image ? <p role="alert" data-invalid="true" className="text-xs font-semibold text-danger">{f.errors.image}</p> : null}
+          </div>
           <Input
             label="Priority"
             type="number"
             hint="Higher shows first"
             value={form.priority}
-            onChange={(e) => setForm({ ...form, priority: e.target.value })}
+            onChange={(e) => {
+              setForm({ ...form, priority: e.target.value });
+              f.clear("priority");
+            }}
+            error={f.errors.priority ?? undefined}
           />
           <Input
             label="CTA label"
             placeholder="e.g. Order now"
             value={form.ctaLabel}
-            onChange={(e) => setForm({ ...form, ctaLabel: e.target.value })}
+            onChange={(e) => {
+              setForm({ ...form, ctaLabel: e.target.value });
+              f.clear("ctaLabel");
+            }}
+            error={f.errors.ctaLabel ?? undefined}
           />
           <Input
             label="CTA link"
             placeholder="/pastries or https://…"
             value={form.ctaTarget}
-            onChange={(e) => setForm({ ...form, ctaTarget: e.target.value })}
+            onChange={(e) => {
+              setForm({ ...form, ctaTarget: e.target.value });
+              f.clear("ctaTarget");
+            }}
+            error={f.errors.ctaTarget ?? undefined}
           />
         </div>
         <label className="mt-3 block text-sm">
@@ -143,7 +178,7 @@ export default function AdminPromosPage() {
           Active on customer home
         </label>
         <div className="mt-3 flex gap-2">
-          <Button onClick={() => void save()}>{editId ? "Save" : "Create"}</Button>
+          <Button onClick={() => save()}>{editId ? "Save" : "Create"}</Button>
           {editId ? (
             <Button
               variant="ghost"

@@ -76,7 +76,7 @@ export function PwaRegister() {
               : "Save the admin app on this device for quick kitchen access."}
           </p>
           {!iosHint && deferred ? (
-            <Button className="mt-2" variant="dark" onClick={() => void install()}>
+            <Button className="mt-2" variant="dark" onClick={() => install()}>
               Install app
             </Button>
           ) : null}

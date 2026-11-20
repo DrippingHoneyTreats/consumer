@@ -8,7 +8,7 @@ import { ArrowUpRight, Check, ChevronRight, Inbox, MapPin, PartyPopper, Users } 
 import { apiClient } from "@/lib/api";
 import { getEventTypes } from "@/lib/catalogue";
 import { asArray } from "@/lib/data";
-import { formatNgn, contactLink } from "@/lib/format";
+import { formatNgn, contactLink, greetingForNow } from "@/lib/format";
 import { EVENT_CITIES, EVENT_PLACEHOLDER } from "@/lib/placeholders";
 import type { EventRequest, EventType } from "@/lib/types";
 import { useAuthStore } from "@/store/auth-store";
@@ -46,9 +46,6 @@ function tabFor(status: string): Tab {
   return "ongoing";
 }
 
-function firstName(name: string) {
-  return name.trim().split(/\s+/)[0] || "there";
-}
 
 export function EventsView() {
   const user = useAuthStore((s) => s.user);
@@ -153,7 +150,7 @@ export function EventsView() {
         className="md:pt-4"
         pill={
           <>
-            <PartyPopper size={13} /> {user ? `Hi ${firstName(user.fullName)}, welcome to DHT Events` : "Welcome to DHT Events"}
+            <PartyPopper size={13} /> {user ? `${greetingForNow(user.fullName)}, welcome to DHT Events` : "Welcome to DHT Events"}
           </>
         }
         title={

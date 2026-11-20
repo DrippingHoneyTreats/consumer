@@ -111,28 +111,32 @@ body {
   );
 }
 
-.page-pad {
-  padding: calc(12px + var(--safe-top)) 16px calc(var(--tab-h) + var(--safe-bottom) + var(--banner-h, 0px) + 40px);
-  transition: padding-bottom 300ms ease;
-}
-
-.page-pad-no-tab {
-  padding: calc(12px + var(--safe-top)) 16px 16px;
-}
-
-@media (min-width: 768px) {
-  .page-pad,
-  .page-pad-no-tab {
-    padding-left: 24px;
-    padding-right: 24px;
+/* In the components layer so per-page utilities (e.g. pb-32 to clear a
+   floating button bar) can override this default padding. */
+@layer components {
+  .page-pad {
+    padding: calc(12px + var(--safe-top)) 16px calc(var(--tab-h) + var(--safe-bottom) + var(--banner-h, 0px) + 40px);
+    transition: padding-bottom 300ms ease;
   }
-}
 
-@media (min-width: 1024px) {
-  .page-pad,
   .page-pad-no-tab {
-    padding-left: 32px;
-    padding-right: 32px;
+    padding: calc(12px + var(--safe-top)) 16px 16px;
+  }
+
+  @media (min-width: 768px) {
+    .page-pad,
+    .page-pad-no-tab {
+      padding-left: 24px;
+      padding-right: 24px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .page-pad,
+    .page-pad-no-tab {
+      padding-left: 32px;
+      padding-right: 32px;
+    }
   }
 }
 
