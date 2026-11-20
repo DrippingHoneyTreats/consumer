@@ -101,12 +101,12 @@ export default function WelcomePage() {
       </div>
 
       <div className="pt-6 space-y-2.5">
-        <GoogleButton returnTo="/" />
         <Link href="/verify?returnTo=/" className="block">
           <Button fullWidth variant="dark" rightIcon={<ArrowRight size={18} />}>
             Get started
           </Button>
         </Link>
+        <GoogleButton returnTo="/" />
         <Link href="/" className="block">
           <Button variant="tertiary" fullWidth>
             Continue as guest
