@@ -307,9 +307,20 @@ route("GET", "/auth/google/callback", async ({ req, query }) => {
   }
   if (isNew) await notifyWelcome(user, "Google");
 
-  const res = NextResponse.redirect(`${env.appUrl}${safeReturnTo(state.r)}`);
+  // Hand the session cookie over on a plain 200 page (not a redirect) and set
+  // ONLY that one cookie. Cookies on redirects, and several Set-Cookie headers
+  // on one response, can get dropped by serverless/CDN layers. The nonce
+  // cookie simply expires on its own after 10 minutes.
+  const target = `${env.appUrl}${safeReturnTo(state.r)}`;
+  const safe = JSON.stringify(target).replace(/</g, "\\u003c");
+  const res = new NextResponse(
+    `<!doctype html><html><head><meta charset="utf-8"><meta name="robots" content="noindex">
+<meta http-equiv="refresh" content="0;url=${target.replace(/"/g, "&quot;")}"><title>Signing you in…</title></head>
+<body style="font-family:system-ui,sans-serif;background:#f7f3ee;color:#3f5f46;display:flex;min-height:100vh;align-items:center;justify-content:center">
+<p>Signing you in…</p><script>location.replace(${safe})</script></body></html>`,
+    { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } },
+  );
   setSessionCookie(res, user.id);
-  res.cookies.set(GOOGLE_NONCE_COOKIE, "", { path: "/", maxAge: 0 });
   return res;
 });
 

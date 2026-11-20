@@ -223,7 +223,8 @@ export function HomeView() {
   const [categories, setCategories] = useState<CatalogueCategory[]>([]);
   const [popular, setPopular] = useState<CatalogueItem[]>([]);
   const [whatsapp, setWhatsapp] = useState(process.env.NEXT_PUBLIC_WHATSAPP || "2348000000000");
-  const [greeting, setGreeting] = useState("Welcome, Guest");
+  // Time-of-day greeting from the visitor's own clock (set after mount to avoid a server/client mismatch).
+  const [greeting, setGreeting] = useState("");
   const [selected, setSelected] = useState<CatalogueItem | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -233,8 +234,7 @@ export function HomeView() {
 
   useEffect(() => {
     if (!hydrated) return;
-    if (user?.fullName) setGreeting(greetingForNow(user.fullName));
-    else setGreeting("Welcome, Guest");
+    setGreeting(greetingForNow(user?.fullName));
   }, [user?.fullName, hydrated]);
 
   const load = useCallback(async () => {
@@ -337,7 +337,7 @@ export function HomeView() {
         >
           <div className="relative z-10 grid items-center gap-4 p-5 md:grid-cols-[minmax(0,1fr)_minmax(260px,1.15fr)] md:gap-3 md:p-7 lg:gap-4 lg:p-8">
             <div className="relative z-20 max-w-md lg:max-w-lg">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-tea md:text-[13px]">{greeting}</p>
+              <p className="min-h-[1.25em] text-xs font-semibold uppercase tracking-[0.14em] text-tea md:text-[13px]">{greeting}</p>
               <h1 className="mt-2 font-display text-[30px] leading-[1.08] text-deep md:text-[40px] lg:text-[48px]">
                 Freshly baked{" "}
                 <span className="inline-block text-honey">drips</span>
