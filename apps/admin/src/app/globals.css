@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Shared components (@dht/ui) live outside this app, so scan them for Tailwind classes too. */
+@source "../../../../packages/ui/src";
 
 /* DHT brand tokens — warm, elegant, Lagos-first (PRD §4.3) */
 :root {
@@ -143,5 +145,15 @@ body {
   .animate-fade-up,
   .skeleton {
     animation: none;
+  }
+}
+
+/* iOS Safari zooms the page into any field with text under 16px (and the page
+   then looks shifted/cut off). Keep every form field at 16px or more. */
+@layer base {
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1rem);
   }
 }

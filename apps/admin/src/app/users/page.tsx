@@ -64,7 +64,7 @@ export default function AdminUsersPage() {
     } catch (e) {
       setUsers([]);
       setState("error");
-      toast(e instanceof Error ? e.message : "Could not load users");
+      toast.error(e instanceof Error ? e.message : "Could not load users");
     }
   }, [appliedQuery]);
 

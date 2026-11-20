@@ -32,7 +32,7 @@ export default function AdminEventsPage() {
       });
       setEvents(res.items);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Load failed");
+      toast.error(e instanceof Error ? e.message : "Load failed");
     }
   }, [statusFilter]);
 
@@ -49,11 +49,11 @@ export default function AdminEventsPage() {
         quoteNote: quoteNote.trim() || undefined,
         quoteLink: quoteLink.trim() || undefined,
       });
-      toast("Event updated");
+      toast.success("Event updated");
       setSelected(null);
       void load();
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Update failed");
+      toast.error(e instanceof Error ? e.message : "Update failed");
     }
   };
 

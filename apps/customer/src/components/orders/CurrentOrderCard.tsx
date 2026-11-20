@@ -84,7 +84,7 @@ export function CurrentOrderCard({
                 type="button"
                 aria-label={`Remove ${line.name}`}
                 onClick={() => onQtyChange(line.key, 0)}
-                className="pressable flex h-8 w-8 items-center justify-center rounded-full text-deep/35 hover:bg-blush-soft hover:text-blush-deep"
+                className="pressable flex h-8 w-8 items-center justify-center rounded-full bg-danger/8 text-danger ring-1 ring-danger/20 transition hover:bg-danger/15"
               >
                 <Trash2 size={14} />
               </button>

@@ -9,6 +9,8 @@ export type User = {
   emailVerified?: boolean;
   role: Role;
   avatar?: string | null;
+  /** Has set a 4-digit sign-in PIN (phone accounts). */
+  hasPin?: boolean;
 };
 
 export type Category = {

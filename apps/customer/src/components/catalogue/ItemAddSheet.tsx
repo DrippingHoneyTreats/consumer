@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, ShoppingBag } from "lucide-react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
@@ -21,6 +21,11 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onConfirm: (opts: { variantId?: string; qty: number }) => void;
+  /** Editing a cart line: start from its current size and quantity. */
+  initialVariantId?: string;
+  initialQty?: number;
+  /** Button text instead of "Order now", e.g. "Update item". */
+  confirmLabel?: string;
 };
 
 function isCatalogue(item: Item | CatalogueItem): item is CatalogueItem {
@@ -41,9 +46,16 @@ function variantSectionLabel(categoryId: string): string {
   }
 }
 
-export function ItemAddSheet({ item, open, onClose, onConfirm }: Props) {
-  const [variantId, setVariantId] = useState<string | undefined>();
-  const [qty, setQty] = useState(1);
+export function ItemAddSheet({ item, open, onClose, onConfirm, initialVariantId, initialQty, confirmLabel }: Props) {
+  const [variantId, setVariantId] = useState<string | undefined>(initialVariantId);
+  const [qty, setQty] = useState(initialQty ?? 1);
+
+  // Each time the sheet opens, start from the line being edited (or fresh).
+  useEffect(() => {
+    if (!open) return;
+    setVariantId(initialVariantId);
+    setQty(initialQty ?? 1);
+  }, [open, item?.id, initialVariantId, initialQty]);
   const [openPanel, setOpenPanel] = useState<"ingredients" | "nutrition" | null>("ingredients");
 
   const price = useMemo(() => {
@@ -205,7 +217,7 @@ export function ItemAddSheet({ item, open, onClose, onConfirm }: Props) {
           setVariantId(undefined);
         }}
       >
-        {soldOut ? "Sold out" : `Order now · ${formatNgn(price * qty)}`}
+        {soldOut ? "Sold out" : `${confirmLabel ?? "Order now"} · ${formatNgn(price * qty)}`}
       </Button>
     </BottomSheet>
   );

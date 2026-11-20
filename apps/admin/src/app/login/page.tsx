@@ -25,16 +25,16 @@ export default function AdminLoginPage() {
   const sendCode = async () => {
     const contact = email.trim().toLowerCase();
     if (!contact.includes("@")) {
-      toast("Enter your staff email");
+      toast.error("Enter your staff email");
       return;
     }
     setLoading(true);
     try {
       await apiClient.post("/auth/otp/send", { contact, channel: "email", audience: "admin" });
       setStep("code");
-      toast("Code sent — check your email");
+      toast.success("Code sent — check your email");
     } catch (e) {
-      toast(errMsg(e, "Could not send code"));
+      toast.error(errMsg(e, "Could not send code"));
     } finally {
       setLoading(false);
     }
@@ -52,7 +52,7 @@ export default function AdminLoginPage() {
       setUser(user);
       router.replace("/orders");
     } catch (e) {
-      toast(errMsg(e, "Invalid code"));
+      toast.error(errMsg(e, "Invalid code"));
     } finally {
       setLoading(false);
     }

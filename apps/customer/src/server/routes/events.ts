@@ -41,6 +41,10 @@ route("POST", "/events", async ({ req, body }) => {
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) throw badRequest("Pick a valid date.");
   if (parsed.getTime() < Date.now() - 24 * 3600_000) throw badRequest("Pick a date in the future.");
+  // Ibadan events mean travel: we need at least 3 weeks' notice (1 day of slack for time zones).
+  if (/ibadan/i.test(String(body.city ?? "")) && parsed.getTime() < Date.now() + 20 * 24 * 3600_000) {
+    throw badRequest("Ibadan events need at least 3 weeks' notice. Please pick a later date.");
+  }
 
   const row = must(
     await db()

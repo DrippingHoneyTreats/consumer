@@ -5,22 +5,20 @@ import Link from "next/link";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  ArrowRight,
+  ArrowUpRight,
   Heart,
   Inbox,
   Leaf,
-  MessageCircle,
   Search,
   SearchX,
   SlidersHorizontal,
   Sparkles,
-  Truck,
   Wheat,
   X,
 } from "lucide-react";
-import { getCategories, searchItems } from "@/lib/catalogue";
+import { getCategories, searchItems, needsOptions } from "@/lib/catalogue";
 import type { CatalogueCategory, CatalogueItem } from "@/lib/catalogue-types";
-import { whatsappLink } from "@/lib/format";
+import { contactLink } from "@/lib/format";
 import { categoryImage } from "@/lib/placeholders";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
 import { ColumnLoader } from "@/components/ui/ColumnLoader";
@@ -30,14 +28,19 @@ import { HeroImageCycle } from "@/components/motion/HeroImageCycle";
 import { useCartActions } from "@/hooks/useCartActions";
 import { easeGentle } from "@/lib/motion";
 import { cn } from "@/lib/cn";
+import {
+  ArrowPill,
+  CtaBanner,
+  FeatureGridDark,
+  Pill,
+  ProcessSteps,
+  SectionIntro,
+  TrustStrip,
+} from "@/components/editorial/Editorial";
+import { ORDER_STEPS, TRUST_WORDS, WHY_PASTRIES } from "@/components/editorial/content";
+import { SwipeDeck } from "@/components/editorial/SwipeDeck";
 
 const ease = easeGentle;
-
-const featurePills = [
-  { icon: Leaf, title: "Fresh daily" },
-  { icon: Heart, title: "Handmade" },
-  { icon: Truck, title: "Lagos delivery" },
-];
 
 const sideLinks = [
   { icon: Wheat, label: "Fibre" },
@@ -46,7 +49,6 @@ const sideLinks = [
   { icon: Leaf, label: "Grain" },
 ];
 
-const blobTones = ["bg-[#fce4ec]", "bg-[#ffe8d6]", "bg-[#f9d5e0]", "bg-[#f3ebe3]"] as const;
 
 export function PastriesView() {
   const { addItem } = useCartActions();
@@ -100,7 +102,33 @@ export function PastriesView() {
   }, [query, searchNonce]);
 
   const searching = query.trim().length >= 2;
-  const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP ?? "2348000000000";
+
+  const collectionCard = (cat: CatalogueCategory, index: number) => (
+    <Link
+      href={`/pastries/${cat.slug}`}
+      className="pressable group relative flex h-full min-h-[260px] flex-col justify-end overflow-hidden rounded-[28px] bg-cream p-5 shadow-[var(--shadow-card)]"
+    >
+      <Image
+        src={categoryImage(cat)}
+        alt=""
+        fill
+        className="object-cover transition duration-700 group-hover:scale-105"
+        sizes="(min-width: 1024px) 380px, (min-width: 640px) 50vw, 100vw"
+        unoptimized
+      />
+      <span className="absolute inset-0 bg-gradient-to-t from-[#1f2f24]/85 via-[#1f2f24]/25 to-transparent" />
+      <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 font-display text-xs font-semibold text-deep">
+        {String(index + 1).padStart(2, "0")}
+      </span>
+      <span className="absolute right-4 top-4 hidden h-10 w-10 items-center justify-center rounded-full bg-white text-deep shadow transition group-hover:rotate-45 md:flex">
+        <ArrowUpRight size={17} />
+      </span>
+      <span className="relative">
+        <span className="block font-display text-[26px] font-semibold leading-tight text-white md:text-[30px]">{cat.name}</span>
+        {cat.tagline ? <span className="mt-1 block max-w-xs text-sm text-white/75">{cat.tagline}</span> : null}
+      </span>
+    </Link>
+  );
 
   return (
     <div className="page-pad !px-0 !pt-0 bg-[#fffaf7]">
@@ -150,7 +178,7 @@ export function PastriesView() {
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Search cakes, chinchin, meat pies…"
                         aria-label="Search pastries"
-                        className="w-full bg-transparent text-sm text-deep outline-none placeholder:text-deep/40"
+                        className="w-full bg-transparent text-base text-deep outline-none placeholder:text-deep/40"
                       />
                       {query ? (
                         <button
@@ -245,7 +273,7 @@ export function PastriesView() {
                     index={i}
                     layout="grid"
                     onOpen={() => openItem(item)}
-                    onAdd={() => openItem(item)}
+                    onAdd={() => (needsOptions(item) ? openItem(item) : void addItem({ item }))}
                   />
                 ))}
               </AnimatePresence>
@@ -269,126 +297,88 @@ export function PastriesView() {
           />
         </div>
       ) : (
-        <>
-          <ul className="relative z-[1] -mt-3 mb-2 flex items-start justify-around gap-2 px-4 md:-mt-5 md:mb-4 md:px-12">
-            {featurePills.map((f) => {
-              const Icon = f.icon;
-              return (
-                <li key={f.title} className="flex max-w-[110px] flex-col items-center gap-2 text-center">
-                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#fce4ec] text-[#5d4037] shadow-[0_8px_20px_-12px_rgba(93,64,55,0.35)] md:h-16 md:w-16">
-                    <Icon size={22} strokeWidth={1.5} />
-                  </span>
-                  <span className="font-display text-sm font-semibold text-[#5d4037] md:text-base">{f.title}</span>
-                </li>
-              );
-            })}
-          </ul>
+        <div className="mx-auto max-w-6xl space-y-16 px-4 pb-10 md:space-y-24 md:px-10">
+          <TrustStrip items={TRUST_WORDS} className="-mt-2" />
 
-          <div id="categories" className="relative scroll-mt-24 px-4 pb-6 md:px-10">
-            <span className="pointer-events-none absolute left-6 top-10 h-2 w-2 rounded-full bg-[#f9a8bb]" aria-hidden />
-            <span className="pointer-events-none absolute right-8 top-24 h-1.5 w-1.5 rounded-full bg-[#e8a48a]" aria-hidden />
-
-            <div className="mx-auto max-w-2xl md:max-w-3xl">
-              {categories.map((cat, index) => {
-                const flip = index % 2 === 1;
-                const blob = blobTones[index % blobTones.length];
-                const organic =
-                  index % 3 === 0
-                    ? "rounded-[48%_42%_50%_44%]"
-                    : index % 3 === 1
-                      ? "rounded-full"
-                      : "rounded-[42%_50%_44%_48%]";
-
-                return (
-                  <motion.div
-                    key={cat.id}
-                    initial={{ opacity: 0, y: 36 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.22 }}
-                    transition={{ duration: 0.7, delay: Math.min(index, 6) * 0.05, ease }}
-                    className="relative py-9 md:py-12"
-                  >
-                    <Link
-                      href={`/pastries/${cat.slug}`}
-                      className={cn(
-                        "group relative flex w-full items-center gap-4 md:gap-10",
-                        flip ? "flex-row-reverse" : "flex-row",
-                      )}
-                    >
-                      <span className="relative shrink-0">
-                        <span className={cn("absolute -inset-5 md:-inset-8", blob, organic)} aria-hidden />
-                        <span
-                          className={cn(
-                            "relative block h-[148px] w-[148px] overflow-hidden shadow-[0_16px_36px_-18px_rgba(93,64,55,0.35)] ring-[5px] ring-white md:h-[200px] md:w-[200px]",
-                            organic,
-                          )}
-                        >
-                          <Image
-                            src={categoryImage(cat)}
-                            alt=""
-                            fill
-                            className="object-cover transition duration-500 group-hover:scale-105"
-                            sizes="200px"
-                            unoptimized
-                          />
-                        </span>
-                      </span>
-
-                      <span className={cn("min-w-0 flex-1", flip ? "text-right" : "text-left")}>
-                        <span className="block font-display text-[26px] leading-[1.1] text-[#5d4037] md:text-[34px]">
-                          {cat.name}
-                        </span>
-                        {cat.tagline ? (
-                          <span
-                            className={cn(
-                              "mt-2 block text-[13px] leading-relaxed text-[#5d4037]/55 md:text-[15px]",
-                              flip ? "ml-auto max-w-[260px]" : "max-w-[260px]",
-                            )}
-                          >
-                            {cat.tagline}
-                          </span>
-                        ) : null}
-                        <span
-                          className={cn(
-                            "mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#c47b62]",
-                            flip && "flex-row-reverse",
-                          )}
-                        >
-                          View treats <ArrowRight size={14} />
-                        </span>
-                      </span>
-                    </Link>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            <section className="mx-auto mt-4 grid max-w-3xl gap-3 md:grid-cols-2">
-              <div className="rounded-[28px] bg-gradient-to-br from-[#fff1ea] to-[#fce4ec] p-5 shadow-[var(--shadow-card)]">
-                <p className="font-display text-2xl text-[#5d4037]">Get 10% off first order</p>
-                <p className="mt-2 text-sm text-[#5d4037]/60">Message us on WhatsApp for your welcome treat code.</p>
-                <a
-                  href={whatsappLink(whatsapp, "Hi DHT! I'd love the 10% first-order welcome treat.")}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#5d4037] px-5 py-2.5 text-sm font-semibold text-white"
+          <section id="categories" className="scroll-mt-24">
+            <SectionIntro
+              pill={<><Wheat size={13} /> Our collections</>}
+              title={
+                <>
+                  Baked fresh, <span className="italic text-tea">made</span> for sharing
+                </>
+              }
+              text="Pick a collection to see every treat, price and size."
+            />
+            <SwipeDeck
+              tone="none"
+              label="Collections"
+              items={categories.map((cat, index) => (
+                <div key={cat.id} className="h-[340px] [&>a]:h-full">
+                  {collectionCard(cat, index)}
+                </div>
+              ))}
+            />
+            <ul className="hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-3">
+              {categories.map((cat, index) => (
+                <motion.li
+                  key={cat.id}
+                  initial={{ opacity: 0, y: 28 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.6, delay: Math.min(index, 6) * 0.06, ease }}
+                  className={cn(index === 0 && categories.length > 2 && "md:col-span-2 lg:col-span-1 lg:row-span-2")}
                 >
-                  <MessageCircle size={16} /> Claim on WhatsApp
-                </a>
-              </div>
-              <Link
-                href="/events"
-                className="pressable rounded-[28px] bg-white p-5 shadow-[var(--shadow-card)] ring-1 ring-[#5d4037]/8"
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#c47b62]">Follow the vibe</p>
-                <p className="mt-2 font-display text-2xl text-[#5d4037]">Events & dessert tables</p>
-                <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#c47b62]">
-                  Explore events <ArrowRight size={14} />
+                  {collectionCard(cat, index)}
+                </motion.li>
+              ))}
+            </ul>
+          </section>
+
+          <section>
+            <SectionIntro
+              pill="How to order"
+              title={
+                <>
+                  From our oven to your <span className="italic text-tea">door</span>
+                </>
+              }
+            />
+            <ProcessSteps steps={ORDER_STEPS} note="Ready to be enjoyed!" />
+          </section>
+
+          <FeatureGridDark
+            pill="Why DHT"
+            title="Treats that are good, and good for you"
+            text="Everything we bake starts with whole grains, real fibre and a lot of love."
+            items={WHY_PASTRIES}
+          />
+
+          <section className="grid gap-4 md:grid-cols-[1.4fr_1fr]">
+            <CtaBanner
+              className="!text-left md:!px-10"
+              title="Get 10% off your first order"
+              text="Message us on WhatsApp for your welcome treat code."
+              actions={
+                <ArrowPill href={contactLink("Hi DHT! I'd love the 10% first-order welcome treat.")} external tone="light">
+                  Claim on WhatsApp
+                </ArrowPill>
+              }
+            />
+            <Link
+              href="/events"
+              className="pressable group relative flex min-h-[220px] flex-col justify-between overflow-hidden rounded-[32px] bg-blush-soft p-7"
+            >
+              <Pill>Events</Pill>
+              <span>
+                <span className="block font-display text-[28px] font-semibold leading-tight text-deep">Dessert tables for your next party</span>
+                <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-tea">
+                  Explore events <ArrowUpRight size={15} className="transition group-hover:rotate-45" />
                 </span>
-              </Link>
-            </section>
-          </div>
-        </>
+              </span>
+            </Link>
+          </section>
+        </div>
       )}
 
       <ItemAddSheet

@@ -6,9 +6,9 @@ import { motion } from "framer-motion";
 import { CalendarDays, Check, Clock, FileText, MapPin, MessageCircle, Users, Wallet } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { unwrapData } from "@/lib/data";
-import { formatNgn, statusLabel, whatsappLink } from "@/lib/format";
+import { formatNgn, statusLabel, contactLink } from "@/lib/format";
 import type { EventRequest } from "@/lib/types";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { InnerPage, PageSection } from "@/components/layout/InnerPage";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { PageSkeleton } from "@/components/ui/ColumnLoader";
@@ -25,18 +25,18 @@ export default function EventDetailPage() {
     void apiClient
       .get<EventRequest | { data: EventRequest }>(`/events/${id}`)
       .then((res) => setEvent(unwrapData(res) ?? (res as EventRequest)))
-      .catch(() => toast("Could not load this event."));
+      .catch(() => toast.error("Could not load this event."));
   }, [id]);
 
   async function cancel() {
     if (!confirm("Cancel this event request?")) return;
     try {
       await apiClient.post(`/events/${id}/cancel`);
-      toast("Request cancelled.");
+      toast.success("Request cancelled.");
       const res = await apiClient.get<EventRequest>(`/events/${id}`);
       setEvent(res);
     } catch {
-      toast("Could not cancel.");
+      toast.error("Could not cancel.");
     }
   }
 
@@ -59,32 +59,50 @@ export default function EventDetailPage() {
     ...(event.budget ? [{ icon: Wallet, label: "Budget", value: formatNgn(event.budget) }] : []),
   ];
 
+  const buttons = (
+    <>
+      {event.quoteLink ? (
+        <a href={event.quoteLink} className="block">
+          <Button fullWidth variant="dark" leftIcon={<FileText size={16} />}>
+            View quote
+          </Button>
+        </a>
+      ) : null}
+      <a href={contactLink(`Hi DHT, about event ${event.refNo}`)} className="block">
+        <Button fullWidth variant={event.quoteLink ? "tertiary" : "dark"} leftIcon={<MessageCircle size={16} />}>
+          Chat on WhatsApp
+        </Button>
+      </a>
+      {!["cancelled", "completed", "confirmed"].includes(event.status) ? (
+        <Button variant="ghost" fullWidth className="text-danger" onClick={() => void cancel()}>
+          Cancel request
+        </Button>
+      ) : null}
+    </>
+  );
+
   return (
-    <div className="page-pad">
-      <PageHeader title={event.title || event.type || "Event"} backHref="/events" />
-
-      <motion.section
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-4 rounded-[28px] bg-hero p-4 shadow-[var(--shadow-card)]"
-      >
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-deep/60">Ref {event.refNo}</p>
-          <Badge status={event.status} className="bg-white/80" />
-        </div>
-        {event.quoteAmount ? (
-          <div className="mt-3">
-            <p className="text-xs text-deep/60">Your quote</p>
-            <p className="font-display text-3xl text-deep">{formatNgn(event.quoteAmount)}</p>
-            {event.quoteNote ? <p className="mt-1 text-xs text-deep/65">{event.quoteNote}</p> : null}
+    <InnerPage
+      tabbed
+      eyebrow="Event booking"
+      title={event.title || event.type || "Event"}
+      subtitle={`Ref ${event.refNo}`}
+      backHref="/events"
+      help={false}
+      hero={
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <p className="text-xs text-white/70">{event.quoteAmount ? "Your quote" : "Quote"}</p>
+            <p className="font-display text-2xl">{event.quoteAmount ? formatNgn(event.quoteAmount) : "Coming soon"}</p>
           </div>
-        ) : (
-          <p className="mt-3 text-sm text-deep/70">We&apos;re reviewing your request and will send a quote shortly.</p>
-        )}
-      </motion.section>
-
+          <Badge status={event.status} className="bg-white/85" />
+        </div>
+      }
+      facts={details.map(({ icon, label, value }) => ({ icon, label, value }))}
+      actions={buttons}
+    >
       {!cancelled ? (
-        <section className="mb-4 rounded-[24px] border border-deep/5 bg-white p-4 shadow-[var(--shadow-card)]">
+        <PageSection title="Progress">
           <div className="flex items-start justify-between">
             {TIMELINE.map((s, i) => {
               const done = i <= current;
@@ -112,50 +130,30 @@ export default function EventDetailPage() {
                   >
                     {done && i !== current ? <Check size={14} /> : i + 1}
                   </motion.span>
-                  <span className={cn("mt-1.5 text-[9.5px] font-semibold leading-tight", done ? "text-deep" : "text-deep/35")}>
+                  <span className={cn("mt-1.5 text-[10px] font-semibold leading-tight md:text-xs", done ? "text-deep" : "text-deep/35")}>
                     {statusLabel(s)}
                   </span>
                 </div>
               );
             })}
           </div>
-        </section>
+        </PageSection>
       ) : null}
 
-      <dl className="mb-5 divide-y divide-deep/5 rounded-[24px] border border-deep/5 bg-white px-4 shadow-[var(--shadow-card)]">
-        {details.map(({ icon: Icon, label, value }) => (
-          <div key={label} className="flex items-center gap-3 py-3 text-sm">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sage-soft text-tea">
-              <Icon size={16} />
-            </span>
-            <dt className="text-deep/55">{label}</dt>
-            <dd className="ml-auto max-w-[60%] text-right font-medium text-deep">{value}</dd>
+      <PageSection title="Quote">
+        {event.quoteAmount ? (
+          <div>
+            <p className="font-display text-3xl text-deep">{formatNgn(event.quoteAmount)}</p>
+            {event.quoteNote ? <p className="mt-1 text-sm text-deep/65">{event.quoteNote}</p> : null}
           </div>
-        ))}
-      </dl>
+        ) : (
+          <p className="text-sm text-deep/65">We&apos;re reviewing your request and will send a quote on WhatsApp shortly.</p>
+        )}
+      </PageSection>
 
-      <div className="space-y-2.5">
-        {event.quoteLink ? (
-          <a href={event.quoteLink} className="block">
-            <Button fullWidth variant="dark" leftIcon={<FileText size={16} />}>
-              View quote
-            </Button>
-          </a>
-        ) : null}
-        <a
-          href={whatsappLink(process.env.NEXT_PUBLIC_WHATSAPP ?? "2348000000000", `Hi DHT, about event ${event.refNo}`)}
-          className="block"
-        >
-          <Button fullWidth variant="secondary" leftIcon={<MessageCircle size={16} />}>
-            Chat on WhatsApp
-          </Button>
-        </a>
-        {!["cancelled", "completed", "confirmed"].includes(event.status) ? (
-          <Button variant="ghost" fullWidth className="text-danger" onClick={() => void cancel()}>
-            Cancel request
-          </Button>
-        ) : null}
-      </div>
-    </div>
+      <PageSection className="md:hidden">
+        <div className="grid gap-2 sm:grid-cols-2">{buttons}</div>
+      </PageSection>
+    </InnerPage>
   );
 }

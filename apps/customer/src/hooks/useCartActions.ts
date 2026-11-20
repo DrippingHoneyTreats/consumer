@@ -8,13 +8,13 @@ import { useCartStore } from "@/store/cart-store";
 import { toast } from "@/components/ui/Toast";
 import { flyToCart } from "@/components/motion/CartFly";
 
-function lineName(item: Item, variantId?: string): string {
+export function lineName(item: Item, variantId?: string): string {
   if (!variantId || !item.variants?.length) return item.name;
   const v = item.variants.find((x) => x.id === variantId);
   return v ? `${item.name} · ${v.name}` : item.name;
 }
 
-function unitPrice(item: Item, variantId?: string): number {
+export function unitPrice(item: Item, variantId?: string): number {
   if (variantId && item.variants?.length) {
     return item.variants.find((v) => v.id === variantId)?.price ?? item.basePrice;
   }
@@ -38,6 +38,11 @@ export function useCartActions() {
     const { item, variantId, qty = 1, note } = opts;
     if (item.status === "sold_out") {
       toast("This one is sold out for now.");
+      return;
+    }
+    // Never add an item with sizes/options without the customer choosing one.
+    if ((item.variants?.length ?? 0) > 0 && !variantId) {
+      toast.error("Please choose a size first.");
       return;
     }
 
@@ -99,7 +104,7 @@ export function useCartActions() {
       const order = unwrapData(res) ?? (res as Order);
       setDraft(order);
     } catch {
-      toast("Could not update quantity.");
+      toast.error("Could not update quantity.");
       await refreshDraft();
     }
   }

@@ -83,7 +83,7 @@ export default function AdminCataloguePage() {
       setItems(allItems);
       setItemForm((f) => (f.categoryId || !cats[0] ? f : { ...f, categoryId: cats[0].id }));
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Catalogue load failed");
+      toast.error(e instanceof Error ? e.message : "Catalogue load failed");
     } finally {
       setLoading(false);
     }
@@ -102,10 +102,10 @@ export default function AdminCataloguePage() {
     try {
       const res = await apiClient.post<{ sent: number; remaining: number; total: number }>(`/admin/items/${item.id}/announce`);
       if (res.sent === 0 && res.remaining === 0) toast("Everyone has already been told about this one");
-      else if (res.remaining > 0) toast(`Sent to ${res.sent}. ${res.remaining} left: press Announce again tomorrow`);
-      else toast(`Announced to ${res.sent} customer${res.sent === 1 ? "" : "s"}`);
+      else if (res.remaining > 0) toast.success(`Sent to ${res.sent}. ${res.remaining} left: press Announce again tomorrow`);
+      else toast.success(`Announced to ${res.sent} customer${res.sent === 1 ? "" : "s"}`);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Announcement failed");
+      toast.error(e instanceof Error ? e.message : "Announcement failed");
     } finally {
       setAnnouncing(null);
     }
@@ -121,10 +121,10 @@ export default function AdminCataloguePage() {
         status: next,
         images: item.images,
       });
-      toast(next === "sold_out" ? "Marked sold out" : "Back in stock");
+      toast.success(next === "sold_out" ? "Marked sold out" : "Back in stock");
       void load();
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Update failed");
+      toast.error(e instanceof Error ? e.message : "Update failed");
     }
   };
 
@@ -137,24 +137,24 @@ export default function AdminCataloguePage() {
         image: catForm.image.trim() || undefined,
       });
       setCatForm({ name: "", slug: "", image: "" });
-      toast("Category created");
+      toast.success("Category created");
       void load();
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Could not create category");
+      toast.error(e instanceof Error ? e.message : "Could not create category");
     }
   };
 
   const saveItem = async () => {
     const variants = parseSizes(itemForm.sizes, editingItem?.variants);
     if (!variants) {
-      toast('Sizes: one per line, like "Pack of 3 = 4000"');
+      toast.error('Sizes: one per line, like "Pack of 3 = 4000"');
       return;
     }
     const basePrice = variants.length
       ? Math.min(...variants.map((v) => v.price))
       : Math.round(Number(itemForm.basePrice) * 100);
     if (!itemForm.name.trim() || !itemForm.categoryId || !Number.isFinite(basePrice) || basePrice <= 0) {
-      toast("Name, category and a price (or sizes) are required");
+      toast.error("Name, category and a price (or sizes) are required");
       return;
     }
     const images = itemForm.images.filter(Boolean);
@@ -170,16 +170,16 @@ export default function AdminCataloguePage() {
     try {
       if (editingItem) {
         await apiClient.patch(`/admin/items/${editingItem.id}`, body);
-        toast("Item updated");
+        toast.success("Item updated");
       } else {
         await apiClient.post("/admin/items", body);
-        toast("Item created");
+        toast.success("Item created");
       }
       setEditingItem(null);
       setItemForm(blankItem(itemForm.categoryId));
       void load();
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Save failed");
+      toast.error(e instanceof Error ? e.message : "Save failed");
     }
   };
 

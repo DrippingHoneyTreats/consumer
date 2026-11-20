@@ -19,6 +19,7 @@ export function EmptyState({
   icon,
   image,
   compact,
+  tone = "neutral",
   className,
 }: {
   title: string;
@@ -33,9 +34,12 @@ export function EmptyState({
   /** Optional illustration (admin/customer empty slots) */
   image?: string;
   compact?: boolean;
+  /** "error" = soft red card with red border, icon and title (load failures, offline). */
+  tone?: "neutral" | "error";
   className?: string;
 }) {
   const body = message ?? description;
+  const isError = tone === "error";
   const button = actionLabel ? (
     <Button variant="dark" leftIcon={actionIcon ?? <Plus size={16} />} onClick={actionHref ? undefined : onAction}>
       {actionLabel}
@@ -47,9 +51,14 @@ export function EmptyState({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      role={isError ? "alert" : undefined}
       className={cn(
         "flex flex-col items-center justify-center gap-3 text-center",
-        compact ? "rounded-[26px] border border-dashed border-deep/10 bg-white/60 px-5 py-8" : "px-6 py-14",
+        isError
+          ? cn("rounded-[26px] border border-danger/25 bg-[#fdecea]", compact ? "px-5 py-8" : "px-6 py-12")
+          : compact
+            ? "rounded-[26px] border border-dashed border-deep/10 bg-white/60 px-5 py-8"
+            : "px-6 py-14",
         className,
       )}
     >
@@ -66,14 +75,16 @@ export function EmptyState({
           <motion.div
             animate={{ y: [0, -6, 0] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="relative flex items-center justify-center text-deep/45"
+            className={cn("relative flex items-center justify-center", isError ? "text-danger/80" : "text-deep/45")}
           >
             {icon ?? <Plus size={compact ? 40 : 56} strokeWidth={1.4} />}
           </motion.div>
         )}
       </div>
-      <h3 className={cn("font-display text-deep", compact ? "text-xl" : "text-2xl")}>{title}</h3>
-      {body ? <p className="max-w-xs text-sm leading-relaxed text-deep/60">{body}</p> : null}
+      <h3 className={cn("font-display", isError ? "text-[#7a1a12]" : "text-deep", compact ? "text-xl" : "text-2xl")}>{title}</h3>
+      {body ? (
+        <p className={cn("max-w-xs text-sm leading-relaxed", isError ? "text-[#7a1a12]/75" : "text-deep/60")}>{body}</p>
+      ) : null}
       {button ? (
         actionHref ? (
           <Link href={actionHref} className="mt-2">
@@ -91,6 +102,7 @@ export function OfflineState({ onRetry, compact, className }: { onRetry: () => v
   return (
     <EmptyState
       compact={compact}
+      tone="error"
       className={className}
       icon={<WifiOff size={compact ? 22 : 28} />}
       title="We couldn't reach the kitchen"

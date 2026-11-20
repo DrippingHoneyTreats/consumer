@@ -1,6 +1,7 @@
 import "server-only";
 import type { Order } from "@dht/types";
 import { absUrl, camel, db, maybe, must } from "../db";
+import { BUSINESS_WHATSAPP, cleanWhatsapp } from "@/lib/format";
 import { badRequest, forbidden, notFound } from "../http";
 import type { DbUser } from "../session";
 
@@ -73,7 +74,8 @@ export async function getSettings() {
   const row = maybe(await db().from("settings").select("*").eq("id", 1).maybeSingle(), "settings");
   return {
     pauseOrders: Boolean(row?.pause_orders),
-    whatsappNumber: (row?.whatsapp_number as string | null) ?? null,
+    // Admin-set number wins; placeholders are ignored in favour of NEXT_PUBLIC_WHATSAPP.
+    whatsappNumber: cleanWhatsapp(row?.whatsapp_number as string | null) ?? BUSINESS_WHATSAPP,
     pickupEnabled: row?.pickup_enabled !== false,
     pickupAddress: (row?.pickup_address as string | null) ?? null,
     pickupHours: (row?.pickup_hours as string | null) ?? null,
@@ -159,6 +161,47 @@ type CatalogueRow = {
   images: string[];
   variants: { id: string; name: string; price: number }[];
 };
+
+/**
+ * Change a line's size/option (and qty). Price and name come from the DB.
+ * If the order already has a line for the new size, the two are merged.
+ */
+export async function changeLineVariant(
+  orderId: string,
+  line: { id: string; itemId: string },
+  next: { variantId: string | null; qty: number; note?: string | null },
+) {
+  const item = maybe(await db().from("items").select("*").eq("id", line.itemId).maybeSingle(), "load item") as CatalogueRow | null;
+  if (!item || !item.active) throw badRequest("That item is no longer on the menu.");
+  if (item.status === "sold_out") throw badRequest(`${item.name} is sold out right now.`);
+
+  let unitPrice = item.base_price;
+  let name = item.name;
+  let variantId: string | null = null;
+  if (item.variants?.length) {
+    const v = item.variants.find((x) => x.id === next.variantId);
+    if (!v) throw badRequest("Please pick a size for this item.");
+    unitPrice = v.price;
+    name = `${item.name} · ${v.name}`;
+    variantId = v.id;
+  }
+  const max = item.max_qty || 50;
+
+  const base = db().from("order_items").select("id, qty").eq("order_id", orderId).eq("item_id", item.id).neq("id", line.id);
+  const twin = maybe(await (variantId === null ? base.is("variant_id", null) : base.eq("variant_id", variantId)).maybeSingle(), "find twin");
+
+  if (twin) {
+    must(
+      await db().from("order_items").update({ qty: Math.min(max, (twin.qty as number) + next.qty), unit_price: unitPrice }).eq("id", twin.id),
+      "merge line",
+    );
+    must(await db().from("order_items").delete().eq("id", line.id), "remove old line");
+  } else {
+    const patch: Record<string, unknown> = { variant_id: variantId, name_snapshot: name, unit_price: unitPrice, qty: Math.min(max, next.qty) };
+    if (next.note !== undefined) patch.note = next.note;
+    must(await db().from("order_items").update(patch).eq("id", line.id), "change line");
+  }
+}
 
 /** Add (or increment) a line — price always comes from the DB, never the client. */
 export async function addLine(

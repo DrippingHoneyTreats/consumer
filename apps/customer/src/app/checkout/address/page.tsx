@@ -3,14 +3,15 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bike, Briefcase, Check, Clock, Home, MapPin, Phone, Search, Store } from "lucide-react";
-import { ApiRequestError, apiClient } from "@/lib/api";
+import { AlertTriangle, Bike, Briefcase, Check, Clock, Home, Landmark, MapPin, Phone, Search, Store, X } from "lucide-react";
+import { ApiRequestError, apiClient, apiUrl } from "@/lib/api";
 import { asArray } from "@/lib/data";
 import type { Address } from "@/lib/types";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { InnerPage } from "@/components/layout/InnerPage";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { toast } from "@/components/ui/Toast";
+import { VerifyingInline } from "@/components/ui/Verifying";
 import { cn } from "@/lib/cn";
 import { CheckoutSteps } from "@/components/layout/CheckoutSteps";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
@@ -18,7 +19,18 @@ import { StickyActions } from "@/components/layout/StickyActions";
 import { PageSkeleton } from "@/components/ui/ColumnLoader";
 import { useAuthStore } from "@/store/auth-store";
 
-type PlaceSuggestion = { placeId: string; description: string };
+type PlaceSuggestion = { placeId: string; description: string; mainText?: string; secondaryText?: string };
+type PlaceDetails = {
+  placeId: string | null;
+  formattedAddress: string;
+  lat: number;
+  lng: number;
+  state: string | null;
+  inLagos: boolean;
+};
+
+const newSessionToken = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 type Fulfillment = "delivery" | "pickup";
 type CheckoutOptions = {
   pickup: { enabled: boolean; address: string | null; hours: string | null };
@@ -46,7 +58,11 @@ function FulfillmentForm() {
 
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<PlaceDetails | null>(null);
+  const [resolving, setResolving] = useState(false);
+  const [landmark, setLandmark] = useState("");
+  // One Google "session" per address search keeps autocomplete + details billed as one lookup.
+  const [sessionToken, setSessionToken] = useState(newSessionToken);
   const [saved, setSaved] = useState<Address[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -63,32 +79,55 @@ function FulfillmentForm() {
 
   useEffect(() => {
     const q = query.trim();
-    if (q.length < 3 || q === selected) {
+    if (q.length < 3 || q === selected?.formattedAddress) {
       setSuggestions([]);
       return;
     }
     const t = window.setTimeout(() => {
       void apiClient
-        .get<PlaceSuggestion[] | { data: PlaceSuggestion[] }>("/places/autocomplete", { q })
+        .get<PlaceSuggestion[] | { data: PlaceSuggestion[] }>("/places/autocomplete", { q, session: sessionToken })
         .then((res) => setSuggestions(asArray(res)))
         .catch(() => setSuggestions([]));
     }, 300);
     return () => clearTimeout(t);
-  }, [query, selected]);
+  }, [query, selected, sessionToken]);
+
+  async function choose(s: PlaceSuggestion) {
+    setSuggestions([]);
+    setQuery(s.description);
+    setResolving(true);
+    try {
+      const d = await apiClient.get<PlaceDetails>("/places/details", { placeId: s.placeId, session: sessionToken });
+      setSelected(d);
+      setQuery(d.formattedAddress);
+      if (!d.inLagos) toast.error(notInLagosMessage(d.state));
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : "We couldn't load that address. Please try again.");
+    } finally {
+      setResolving(false);
+    }
+  }
+
+  function clearAddress() {
+    setSelected(null);
+    setQuery("");
+    setSuggestions([]);
+    setSessionToken(newSessionToken());
+  }
 
   const pickupEnabled = options?.pickup.enabled ?? false;
 
   async function submit(addressId?: string) {
     if (!orderId) {
-      toast("Missing order.");
+      toast.error("Missing order.");
       return;
     }
     if (needsPhone && !phoneOk) {
-      toast("Add your WhatsApp number so we can send you updates.");
+      toast.error("Add your WhatsApp number so we can send you updates.");
       return;
     }
     if (mode === "delivery" && !agreeFee) {
-      toast("Please tick the box to agree to pay the delivery fee on arrival.");
+      toast.error("Please tick the box to agree to pay the delivery fee on arrival.");
       return;
     }
     const phone = needsPhone ? { contactPhone: contactPhone.trim() } : {};
@@ -98,10 +137,24 @@ function FulfillmentForm() {
         : addressId
           ? { fulfillment: "delivery", agreeDeliveryFee: true, addressId, ...phone }
           : selected
-            ? { fulfillment: "delivery", agreeDeliveryFee: true, formattedAddress: selected, lat: 0, lng: 0, ...phone }
+            ? {
+                fulfillment: "delivery",
+                agreeDeliveryFee: true,
+                placeId: selected.placeId ?? undefined,
+                sessionToken,
+                formattedAddress: selected.formattedAddress,
+                lat: selected.lat,
+                lng: selected.lng,
+                landmark: landmark.trim() || undefined,
+                ...phone,
+              }
             : null;
+    if (mode === "delivery" && !addressId && selected && !selected.inLagos) {
+      toast.error(notInLagosMessage(selected.state));
+      return;
+    }
     if (!body) {
-      toast("Enter your delivery address.");
+      toast.error("Enter your delivery address.");
       return;
     }
     setLoading(true);
@@ -110,13 +163,15 @@ function FulfillmentForm() {
       if (needsPhone) void useAuthStore.getState().refreshMe();
       router.push(`/checkout/review?orderId=${orderId}`);
     } catch (err) {
-      toast(err instanceof ApiRequestError ? err.message : "Could not save. Please try again.");
+      toast.error(err instanceof ApiRequestError ? err.message : "Could not save. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
-  const canContinue = (!needsPhone || phoneOk) && (mode === "pickup" ? pickupEnabled : agreeFee && !!selected);
+  const outsideLagos = mode === "delivery" && !!selected && !selected.inLagos;
+  const canContinue =
+    (!needsPhone || phoneOk) && (mode === "pickup" ? pickupEnabled : agreeFee && !!selected && selected.inLagos);
 
   const choices = [
     { id: "delivery" as const, label: "Delivery", hint: "Pay rider on arrival", icon: Bike },
@@ -124,8 +179,19 @@ function FulfillmentForm() {
   ];
 
   return (
-    <div className="page-pad-no-tab min-h-dvh pb-32">
-      <PageHeader title="Pickup or delivery?" backHref={orderId ? `/orders/${orderId}` : "/orders"} />
+    <InnerPage
+      title="Pickup or delivery?"
+      subtitle="Tell us how you'd like to get your treats."
+      backHref={orderId ? `/orders/${orderId}` : "/orders"}
+      className="min-h-dvh pb-32 md:pb-12"
+      facts={[
+        { icon: MapPin, value: "Anywhere in Lagos", label: "Where we deliver" },
+        { icon: Bike, value: "Paid to the rider", label: "Delivery fee, on arrival" },
+        ...(pickupEnabled
+          ? [{ icon: Store, value: options?.pickup.hours || "We'll tell you when it's ready", label: "Pickup" }]
+          : []),
+      ]}
+    >
       <CheckoutSteps current={0} />
 
       <div className={cn("mb-5 grid gap-2.5", choices.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
@@ -205,9 +271,10 @@ function FulfillmentForm() {
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
-                setSelected(null);
+                if (selected) setSelected(null);
               }}
-              placeholder="House number, street, area, Lagos"
+              placeholder="Start typing your street or estate"
+              autoComplete="off"
               leftAddon={<Search size={18} className="text-tea" />}
             />
             <AnimatePresence>
@@ -222,19 +289,93 @@ function FulfillmentForm() {
                     <li key={s.placeId} className="border-b border-deep/5 last:border-0">
                       <button
                         type="button"
-                        className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-deep transition active:bg-off-white"
-                        onClick={() => {
-                          setSelected(s.description);
-                          setQuery(s.description);
-                          setSuggestions([]);
-                        }}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-deep transition hover:bg-off-white active:bg-off-white"
+                        onClick={() => void choose(s)}
                       >
                         <MapPin size={16} className="shrink-0 text-tea" />
-                        Use “{s.description}”
+                        {s.placeId.startsWith("typed:") ? (
+                          <span>Use “{s.description}”</span>
+                        ) : (
+                          <span className="min-w-0">
+                            <span className="block truncate font-semibold">{s.mainText || s.description}</span>
+                            {s.secondaryText ? (
+                              <span className="block truncate text-xs text-deep/50">{s.secondaryText}</span>
+                            ) : null}
+                          </span>
+                        )}
                       </button>
                     </li>
                   ))}
                 </motion.ul>
+              ) : null}
+            </AnimatePresence>
+
+            <VerifyingInline show={resolving} text="Checking your address on the map…" className="justify-start pl-1" />
+
+            <AnimatePresence>
+              {selected ? (
+                <motion.div
+                  key={selected.formattedAddress}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  className="mt-3 space-y-3"
+                >
+                  {outsideLagos ? (
+                    <div
+                      role="alert"
+                      className="flex items-start gap-2.5 rounded-[20px] border border-danger/35 bg-[#fdecea] p-3.5 text-sm text-[#7a1a12]"
+                    >
+                      <AlertTriangle size={17} className="mt-0.5 shrink-0" />
+                      <span>
+                        <span className="block font-semibold">{notInLagosMessage(selected.state)}</span>
+                        <span className="mt-0.5 block text-xs">
+                          {pickupEnabled
+                            ? "You can't continue with this address. Choose pickup or enter a Lagos address."
+                            : "You can't continue with this address. Please enter a Lagos address."}
+                        </span>
+                      </span>
+                    </div>
+                  ) : null}
+                  <div className="overflow-hidden rounded-[22px] border border-deep/5 bg-white shadow-[var(--shadow-card)]">
+                    {selected.lat && selected.lng ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={apiUrl(`/places/map?lat=${selected.lat}&lng=${selected.lng}`)}
+                        alt="Map of your delivery address"
+                        className="h-40 w-full bg-off-white object-cover"
+                        onError={(e) => (e.currentTarget.style.display = "none")}
+                      />
+                    ) : null}
+                    <p className="flex items-start gap-2.5 p-3.5 text-sm text-deep">
+                      <MapPin size={17} className={cn("mt-0.5 shrink-0", outsideLagos ? "text-danger" : "text-tea")} />
+                      <span>
+                        <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-deep/50">
+                          Delivering to
+                        </span>
+                        <span className="mt-0.5 block font-semibold">{selected.formattedAddress}</span>
+                      </span>
+                      <button
+                        type="button"
+                        aria-label="Change address"
+                        onClick={clearAddress}
+                        className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-off-white text-deep/50 transition hover:text-deep"
+                      >
+                        <X size={15} />
+                      </button>
+                    </p>
+                  </div>
+                  {!outsideLagos ? (
+                    <Input
+                      label="Landmark or directions (optional)"
+                      value={landmark}
+                      onChange={(e) => setLandmark(e.target.value)}
+                      placeholder="e.g. Blue gate opposite the church"
+                      maxLength={200}
+                      leftAddon={<Landmark size={18} className="text-tea" />}
+                    />
+                  ) : null}
+                </motion.div>
               ) : null}
             </AnimatePresence>
 
@@ -318,8 +459,14 @@ function FulfillmentForm() {
           Continue to review
         </Button>
       </StickyActions>
-    </div>
+    </InnerPage>
   );
+}
+
+function notInLagosMessage(state: string | null) {
+  return state && !/lagos/i.test(state)
+    ? `Sorry, we don't deliver to ${state} yet.`
+    : "Sorry, we don't deliver to that location yet.";
 }
 
 export default function CheckoutAddressPage() {

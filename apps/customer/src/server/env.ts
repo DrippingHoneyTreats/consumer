@@ -44,6 +44,9 @@ export const env = {
     folder: str("CLOUDINARY_FOLDER", "dripping-honey-treats"),
   },
 
+  /** Google Maps Platform key (Places API "New" + Maps Static API). Server-only. */
+  googleMapsKey: str("GOOGLE_MAPS_API_KEY"),
+
   google: {
     clientId: str("GOOGLE_CLIENT_ID"),
     clientSecret: str("GOOGLE_CLIENT_SECRET"),

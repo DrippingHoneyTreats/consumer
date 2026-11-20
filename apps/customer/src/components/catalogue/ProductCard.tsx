@@ -80,8 +80,8 @@ export function ProductCard({ ref, item, index = 0, layout = "grid", onAdd, onOp
         <div className="mt-auto flex items-center justify-between gap-2 pt-1">
           <p className="font-display text-[15px] font-semibold text-deep md:text-base">{formatNgn(item.basePrice)}</p>
           <motion.button
-            whileHover={{ scale: 1.12, rotate: 90 }}
-            whileTap={{ scale: 0.85 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.92 }}
             transition={springSnappy}
             type="button"
             disabled={soldOut}
@@ -90,9 +90,15 @@ export function ProductCard({ ref, item, index = 0, layout = "grid", onAdd, onOp
               onAdd?.();
             }}
             aria-label={`Add ${item.name}`}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-deep text-white shadow-[0_10px_20px_-10px_rgba(63,95,70,0.85)] disabled:bg-deep/25"
+            className="flex h-9 shrink-0 items-center justify-center gap-1 rounded-full bg-deep pl-2.5 pr-3.5 text-xs font-semibold text-white shadow-[0_10px_20px_-10px_rgba(63,95,70,0.85)] disabled:bg-deep/25"
           >
-            <Plus size={16} strokeWidth={2.4} />
+            {soldOut ? (
+              "Sold out"
+            ) : (
+              <>
+                <Plus size={14} strokeWidth={2.6} /> Order
+              </>
+            )}
           </motion.button>
         </div>
       </div>

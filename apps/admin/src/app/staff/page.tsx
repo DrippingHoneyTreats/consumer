@@ -57,7 +57,7 @@ export default function AdminStaffPage() {
     } catch (e) {
       setStaff([]);
       setState("error");
-      toast(e instanceof Error ? e.message : "Could not load staff");
+      toast.error(e instanceof Error ? e.message : "Could not load staff");
     }
   }, []);
 
@@ -68,7 +68,7 @@ export default function AdminStaffPage() {
   const invite = async () => {
     const contact = email.trim().toLowerCase();
     if (!contact.includes("@")) {
-      toast("Enter a valid email");
+      toast.error("Enter a valid email");
       return;
     }
     setInviting(true);
@@ -78,13 +78,13 @@ export default function AdminStaffPage() {
         fullName: fullName.trim() || undefined,
         role,
       });
-      toast(`Invite sent to ${contact}`);
+      toast.success(`Invite sent to ${contact}`);
       setEmail("");
       setFullName("");
       setRole("STAFF");
       void load();
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Invite failed");
+      toast.error(e instanceof Error ? e.message : "Invite failed");
     } finally {
       setInviting(false);
     }

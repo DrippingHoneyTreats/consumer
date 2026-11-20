@@ -88,11 +88,11 @@ export function ElegantProductRow({ item, index = 0, onOpen }: Props) {
 
           <span
             className={cn(
-              "absolute z-[1] flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#5d4037] shadow-md transition group-hover:scale-110",
+              "absolute z-[1] flex h-9 items-center justify-center gap-1 rounded-full bg-white pl-2.5 pr-3.5 text-xs font-semibold text-[#5d4037] shadow-md transition group-hover:scale-105",
               flip ? "-left-0.5 bottom-2 md:-left-1" : "-right-0.5 bottom-2 md:-right-1",
             )}
           >
-            <Plus size={18} strokeWidth={2.2} />
+            <Plus size={14} strokeWidth={2.4} /> Order
           </span>
 
           {item.badge ? (

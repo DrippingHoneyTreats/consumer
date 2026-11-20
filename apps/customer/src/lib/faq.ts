@@ -45,7 +45,7 @@ export function getFaqs(
     },
     {
       q: "Do you cater for birthdays, corporate events and weddings?",
-      a: `Yes. We create dessert tables, snack boxes, chinchin jars and celebration cakes for birthdays, office events and weddings in Lagos, and in Ibadan when booked early. Request a quote on our Events page or email ${BUSINESS.email}.`,
+      a: `Yes. We create dessert tables, snack boxes, chinchin jars and celebration cakes for birthdays, office events and weddings in Lagos, and in Ibadan when booked at least 3 weeks ahead. Request a quote on our Events page or email ${BUSINESS.email}.`,
     },
     {
       q: "How much do your pastries cost?",

@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, PartyPopper } from "lucide-react";
+import { CalendarDays, Check, MapPin, PartyPopper, Users } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { asArray } from "@/lib/data";
 import { EVENT_CITIES, EVENT_PLACEHOLDER } from "@/lib/placeholders";
@@ -13,7 +13,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { AuthGateSheet } from "@/components/auth/AuthGateSheet";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
 import { ColumnLoader, PageSkeleton } from "@/components/ui/ColumnLoader";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { InnerPage } from "@/components/layout/InnerPage";
 import { StickyActions } from "@/components/layout/StickyActions";
 import { Input, textareaClass } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -27,9 +27,14 @@ function servedCity(city?: string | null): string {
   return city && EVENT_CITIES.includes(city) ? city : EVENT_CITIES[0];
 }
 
-function minEventDate(): string {
+/** Notice we need before an event: Ibadan means travel, so 3 weeks; Lagos 3 days. */
+const NOTICE_DAYS: Record<string, number> = { Ibadan: 21 };
+const DEFAULT_NOTICE_DAYS = 3;
+const noticeDays = (city: string) => NOTICE_DAYS[city] ?? DEFAULT_NOTICE_DAYS;
+
+function minEventDate(city: string): string {
   const d = new Date();
-  d.setDate(d.getDate() + 3);
+  d.setDate(d.getDate() + noticeDays(city));
   return d.toISOString().slice(0, 10);
 }
 
@@ -108,27 +113,39 @@ function BookEventForm() {
         services: [],
         notes: notes || undefined,
       });
-      toast("Request sent — we will be in touch.");
+      toast.success("Request sent — we will be in touch.");
       router.push(`/events/${ev.id}`);
     } catch {
-      toast("Could not submit. Try again or WhatsApp us.");
+      toast.error("Could not submit. Try again or WhatsApp us.");
     } finally {
       setLoading(false);
     }
   }
 
-  const canContinue = step === 0 ? !!typeId : step === 1 ? !!date && !!venue : true;
+  const canContinue = step === 0 ? !!typeId : step === 1 ? !!date && date >= minEventDate(city) && !!venue : true;
   const showSticky =
     step > 0 || (step === 0 && typesState === "ready" && types.length > 0);
 
   return (
-    <div className={cn("page-pad", showSticky && "pb-[calc(var(--tab-h)+var(--safe-bottom)+110px)]")}>
-      <PageHeader
-        eyebrow={`Step ${step + 1} of ${STEPS.length}`}
-        title={STEPS[step]}
-        backHref={step === 0 ? "/events" : undefined}
-        onBack={step > 0 ? () => setStep((s) => s - 1) : undefined}
-      />
+    <InnerPage
+      tabbed
+      className={cn(showSticky && "pb-[calc(var(--tab-h)+var(--safe-bottom)+110px)] md:pb-[calc(var(--tab-h)+var(--safe-bottom)+24px)]")}
+      eyebrow={`Step ${step + 1} of ${STEPS.length}`}
+      title={STEPS[step]}
+      subtitle="Tell us about your event and we'll send a quote on WhatsApp."
+      facts={[
+        { icon: PartyPopper, value: types.find((t) => t.id === typeId)?.name || "Not chosen yet", label: "Event type" },
+        {
+          icon: CalendarDays,
+          value: date ? new Date(`${date}T00:00`).toLocaleDateString("en-NG", { weekday: "short", day: "numeric", month: "short" }) + (time ? ` · ${time}` : "") : "Pick a date",
+          label: "When",
+        },
+        { icon: MapPin, value: venue ? `${venue}, ${city}` : city || "Lagos", label: "Where" },
+        { icon: Users, value: `${guests || "–"} guests`, label: "Expected" },
+      ]}
+      backHref={step === 0 ? "/events" : undefined}
+      onBack={step > 0 ? () => setStep((s) => s - 1) : undefined}
+    >
 
       <div className="mb-6 flex gap-1.5">
         {STEPS.map((s, i) => (
@@ -202,7 +219,7 @@ function BookEventForm() {
             <div className="space-y-4">
               <Input label="Event title (optional)" placeholder="e.g. Tolu's 30th" value={title} onChange={(e) => setTitle(e.target.value)} />
               <div className="grid grid-cols-2 gap-3">
-                <Input label="Date" type="date" min={minEventDate()} value={date} onChange={(e) => setDate(e.target.value)} />
+                <Input label="Date" type="date" min={minEventDate(city)} value={date} onChange={(e) => setDate(e.target.value)} />
                 <Input label="Time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
               </div>
               <div>
@@ -212,7 +229,14 @@ function BookEventForm() {
                     <button
                       key={c}
                       type="button"
-                      onClick={() => setCity(c)}
+                      onClick={() => {
+                        setCity(c);
+                        // A date that was fine for Lagos may be too soon for Ibadan.
+                        if (date && date < minEventDate(c)) {
+                          setDate("");
+                          toast.info(`${c} events need at least ${c === "Ibadan" ? "3 weeks" : `${noticeDays(c)} days`} notice. Please pick a later date.`);
+                        }
+                      }}
                       className={cn(
                         "rounded-full px-4 py-2 text-xs font-semibold transition",
                         city === c ? "bg-deep text-white" : "bg-white text-deep ring-1 ring-deep/10",
@@ -226,7 +250,7 @@ function BookEventForm() {
               <Input label="Venue address" placeholder="Street, area" value={venue} onChange={(e) => setVenue(e.target.value)} />
               <p className="pl-1 text-xs text-deep/50">
                 {city === "Ibadan"
-                  ? "We travel to Ibadan for events when booked early — at least 3 days notice."
+                  ? "We travel to Ibadan for events, so please book at least 3 weeks ahead."
                   : "Events need at least 3 days notice. Pastry delivery stays Lagos-only."}
               </p>
             </div>
@@ -281,7 +305,7 @@ function BookEventForm() {
         title="Last step"
         message="Add your name and number so we can send your quote. Your details are saved."
       />
-    </div>
+    </InnerPage>
   );
 }
 

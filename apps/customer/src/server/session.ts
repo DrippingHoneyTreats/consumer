@@ -70,6 +70,7 @@ export function publicUser(u: DbUser): User & { createdAt: string } {
     emailVerified: u.emailVerified,
     role: u.role,
     avatar: u.avatar ?? null,
+    hasPin: Boolean((u as { pinHash?: string | null }).pinHash),
     createdAt: u.createdAt,
   };
 }

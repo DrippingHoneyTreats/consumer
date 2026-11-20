@@ -29,9 +29,9 @@ export function StatusActionBar({ order, onUpdated }: Props) {
         note,
       });
       onUpdated(updated);
-      toast("Order updated");
+      toast.success("Order updated");
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Update failed");
+      toast.error(e instanceof Error ? e.message : "Update failed");
     } finally {
       setLoading(false);
     }
@@ -39,12 +39,12 @@ export function StatusActionBar({ order, onUpdated }: Props) {
 
   const submitDelivery = async () => {
     if (!riderName.trim() || !riderPhone.trim()) {
-      toast("Rider name and phone are required");
+      toast.error("Rider name and phone are required");
       return;
     }
     const eta = Number(etaMinutes);
     if (!Number.isFinite(eta) || eta < 1) {
-      toast("Enter a valid ETA in minutes");
+      toast.error("Enter a valid ETA in minutes");
       return;
     }
     setLoading(true);
@@ -57,9 +57,9 @@ export function StatusActionBar({ order, onUpdated }: Props) {
       const refreshed = await apiClient.get<Order>(`/admin/orders/${order.id}`);
       onUpdated(refreshed);
       setDeliveryOpen(false);
-      toast("Rider assigned");
+      toast.success("Rider assigned");
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Delivery update failed");
+      toast.error(e instanceof Error ? e.message : "Delivery update failed");
     } finally {
       setLoading(false);
     }

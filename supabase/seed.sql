@@ -56,6 +56,5 @@ insert into event_types (id, name, slug, description, image, includes, sort) val
 insert into event_types (id, name, slug, description, image, includes, sort) values ('ev-wedding', 'Wedding dessert bar', 'wedding', 'Multi-tier fibre cakes and guest favour boxes.', 'https://res.cloudinary.com/vqnvkbxz/image/upload/f_auto,q_auto,c_limit,w_1600/v1795178025/dripping-honey-treats/catalogue/cake-citrus.jpg', '["Celebration cake","Favour cookies","On-site styling"]'::jsonb, 2)
   on conflict (id) do nothing;
 
-update settings set whatsapp_number = coalesce(whatsapp_number, '2348000000000') where id = 1;
 
 commit;

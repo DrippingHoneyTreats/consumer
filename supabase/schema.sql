@@ -258,6 +258,18 @@ alter table settings add column if not exists pickup_hours text;     -- e.g. Mon
 -- email has a one-click unsubscribe link that turns it off.
 alter table users add column if not exists marketing_opt_in boolean not null default true;
 
+-- ───────────────────────── Phone sign-in with a PIN ─────────────────────────
+-- Customers who use their WhatsApp number create a 4-digit PIN (stored only
+-- as a salted scrypt hash). Wrong guesses are counted and the account is
+-- locked for a while after too many, so PINs can't be brute-forced.
+alter table users add column if not exists pin_hash text;
+alter table users add column if not exists pin_failed_attempts int not null default 0;
+alter table users add column if not exists pin_locked_until timestamptz;
+
+-- Delivery addresses remember which state Google placed them in (Lagos check).
+alter table addresses add column if not exists state text;
+alter table addresses add column if not exists place_id text;
+
 -- ───────────────────────── Lock everything down ─────────────────────────
 alter table users enable row level security;
 alter table otp_codes enable row level security;

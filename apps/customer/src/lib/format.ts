@@ -61,6 +61,30 @@ export function statusLabel(status: string): string {
   return map[status] ?? status.replaceAll("_", " ");
 }
 
+/** Placeholder numbers from templates/seed data must never reach customers. */
+const PLACEHOLDER_NUMBERS = new Set(["2348000000000", "08000000000", "8000000000"]);
+
+/** Digits-only WhatsApp number, or null if empty / too short / a placeholder. */
+export function cleanWhatsapp(phone?: string | null): string | null {
+  const digits = (phone ?? "").replace(/\D/g, "");
+  if (digits.length < 10 || PLACEHOLDER_NUMBERS.has(digits)) return null;
+  return digits;
+}
+
+/** The business WhatsApp number from NEXT_PUBLIC_WHATSAPP (null if unset). */
+export const BUSINESS_WHATSAPP = cleanWhatsapp(process.env.NEXT_PUBLIC_WHATSAPP);
+export const BUSINESS_EMAIL = "hello@drippinghoneytreats.com";
+
+/**
+ * "Chat with us" link: WhatsApp when a real number is known (optionally one
+ * from the API settings), otherwise an email so the link always works.
+ */
+export function contactLink(text: string, phone?: string | null): string {
+  const number = cleanWhatsapp(phone) ?? BUSINESS_WHATSAPP;
+  if (number) return whatsappLink(number, text);
+  return `mailto:${BUSINESS_EMAIL}?subject=${encodeURIComponent("Dripping Honey Treats")}&body=${encodeURIComponent(text)}`;
+}
+
 export function whatsappLink(phone: string, text?: string): string {
   const digits = phone.replace(/\D/g, "");
   const q = text ? `?text=${encodeURIComponent(text)}` : "";

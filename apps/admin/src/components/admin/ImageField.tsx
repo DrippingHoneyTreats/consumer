@@ -28,9 +28,9 @@ export function ImageField({
     setUploading(true);
     try {
       onChange(await uploadImage(file, folder));
-      toast("Photo uploaded");
+      toast.success("Photo uploaded");
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Upload failed");
+      toast.error(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";

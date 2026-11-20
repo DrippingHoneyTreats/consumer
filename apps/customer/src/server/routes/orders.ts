@@ -1,6 +1,8 @@
 import "server-only";
 import { camel, db, maybe, must } from "../db";
-import { badRequest, int, notFound, optStr, str } from "../http";
+import { HttpError, badRequest, int, notFound, optStr, str } from "../http";
+import { NextResponse } from "next/server";
+import { autocomplete, lagosFromText, mapsEnabled, placeDetails, staticMap } from "../places";
 import { isPhone, normalizePhone } from "../contact";
 import { route } from "../router";
 import { requireUser } from "../session";
@@ -11,6 +13,7 @@ import {
   ONGOING_STATUSES,
   addLine,
   applyPromo,
+  changeLineVariant,
   ensureEditable,
   getOrCreateDraft,
   getOwnOrder,
@@ -20,6 +23,27 @@ import {
 } from "../services/orders";
 
 type Row = Record<string, unknown>;
+
+const notInLagos = (state: string | null) =>
+  new HttpError(
+    422,
+    "NOT_IN_LAGOS",
+    `Sorry, we don't deliver to ${state ? state.replace(/ State$/i, "") : "that area"} yet. We only deliver within Lagos for now. You can choose pickup instead.`,
+  );
+
+/** Insert/update an address; if the new state/place_id columns don't exist yet, retry without them. */
+async function saveAddress(fields: Record<string, unknown>, id?: string) {
+  const run = (f: Record<string, unknown>) =>
+    id ? db().from("addresses").update(f).eq("id", id).select("*").single() : db().from("addresses").insert(f).select("*").single();
+  let res = await run(fields);
+  if (res.error && /state|place_id/.test(res.error.message) && ["PGRST204", "42703"].includes(res.error.code ?? "")) {
+    const { state: _s, place_id: _p, ...rest } = fields;
+    void _s;
+    void _p;
+    res = await run(rest);
+  }
+  return must(res, "save address");
+}
 
 // ───────────────────────── Orders ─────────────────────────
 
@@ -98,8 +122,14 @@ route("PATCH", "/orders/:id/items/:itemId", async ({ req, params, body }) => {
   const line = order.items.find((i) => i.id === params.itemId);
   if (!line) throw notFound("That item is not in your order.");
   const qty = int(body.qty, "Quantity", { min: 0, max: 100 });
-  if (qty === 0) must(await db().from("order_items").delete().eq("id", line.id), "remove line");
-  else must(await db().from("order_items").update({ qty }).eq("id", line.id), "update qty");
+  if (qty === 0) {
+    must(await db().from("order_items").delete().eq("id", line.id), "remove line");
+  } else if (body.variantId !== undefined && (body.variantId ?? null) !== (line.variantId ?? null)) {
+    // Size/option changed (e.g. small jar → big jar).
+    await changeLineVariant(order.id, line, { variantId: optStr(body.variantId, 80) ?? null, qty });
+  } else {
+    must(await db().from("order_items").update({ qty }).eq("id", line.id), "update qty");
+  }
   return recalc(order.id);
 });
 
@@ -141,19 +171,42 @@ route("POST", "/orders/:id/address", async ({ req, params, body }) => {
         "address",
       );
       if (!a) throw notFound("Address not found.");
+      const check = a.state ? { inLagos: /lagos/i.test(a.state), state: a.state } : lagosFromText(a.formatted_address);
+      if (check.inLagos === false) throw notInLagos(check.state);
       snapshot = camel(a);
       if (!snapshot.contactPhone && contactPhone) snapshot.contactPhone = contactPhone;
     } else {
-      const formattedAddress = str(body.formattedAddress, "Address", { min: 5, max: 300 });
-      const fields = {
+      // Google-picked address: resolve it on the server (never trust the client's text/coords).
+      let formattedAddress: string;
+      let lat = 0;
+      let lng = 0;
+      let state: string | null = null;
+      let placeId: string | null = null;
+      if (typeof body.placeId === "string" && body.placeId && mapsEnabled()) {
+        const d = await placeDetails(body.placeId, optStr(body.sessionToken, 100)).catch((e: Error) => {
+          console.warn("[places] details failed", e.message);
+          throw badRequest("We couldn't confirm that address. Please pick it again from the list.");
+        });
+        if (!d.inLagos) throw notInLagos(d.state);
+        formattedAddress = d.formattedAddress;
+        ({ lat, lng, state, placeId } = d);
+      } else {
+        formattedAddress = str(body.formattedAddress, "Address", { min: 5, max: 300 });
+        const check = lagosFromText(formattedAddress);
+        if (check.inLagos === false) throw notInLagos(check.state);
+        state = check.state;
+      }
+      const fields: Record<string, unknown> = {
         user_id: user.id,
         label: optStr(body.label, 40) ?? "Home",
         formatted_address: formattedAddress,
-        lat: Number(body.lat) || 0,
-        lng: Number(body.lng) || 0,
+        lat,
+        lng,
         landmark: optStr(body.landmark, 200) ?? null,
         note: optStr(body.note, 300) ?? null,
         contact_phone: contactPhone,
+        state,
+        place_id: placeId,
       };
       const existing = maybe(
         await db()
@@ -165,9 +218,7 @@ route("POST", "/orders/:id/address", async ({ req, params, body }) => {
           .maybeSingle(),
         "find address",
       );
-      const saved = existing
-        ? must(await db().from("addresses").update(fields).eq("id", existing.id).select("*").single(), "update address")
-        : must(await db().from("addresses").insert(fields).select("*").single(), "save address");
+      const saved = await saveAddress(fields, existing?.id as string | undefined);
       snapshot = camel(saved);
     }
   }
@@ -235,14 +286,53 @@ route("DELETE", "/me/addresses/:id", async ({ req, params }) => {
 });
 
 /**
- * No maps API yet: echo what the customer typed so they can confirm it.
- * Swap for Google Places later without touching the UI.
+ * Address search. With GOOGLE_MAPS_API_KEY: real Google Places suggestions
+ * (Nigeria, biased to Lagos). Without it: echo what the customer typed.
  */
-route("GET", "/places/autocomplete", async ({ query }) => {
+route("GET", "/places/autocomplete", async ({ req, query }) => {
+  await requireUser(req); // protects the Google quota
   const q = (query.get("q") ?? "").trim().slice(0, 200);
-  if (q.length < 3) return { data: [] };
+  if (q.length < 3) return { data: [], google: mapsEnabled() };
+  if (mapsEnabled()) {
+    try {
+      return { data: await autocomplete(q, query.get("session") ?? undefined), google: true };
+    } catch (e) {
+      console.warn("[places] autocomplete failed", (e as Error).message);
+    }
+  }
   const description = /lagos|ibadan/i.test(q) ? q : `${q}, Lagos`;
-  return { data: [{ placeId: `typed:${description}`, description }] };
+  return { data: [{ placeId: `typed:${description}`, description, mainText: description, secondaryText: "" }], google: false };
+});
+
+/** Full address + coordinates + whether it's in Lagos, for the picked suggestion. */
+route("GET", "/places/details", async ({ req, query }) => {
+  await requireUser(req);
+  const placeId = query.get("placeId") ?? "";
+  if (!placeId || placeId.startsWith("typed:")) {
+    const text = placeId.replace(/^typed:/, "");
+    const check = lagosFromText(text);
+    return { placeId: null, formattedAddress: text, lat: 0, lng: 0, state: check.state, inLagos: check.inLagos !== false };
+  }
+  if (!mapsEnabled()) throw badRequest("Address lookup isn't available right now.");
+  try {
+    return await placeDetails(placeId, query.get("session") ?? undefined);
+  } catch (e) {
+    console.warn("[places] details failed", (e as Error).message);
+    throw badRequest("We couldn't load that address. Please try again.");
+  }
+});
+
+/** Small map preview image for a picked address (proxied so the key stays secret). */
+route("GET", "/places/map", async ({ req, query }) => {
+  await requireUser(req);
+  const lat = Number(query.get("lat"));
+  const lng = Number(query.get("lng"));
+  if (!mapsEnabled() || !Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) throw notFound("No map.");
+  const res = await staticMap(lat, lng);
+  if (!res.ok) throw notFound("No map.");
+  return new NextResponse(res.body, {
+    headers: { "Content-Type": res.headers.get("content-type") ?? "image/png", "Cache-Control": "public, max-age=86400" },
+  });
 });
 
 /** What the checkout screen needs to offer pickup vs delivery. */

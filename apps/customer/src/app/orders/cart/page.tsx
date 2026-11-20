@@ -3,16 +3,17 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
-import { CreditCard, Lock, Plus, ShoppingBag } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
+import { Bike, CreditCard, Lock, Plus, ShoppingBag } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { formatNgn } from "@/lib/format";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { InnerPage, PageSection } from "@/components/layout/InnerPage";
 import { StickyActions } from "@/components/layout/StickyActions";
 import { AuthGateSheet } from "@/components/auth/AuthGateSheet";
 import { CartLineRow } from "@/components/orders/CartLineRow";
+import { useLineEditor } from "@/components/orders/LineEditor";
 import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { QtyStepper } from "@/components/ui/QtyStepper";
 import { Button } from "@/components/ui/Button";
@@ -31,6 +32,7 @@ export default function GuestCartPage() {
   const draft = useCartStore((s) => s.draft);
   const mergeGuest = useCartStore((s) => s.mergeGuest);
   const [authOpen, setAuthOpen] = useState(false);
+  const editor = useLineEditor();
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
@@ -60,18 +62,47 @@ export default function GuestCartPage() {
         }
       }
       router.push(`/checkout/address?orderId=${id}`);
-    } else toast("We couldn't save your order. Check your connection and try again.");
+    } else toast.error("We couldn't save your order. Check your connection and try again.");
   }
 
-  return (
-    <div className="page-pad pb-[calc(var(--tab-h)+var(--safe-bottom)+160px)]">
-      <PageHeader
-        eyebrow="Not paid yet"
-        title="Current order"
-        subtitle="One order card — adjust qty, add a note, then pay."
-        backHref="/orders"
-      />
+  const payButton = (
+    <Button fullWidth variant="dark" loading={syncing} leftIcon={<Lock size={16} />} onClick={() => void proceed()}>
+      {syncing ? "Saving your order…" : `Proceed to pay · ${formatNgn(subtotal)}`}
+    </Button>
+  );
 
+  return (
+    <InnerPage
+      tabbed
+      className="pb-[calc(var(--tab-h)+var(--safe-bottom)+160px)] md:pb-[calc(var(--tab-h)+var(--safe-bottom)+32px)]"
+      eyebrow="Not paid yet"
+      title="Current order"
+      subtitle="Adjust quantities, add a note, then pay."
+      backHref="/orders"
+      hero={
+        guestItems.length ? (
+          <div>
+            <p className="text-xs text-white/70">Order total</p>
+            <AnimatedNumber value={subtotal} className="block font-display text-3xl" />
+          </div>
+        ) : null
+      }
+      facts={[
+        { icon: ShoppingBag, value: `${count} item${count === 1 ? "" : "s"}`, label: "In your order" },
+        { icon: Bike, value: "Pickup or delivery", label: "Choose at checkout" },
+        { icon: CreditCard, value: "Card, transfer, USSD", label: "Secure payment" },
+      ]}
+      actions={
+        guestItems.length ? (
+          <>
+            {payButton}
+            <p className="flex items-center justify-center gap-1.5 text-[11px] text-deep/55">
+              <Lock size={11} /> You&apos;ll sign in before paying
+            </p>
+          </>
+        ) : null
+      }
+    >
       {guestItems.length === 0 ? (
         <EmptyState
           title="No item in this order"
@@ -81,29 +112,16 @@ export default function GuestCartPage() {
           icon={<ShoppingBag size={28} />}
         />
       ) : (
-        <div className="mx-auto grid max-w-5xl gap-5 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
-          {/* Single order card — products are rows inside, not separate cards */}
-          <motion.article
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="overflow-hidden rounded-[28px] bg-white shadow-[var(--shadow-card)] ring-1 ring-deep/5"
+        <>
+          <PageSection
+            title={`Items (${count})`}
+            action={
+              <Link href="/pastries" className="flex items-center gap-1 text-xs font-bold text-tea">
+                <Plus size={13} /> Add more
+              </Link>
+            }
           >
-            <header className="flex items-start justify-between gap-3 border-b border-deep/5 bg-gradient-to-br from-blush-soft/80 via-white to-cream px-4 py-4 md:px-6 md:py-5">
-              <div>
-                <p className="font-display text-xl text-deep md:text-2xl">Current order</p>
-                <p className="mt-0.5 text-xs text-deep/50">
-                  {count} item{count === 1 ? "" : "s"} · draft
-                </p>
-              </div>
-              <div className="text-right">
-                <span className="inline-block rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-deep ring-1 ring-deep/5">
-                  Draft
-                </span>
-                <AnimatedNumber value={subtotal} className="mt-2 block font-display text-2xl font-semibold text-deep" />
-              </div>
-            </header>
-
-            <ul>
+            <ul className="-mx-4 sm:-mx-5 md:-mx-6">
               <AnimatePresence initial={false}>
                 {guestItems.map((line) => (
                   <CartLineRow
@@ -114,6 +132,8 @@ export default function GuestCartPage() {
                     qty={line.qty}
                     note={line.note}
                     onRemove={() => updateGuestQty(line.itemId, line.variantId, 0)}
+                    onEdit={() => void editor.edit({ itemId: line.itemId, variantId: line.variantId, qty: line.qty, image: line.image })}
+                    editLabel={line.variantId ? "Change size" : "Edit"}
                   >
                     <QtyStepper
                       size="sm"
@@ -126,81 +146,50 @@ export default function GuestCartPage() {
                 ))}
               </AnimatePresence>
             </ul>
+          </PageSection>
 
-            <div className="border-t border-dashed border-deep/10 px-4 py-4 md:px-6">
-              <Link
-                href="/pastries"
-                className="pressable mb-4 flex items-center justify-center gap-2 rounded-full border border-dashed border-deep/15 py-3 text-sm font-semibold text-tea"
-              >
-                <Plus size={16} /> Add more pastries
-              </Link>
+          <PageSection title="Note for rider or baker">
+            <textarea
+              value={orderNote}
+              onChange={(e) => setOrderNote(e.target.value)}
+              rows={2}
+              aria-label="Note for rider or baker"
+              placeholder="e.g. Write Happy Birthday · call on arrival"
+              className={textareaClass}
+            />
+          </PageSection>
 
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold text-deep">Note for rider or baker</span>
-                <textarea
-                  value={orderNote}
-                  onChange={(e) => setOrderNote(e.target.value)}
-                  rows={2}
-                  placeholder="e.g. Write Happy Birthday · call on arrival"
-                  className={textareaClass}
-                />
-              </label>
-            </div>
-
-            <footer className="space-y-2 border-t border-deep/5 bg-off-white/60 px-4 py-4 text-sm md:px-6">
+          <PageSection title="Summary">
+            <dl className="space-y-2 text-sm">
               <div className="flex justify-between text-deep/70">
-                <span>Subtotal</span>
-                <span>{formatNgn(subtotal)}</span>
+                <dt>Subtotal</dt>
+                <dd>{formatNgn(subtotal)}</dd>
               </div>
-              <div className="flex justify-between text-deep/70">
-                <span>Delivery</span>
-                <span>Pickup, or pay rider on arrival</span>
+              <div className="flex justify-between gap-4 text-deep/70">
+                <dt>Delivery</dt>
+                <dd className="text-right">Pickup, or pay rider on arrival</dd>
               </div>
-              <div className="flex items-baseline justify-between border-t border-dashed border-deep/10 pt-2 font-semibold text-deep">
-                <span>Total amount</span>
-                <AnimatedNumber value={subtotal} className="font-display text-xl" />
+              <div className="flex items-baseline justify-between border-t border-dashed border-deep/10 pt-3 font-semibold text-deep">
+                <dt>Total</dt>
+                <dd>
+                  <AnimatedNumber value={subtotal} className="font-display text-2xl" />
+                </dd>
               </div>
-            </footer>
-          </motion.article>
+            </dl>
+          </PageSection>
 
-          <aside className="hidden space-y-3 lg:sticky lg:top-24 lg:block">
-            <div className="rounded-[28px] bg-white p-5 shadow-[var(--shadow-card)] ring-1 ring-deep/5">
-              <p className="text-xs text-deep/50">Ready when you are</p>
-              <p className="mt-1 font-display text-3xl text-deep">{formatNgn(subtotal)}</p>
-              <Button
-                fullWidth
-                variant="dark"
-                className="mt-4"
-                loading={syncing}
-                leftIcon={<Lock size={16} />}
-                onClick={() => void proceed()}
-              >
-                {syncing ? "Saving your order…" : `Proceed to pay · ${formatNgn(subtotal)}`}
-              </Button>
-              <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-deep/55">
-                <CreditCard size={12} /> Secure payment · Card, transfer, USSD
-              </p>
-            </div>
-          </aside>
-
-          <StickyActions aboveTabs className="lg:hidden">
+          <StickyActions aboveTabs mobileOnly>
             <div className="glass rounded-[26px] border border-white/80 p-3 shadow-[var(--shadow-float)]">
-              <Button
-                fullWidth
-                variant="dark"
-                loading={syncing}
-                leftIcon={<Lock size={16} />}
-                onClick={() => void proceed()}
-              >
-                {syncing ? "Saving your order…" : `Proceed to pay · ${formatNgn(subtotal)}`}
-              </Button>
+              {payButton}
               <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-deep/55">
                 <CreditCard size={12} /> Secure payment methods · Card, transfer, USSD
               </p>
             </div>
           </StickyActions>
-        </div>
+        </>
       )}
+
+      {editor.sheet}
 
       <AuthGateSheet
         open={authOpen}
@@ -209,6 +198,6 @@ export default function GuestCartPage() {
         title="Almost there"
         message="Add your name and number so we can deliver and keep you posted. Your cart stays just as it is."
       />
-    </div>
+    </InnerPage>
   );
 }

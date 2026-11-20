@@ -50,7 +50,7 @@ export default function AdminPromosPage() {
 
   const save = async () => {
     if (!form.title.trim() || !form.image.trim()) {
-      toast("Title and image are required");
+      toast.error("Title and image are required");
       return;
     }
     const body = {
@@ -67,16 +67,16 @@ export default function AdminPromosPage() {
     try {
       if (editId) {
         await apiClient.patch(`/admin/banners/${editId}`, body);
-        toast("Promo updated");
+        toast.success("Promo updated");
       } else {
         await apiClient.post("/admin/banners", body);
-        toast("Promo created");
+        toast.success("Promo created");
       }
       setForm(emptyForm);
       setEditId(null);
       void load();
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Save failed");
+      toast.error(e instanceof Error ? e.message : "Save failed");
     }
   };
 

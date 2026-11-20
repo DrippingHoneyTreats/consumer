@@ -3,21 +3,23 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
-import { CreditCard, Lock, MapPin, MessageCircle, Plus } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
+import { BadgeCheck, Bike, CalendarDays, CreditCard, Lock, MapPin, MessageCircle, Plus, ShoppingBag, Store } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { unwrapData } from "@/lib/data";
-import { formatNgn, whatsappLink } from "@/lib/format";
+import { formatNgn, contactLink } from "@/lib/format";
 import { formatOrderDate, isDraftStatus, isOngoingStatus, deliveryLineLabel, orderStatusLabel } from "@/lib/order-status";
 import type { Order } from "@/lib/types";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StickyActions } from "@/components/layout/StickyActions";
+import { InnerPage, PageSection, type PanelFact } from "@/components/layout/InnerPage";
 import { QtyStepper } from "@/components/ui/QtyStepper";
 import { Button } from "@/components/ui/Button";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
 import { PageSkeleton } from "@/components/ui/ColumnLoader";
 import { textareaClass } from "@/components/ui/Input";
 import { CartLineRow } from "@/components/orders/CartLineRow";
+import { useLineEditor } from "@/components/orders/LineEditor";
 import { OrderProgress } from "@/components/orders/OrderProgress";
 import { useCartActions } from "@/hooks/useCartActions";
 import { useCartStore } from "@/store/cart-store";
@@ -31,6 +33,7 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [noteDirty, setNoteDirty] = useState(false);
+  const editor = useLineEditor({ orderId: id, onSaved: () => void load() });
 
   const load = async () => {
     try {
@@ -93,64 +96,103 @@ export default function OrderDetailPage() {
 
   const created = formatOrderDate(order.createdAt);
   const itemCount = order.items.reduce((s, i) => s + i.qty, 0);
-  const wa = whatsappLink(
-    process.env.NEXT_PUBLIC_WHATSAPP ?? "2348000000000",
-    `Hi DHT, I need help with order #${order.orderNo}`,
+  const wa = contactLink(`Hi DHT, I need help with order #${order.orderNo}`,
   );
 
+  const payHref = `/checkout/address?orderId=${order.id}`;
+  const facts: PanelFact[] = [
+    { icon: BadgeCheck, value: orderStatusLabel(order), label: "Status" },
+    { icon: ShoppingBag, value: `${itemCount} item${itemCount === 1 ? "" : "s"}`, label: "In this order" },
+    { icon: CalendarDays, value: isDraft ? "Not placed yet" : created, label: "Placed" },
+    {
+      icon: order.fulfillment === "pickup" ? Store : Bike,
+      value: order.fulfillment === "pickup" ? "Pickup" : order.fulfillment === "delivery" ? "Delivery" : "Choose at checkout",
+      label: "How you get it",
+    },
+  ];
+
   return (
-    <div className="page-pad pb-[calc(var(--tab-h)+var(--safe-bottom)+150px)]">
-      <PageHeader
-        eyebrow={isDraft ? "Not paid yet" : orderStatusLabel(order)}
-        title={isDraft ? "Current order" : `Order #${order.orderNo}`}
-        subtitle={isDraft ? "Adjust items, add a note, then pay." : `Placed ${created}`}
-        backHref="/orders"
-      />
-
-      <div className="mx-auto grid max-w-5xl gap-5 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
-        {order.items.length === 0 ? (
-          <EmptyState
-            title="No item in this order"
-            description="Add something sweet to get started."
-            actionHref="/pastries"
-            actionLabel="Add an order"
-          />
-        ) : (
-          <motion.article
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="overflow-hidden rounded-[28px] bg-white shadow-[var(--shadow-card)] ring-1 ring-deep/5"
-          >
-            <header className="flex items-start justify-between gap-3 border-b border-deep/5 bg-gradient-to-br from-blush-soft/80 via-white to-cream px-4 py-4 md:px-6 md:py-5">
-              <div className="min-w-0">
-                <p className="font-display text-xl text-deep md:text-2xl">Order # {order.orderNo}</p>
-                <p className="mt-0.5 text-xs text-deep/50">
-                  {itemCount} item{itemCount === 1 ? "" : "s"} · {isDraft ? "draft" : created}
-                </p>
-              </div>
-              <div className="text-right">
-                <span className="inline-block rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-deep ring-1 ring-deep/5">
-                  {orderStatusLabel(order)}
-                </span>
-                <p className="mt-2 font-display text-2xl font-semibold text-deep">{formatNgn(order.total)}</p>
-              </div>
-            </header>
-
-            {!isDraft ? (
-              <div className="border-b border-deep/5 px-4 py-4 md:px-6">
-                <OrderProgress status={order.status} fulfillment={order.fulfillment} compact />
-                {canTrack ? (
-                  <Link
-                    href={`/orders/${order.id}/track`}
-                    className="mt-3 flex items-center justify-center gap-2 text-xs font-bold text-tea"
-                  >
-                    <MapPin size={13} /> Open full tracking
+    <InnerPage
+      tabbed
+      className="pb-[calc(var(--tab-h)+var(--safe-bottom)+150px)] md:pb-[calc(var(--tab-h)+var(--safe-bottom)+32px)]"
+      eyebrow={isDraft ? "Not paid yet" : orderStatusLabel(order)}
+      title={isDraft ? "Current order" : `Order #${order.orderNo}`}
+      subtitle={isDraft ? "Adjust items, add a note, then pay." : `Placed ${created}`}
+      backHref="/orders"
+      help={`Hi DHT, I need help with order #${order.orderNo}`}
+      hero={
+        <div>
+          <p className="text-xs text-white/70">{isDraft ? "Order total" : "You paid"}</p>
+          <p className="font-display text-3xl">{formatNgn(order.total)}</p>
+        </div>
+      }
+      facts={facts}
+      actions={
+        <>
+          {isDraft && order.items.length > 0 ? (
+            <>
+              <Link href={payHref} className="block">
+                <Button fullWidth variant="dark" leftIcon={<Lock size={16} />}>
+                  Proceed to pay
+                </Button>
+              </Link>
+              <p className="flex items-center justify-center gap-1.5 text-[11px] text-deep/55">
+                <CreditCard size={12} /> Card, transfer or USSD
+              </p>
+            </>
+          ) : null}
+          {canTrack ? (
+            <Link href={`/orders/${order.id}/track`} className="block">
+              <Button fullWidth variant="dark" leftIcon={<MapPin size={16} />}>
+                Track order
+              </Button>
+            </Link>
+          ) : null}
+          {!isDraft ? (
+            <a href={wa} className="block">
+              <Button fullWidth variant="tertiary" leftIcon={<MessageCircle size={16} />}>
+                Chat with us
+              </Button>
+            </a>
+          ) : null}
+        </>
+      }
+    >
+      {order.items.length === 0 ? (
+        <EmptyState
+          title="No item in this order"
+          description="Add something sweet to get started."
+          actionHref="/pastries"
+          actionLabel="Add an order"
+        />
+      ) : (
+        <>
+          {!isDraft ? (
+            <PageSection
+              title="Progress"
+              action={
+                canTrack ? (
+                  <Link href={`/orders/${order.id}/track`} className="flex items-center gap-1 text-xs font-bold text-tea">
+                    <MapPin size={13} /> Full tracking
                   </Link>
-                ) : null}
-              </div>
-            ) : null}
+                ) : null
+              }
+            >
+              <OrderProgress status={order.status} fulfillment={order.fulfillment} compact />
+            </PageSection>
+          ) : null}
 
-            <ul>
+          <PageSection
+            title={`Items (${itemCount})`}
+            action={
+              isDraft ? (
+                <Link href="/pastries" className="flex items-center gap-1 text-xs font-bold text-tea">
+                  <Plus size={13} /> Add more
+                </Link>
+              ) : null
+            }
+          >
+            <ul className="-mx-4 sm:-mx-5 md:-mx-6">
               <AnimatePresence initial={false}>
                 {order.items.map((line) => (
                   <CartLineRow
@@ -160,6 +202,12 @@ export default function OrderDetailPage() {
                     unitPrice={line.unitPrice}
                     qty={line.qty}
                     note={line.note}
+                    onEdit={
+                      isDraft
+                        ? () => void editor.edit({ itemId: line.itemId, variantId: line.variantId, qty: line.qty, lineId: line.id, image: line.item?.images?.[0] })
+                        : undefined
+                    }
+                    editLabel={line.variantId ? "Change size" : "Edit"}
                     onRemove={
                       isDraft
                         ? () => {
@@ -184,108 +232,66 @@ export default function OrderDetailPage() {
                 ))}
               </AnimatePresence>
             </ul>
+          </PageSection>
 
-            <div className="border-t border-dashed border-deep/10 px-4 py-4 md:px-6">
-              {isDraft ? (
-                <>
-                  <Link
-                    href="/pastries"
-                    className="pressable mb-4 flex items-center justify-center gap-2 rounded-full border border-dashed border-deep/15 py-3 text-sm font-semibold text-tea"
-                  >
-                    <Plus size={16} /> Add more pastries
-                  </Link>
-                  <label className="block">
-                    <span className="mb-1.5 block text-sm font-semibold text-deep">Note for rider or baker</span>
-                    <textarea
-                      value={orderNote}
-                      onChange={(e) => onNoteChange(e.target.value)}
-                      onBlur={() => void persistNote()}
-                      rows={2}
-                      placeholder="e.g. Write Happy Birthday · call on arrival"
-                      className={textareaClass}
-                    />
-                  </label>
-                </>
-              ) : order.notes ? (
-                <p className="text-sm text-deep/70">
-                  <span className="font-semibold text-deep">Note: </span>
-                  {order.notes}
-                </p>
-              ) : null}
-            </div>
+          {isDraft ? (
+            <PageSection title="Note for rider or baker">
+              <textarea
+                value={orderNote}
+                onChange={(e) => onNoteChange(e.target.value)}
+                onBlur={() => void persistNote()}
+                rows={2}
+                aria-label="Note for rider or baker"
+                placeholder="e.g. Write Happy Birthday · call on arrival"
+                className={textareaClass}
+              />
+            </PageSection>
+          ) : order.notes ? (
+            <PageSection title="Your note">
+              <p className="text-sm text-deep/70">{order.notes}</p>
+            </PageSection>
+          ) : null}
 
-            <footer className="space-y-2 border-t border-deep/5 bg-off-white/60 px-4 py-4 text-sm md:px-6">
+          <PageSection title="Summary">
+            <dl className="space-y-2 text-sm">
               <div className="flex justify-between text-deep/70">
-                <span>Subtotal</span>
-                <span>{formatNgn(order.subtotal)}</span>
+                <dt>Subtotal</dt>
+                <dd>{formatNgn(order.subtotal)}</dd>
               </div>
-              <div className="flex justify-between text-deep/70">
-                <span>Delivery</span>
-                <span>{deliveryLineLabel(order)}</span>
+              <div className="flex justify-between gap-4 text-deep/70">
+                <dt>Delivery</dt>
+                <dd className="text-right">{deliveryLineLabel(order)}</dd>
               </div>
               {order.discount > 0 ? (
                 <div className="flex justify-between text-tea">
-                  <span>Discount</span>
-                  <span>-{formatNgn(order.discount)}</span>
+                  <dt>Discount</dt>
+                  <dd>-{formatNgn(order.discount)}</dd>
                 </div>
               ) : null}
-              <div className="flex items-baseline justify-between border-t border-dashed border-deep/10 pt-2 font-semibold text-deep">
-                <span>Total amount</span>
-                <span className="font-display text-xl">{formatNgn(order.total)}</span>
+              <div className="flex items-baseline justify-between border-t border-dashed border-deep/10 pt-3 font-semibold text-deep">
+                <dt>Total</dt>
+                <dd className="font-display text-2xl">{formatNgn(order.total)}</dd>
               </div>
-            </footer>
-          </motion.article>
-        )}
-
-        <aside className="hidden space-y-3 lg:sticky lg:top-24 lg:block">
-          <div className="rounded-[28px] bg-white p-5 shadow-[var(--shadow-card)] ring-1 ring-deep/5">
-            <p className="text-xs text-deep/50">{isDraft ? "Ready when you are" : "Order total"}</p>
-            <p className="mt-1 font-display text-3xl text-deep">{formatNgn(order.total)}</p>
-            {isDraft && order.items.length > 0 ? (
-              <>
-                <Link href={`/checkout/address?orderId=${order.id}`} className="mt-4 block">
-                  <Button fullWidth variant="dark" leftIcon={<Lock size={16} />}>
-                    Proceed to pay · {formatNgn(order.total)}
-                  </Button>
-                </Link>
-                <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-deep/55">
-                  <CreditCard size={12} /> Secure payment · Card, transfer, USSD
-                </p>
-              </>
-            ) : null}
-            {canTrack ? (
-              <Link href={`/orders/${order.id}/track`} className="mt-3 block">
-                <Button fullWidth variant="dark" leftIcon={<MapPin size={16} />}>
-                  Track order
-                </Button>
-              </Link>
-            ) : null}
-            {!isDraft ? (
-              <a href={wa} className="mt-3 block">
-                <Button fullWidth variant="secondary" leftIcon={<MessageCircle size={16} />}>
-                  Chat with us
-                </Button>
-              </a>
-            ) : null}
-          </div>
-        </aside>
-      </div>
+            </dl>
+          </PageSection>
+        </>
+      )}
 
       {isDraft && order.items.length > 0 ? (
-        <StickyActions aboveTabs className="lg:hidden">
+        <StickyActions aboveTabs mobileOnly>
           <div className="glass rounded-[26px] border border-white/80 p-3 shadow-[var(--shadow-float)]">
-            <Link href={`/checkout/address?orderId=${order.id}`}>
+            <Link href={payHref}>
               <Button fullWidth variant="dark" leftIcon={<Lock size={16} />}>
                 Proceed to pay · {formatNgn(order.total)}
               </Button>
             </Link>
             <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-deep/55">
-              <CreditCard size={12} /> Secure payment methods · Card, transfer, USSD
+              <CreditCard size={12} /> Secure payment · Card, transfer, USSD
             </p>
           </div>
         </StickyActions>
       ) : canTrack ? (
-        <StickyActions aboveTabs className="lg:hidden">
+        <StickyActions aboveTabs mobileOnly>
           <Link href={`/orders/${order.id}/track`}>
             <Button fullWidth variant="dark" leftIcon={<MapPin size={16} />} className="shadow-[var(--shadow-float)]">
               Track order
@@ -293,6 +299,7 @@ export default function OrderDetailPage() {
           </Link>
         </StickyActions>
       ) : null}
-    </div>
+      {editor.sheet}
+    </InnerPage>
   );
 }

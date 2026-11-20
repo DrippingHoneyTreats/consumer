@@ -2,7 +2,8 @@
 
 import { create } from "zustand";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, CheckCircle2, Loader2, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Info, Loader2, X } from "lucide-react";
+import { cn } from "@/lib/cn";
 import { easeGentle } from "@/lib/motion";
 
 type ToastKind = "default" | "loading" | "success" | "error";
@@ -128,7 +129,11 @@ toastFn.success = (message: string, opts?: Omit<ToastOpts, "kind">) =>
   useToastStore.getState().show(message, { ...opts, kind: "success", ms: opts?.ms ?? 2600 });
 
 toastFn.error = (message: string, opts?: Omit<ToastOpts, "kind">) =>
-  useToastStore.getState().show(message, { ...opts, kind: "error", ms: opts?.ms ?? 3600 });
+  useToastStore.getState().show(message, { ...opts, kind: "error", ms: opts?.ms ?? 4200 });
+
+/** Neutral notice (not a success, not an error). Same as calling toast(). */
+toastFn.info = (message: string, opts?: Omit<ToastOpts, "kind">) =>
+  useToastStore.getState().show(message, { ...opts, kind: "default" });
 
 toastFn.dismiss = (id: number) => useToastStore.getState().dismiss(id);
 
@@ -169,9 +174,12 @@ function ToastIcon({ kind }: { kind: ToastKind }) {
     return <Loader2 size={16} className="shrink-0 animate-spin text-honey" />;
   }
   if (kind === "error") {
-    return <AlertCircle size={16} className="shrink-0 text-blush" />;
+    return <AlertCircle size={16} className="shrink-0 text-danger" />;
   }
-  return <CheckCircle2 size={16} className="shrink-0 text-honey" />;
+  if (kind === "success") {
+    return <CheckCircle2 size={16} className="shrink-0 text-honey" />;
+  }
+  return <Info size={16} className="shrink-0 text-blush" />;
 }
 
 export function ToastHost() {
@@ -189,7 +197,14 @@ export function ToastHost() {
             animate={{ opacity: 1, x: 0, y: 0 }}
             exit={{ opacity: 0, x: 20, scale: 0.96 }}
             transition={{ duration: 0.4, ease: easeGentle }}
-            className="glass-deep pointer-events-auto w-full overflow-hidden rounded-2xl text-sm text-white shadow-[var(--shadow-float)]"
+            role={item.kind === "error" ? "alert" : "status"}
+            className={cn(
+              "pointer-events-auto w-full overflow-hidden rounded-2xl text-sm shadow-[var(--shadow-float)]",
+              // Errors: soft red card, red border, dark-red text. Everything else: dark glass.
+              item.kind === "error"
+                ? "border border-danger/35 bg-[#fdecea] text-[#7a1a12]"
+                : "glass-deep text-white",
+            )}
           >
             <div className="flex items-start gap-2.5 px-3.5 py-3">
               <span className="mt-0.5">
@@ -199,7 +214,7 @@ export function ToastHost() {
               {item.actionLabel ? (
                 <button
                   type="button"
-                  className="shrink-0 font-semibold text-blush"
+                  className={cn("shrink-0 font-semibold", item.kind === "error" ? "text-danger underline underline-offset-2" : "text-blush")}
                   onClick={() => {
                     item.onAction?.();
                     dismiss(item.id);
@@ -211,7 +226,12 @@ export function ToastHost() {
                 <button
                   type="button"
                   aria-label="Dismiss"
-                  className="shrink-0 rounded-full p-0.5 text-white/50 hover:bg-white/10 hover:text-white"
+                  className={cn(
+                    "shrink-0 rounded-full p-0.5",
+                    item.kind === "error"
+                      ? "text-danger/60 hover:bg-danger/10 hover:text-danger"
+                      : "text-white/50 hover:bg-white/10 hover:text-white",
+                  )}
                   onClick={() => dismiss(item.id)}
                 >
                   <X size={14} />
@@ -232,6 +252,13 @@ export function ToastHost() {
                 initial={{ scaleX: 1 }}
                 animate={{ scaleX: 0 }}
                 transition={{ duration: 2.2, ease: "linear" }}
+              />
+            ) : item.kind === "error" ? (
+              <motion.div
+                className="h-0.5 origin-left bg-danger/60"
+                initial={{ scaleX: 1 }}
+                animate={{ scaleX: 0 }}
+                transition={{ duration: 4, ease: "linear" }}
               />
             ) : null}
           </motion.div>

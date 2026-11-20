@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Inbox } from "lucide-react";
+import { Inbox, ShoppingBag } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { asArray } from "@/lib/data";
 import { splitOrders } from "@/lib/order-status";
@@ -13,11 +13,22 @@ import { useCartStore } from "@/store/cart-store";
 import { useCartActions } from "@/hooks/useCartActions";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
 import { ColumnLoader } from "@/components/ui/ColumnLoader";
-import { PageHeader } from "@/components/layout/PageHeader";
+import {
+  ArrowPill,
+  CtaBanner,
+  EditorialHero,
+  EditorialPage,
+  ProcessSteps,
+  SectionIntro,
+  StatCard,
+} from "@/components/editorial/Editorial";
+import { ORDER_STEPS } from "@/components/editorial/content";
+import { SwipeDeck } from "@/components/editorial/SwipeDeck";
 import { AuthGateSheet } from "@/components/auth/AuthGateSheet";
 import { toast } from "@/components/ui/Toast";
 import { CurrentCheckoutPanel } from "@/components/orders/CurrentCheckoutPanel";
 import { OrderListCard } from "@/components/orders/OrderListCard";
+import { useLineEditor } from "@/components/orders/LineEditor";
 import { UnderlineTabs } from "@/components/orders/UnderlineTabs";
 
 type Tab = "current" | "ongoing" | "completed";
@@ -38,6 +49,12 @@ export default function OrdersPage() {
   const mergeGuest = useCartStore((s) => s.mergeGuest);
   const orderNote = useCartStore((s) => s.orderNote);
   const { setQty } = useCartActions();
+  const editor = useLineEditor({
+    onSaved: () => {
+      void refreshDraft();
+      setNonce((n) => n + 1);
+    },
+  });
   const [tab, setTab] = useState<Tab>("current");
   const [orders, setOrders] = useState<Order[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
@@ -100,11 +117,11 @@ export default function OrdersPage() {
   async function reorder(id: string) {
     try {
       const order = await apiClient.post<Order>(`/orders/${id}/reorder`);
-      toast("Added to your draft order.");
+      toast.success("Added to your draft order.");
       setTab("current");
       window.location.href = `/orders/${order.id}`;
     } catch {
-      toast("Could not reorder.");
+      toast.error("Could not reorder.");
     }
   }
 
@@ -121,6 +138,17 @@ export default function OrdersPage() {
     setNonce((n) => n + 1);
   }
 
+  /** Change a line's size/options in the details sheet. */
+  function editLine(key: string) {
+    if (showGuestCart) {
+      const l = guestItems.find((g) => `${g.itemId}-${g.variantId ?? ""}` === key);
+      if (l) void editor.edit({ itemId: l.itemId, variantId: l.variantId, qty: l.qty, image: l.image });
+      return;
+    }
+    const l = activeDraft?.items.find((i) => i.id === key);
+    if (l) void editor.edit({ itemId: l.itemId, variantId: l.variantId, qty: l.qty, lineId: l.id, orderId: activeDraft?.id, image: l.item?.images?.[0] });
+  }
+
   async function startCheckout() {
     if (!user) {
       setAuthOpen(true);
@@ -135,7 +163,7 @@ export default function OrdersPage() {
         const ok = await mergeGuest();
         orderId = useCartStore.getState().draft?.id;
         if (!ok || !orderId) {
-          toast("We couldn't save your order. Try again.");
+          toast.error("We couldn't save your order. Try again.");
           return;
         }
         if (orderNote.trim()) {
@@ -148,7 +176,7 @@ export default function OrdersPage() {
       }
 
       if (!orderId) {
-        toast("No draft order to pay for.");
+        toast.error("No draft order to pay for.");
         return;
       }
 
@@ -178,9 +206,49 @@ export default function OrdersPage() {
       : [];
 
   return (
-    <div className="page-pad pb-[calc(var(--tab-h)+var(--safe-bottom)+24px)]">
-      <PageHeader eyebrow="Your treats" title="My orders" subtitle="Current cart, live tracking, and past deliveries." />
+    <EditorialPage className="pb-[calc(var(--tab-h)+var(--safe-bottom)+24px)]">
+      <EditorialHero
+        className="md:pt-4"
+        pill={<><ShoppingBag size={13} /> Your treats</>}
+        title={
+          <>
+            My <span className="italic text-tea">sweet</span> orders
+          </>
+        }
+        text="Your current order, live tracking and past deliveries, all in one place."
+        actions={
+          <>
+            <ArrowPill href="/pastries">Order pastries</ArrowPill>
+            {hasCurrent ? (
+              <button type="button" onClick={() => setTab("current")} className="text-sm font-semibold text-tea">
+                View current order
+              </button>
+            ) : null}
+          </>
+        }
+        media={
+          <StatCard
+            className="hidden md:block"
+            value={user ? buckets.ongoing.length : "4"}
+            label={
+              user
+                ? `order${buckets.ongoing.length === 1 ? "" : "s"} on the way to you`
+                : "simple steps from craving to doorstep"
+            }
+            tags={
+              user
+                ? [
+                    hasCurrent ? "1 order in progress" : "No order in progress",
+                    `${buckets.recent.length} completed`,
+                    "WhatsApp updates",
+                  ]
+                : ["Fresh daily", "Lagos delivery", "Secure payment", "WhatsApp updates"]
+            }
+          />
+        }
+      />
 
+      <section>
       <UnderlineTabs id="orders-hub" tabs={tabs} value={tab} onChange={setTab} className="mb-6 md:mb-8" />
 
       {state === "error" && user ? (
@@ -193,7 +261,7 @@ export default function OrdersPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18 }}
-            className="min-h-[40vh]"
+            className="min-h-[30vh]"
           >
             {tab === "current" ? (
               loading && user && !hasCurrent ? (
@@ -204,6 +272,7 @@ export default function OrdersPage() {
                   lines={currentLines}
                   total={checkoutTotal}
                   onQtyChange={showGuestCart ? onGuestQty : (key, qty) => void onDraftQty(key, qty)}
+                  onEdit={editLine}
                   onPayNow={() => void startCheckout()}
                   paying={paying}
                   userHint={user?.fullName || user?.phone || user?.email || null}
@@ -219,11 +288,20 @@ export default function OrdersPage() {
               ) : buckets.ongoing.length === 0 ? (
                 <TabEmpty actionHref="/pastries" actionLabel="Browse pastries" />
               ) : (
-                <div className="grid gap-3 md:grid-cols-2 md:gap-4">
+                <>
+                <SwipeDeck
+                  tone="none"
+                  label="Ongoing orders"
+                  items={buckets.ongoing.map((order, i) => (
+                    <OrderListCard key={order.id} order={order} mode="ongoing" index={i} />
+                  ))}
+                />
+                <div className="hidden gap-3 md:grid md:grid-cols-2 md:gap-4">
                   {buckets.ongoing.map((order, i) => (
                     <OrderListCard key={order.id} order={order} mode="ongoing" index={i} />
                   ))}
                 </div>
+                </>
               )
             ) : null}
 
@@ -233,7 +311,15 @@ export default function OrdersPage() {
               ) : buckets.recent.length === 0 ? (
                 <TabEmpty actionHref="/pastries" actionLabel="Order now" />
               ) : (
-                <div className="grid gap-3 md:grid-cols-2 md:gap-4">
+                <>
+                <SwipeDeck
+                  tone="none"
+                  label="Completed orders"
+                  items={buckets.recent.map((order, i) => (
+                    <OrderListCard key={order.id} order={order} mode="completed" index={i} onReorder={() => void reorder(order.id)} />
+                  ))}
+                />
+                <div className="hidden gap-3 md:grid md:grid-cols-2 md:gap-4">
                   {buckets.recent.map((order, i) => (
                     <OrderListCard
                       key={order.id}
@@ -244,11 +330,38 @@ export default function OrdersPage() {
                     />
                   ))}
                 </div>
+                </>
               )
             ) : null}
           </motion.div>
         </AnimatePresence>
       )}
+
+      </section>
+
+      {!loading && !hasCurrent && orders.length === 0 ? (
+        <>
+          <section>
+            <SectionIntro
+              pill="How it works"
+              title={
+                <>
+                  From craving to <span className="italic text-tea">doorstep</span>
+                </>
+              }
+              text="Ordering takes a couple of minutes. Here's what happens."
+            />
+            <ProcessSteps steps={ORDER_STEPS} note="Ready to be enjoyed!" />
+          </section>
+          <CtaBanner
+            title="Craving something sweet?"
+            text="Fresh, fibre-rich treats baked in small batches in Lagos."
+            actions={<ArrowPill href="/pastries" tone="light">Browse pastries</ArrowPill>}
+          />
+        </>
+      ) : null}
+
+      {editor.sheet}
 
       <AuthGateSheet
         open={authOpen}
@@ -257,14 +370,15 @@ export default function OrdersPage() {
         title="Almost there"
         message="Add your name and number so we can deliver and keep you posted. Your cart stays just as it is."
       />
-    </div>
+    </EditorialPage>
   );
 }
 
 function TabEmpty({ actionHref, actionLabel }: { actionHref?: string; actionLabel?: string }) {
   return (
     <EmptyState
-      icon={<Inbox size={56} strokeWidth={1.4} />}
+      compact
+      icon={<Inbox size={48} strokeWidth={1.4} />}
       title="Uh-oh! 👀"
       message="Looks like there's nothing here yet."
       actionHref={actionHref}

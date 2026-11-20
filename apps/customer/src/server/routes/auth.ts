@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { camel, db, maybe, must } from "../db";
 import { env } from "../env";
 import { HttpError, badRequest, forbidden, json, optStr, str } from "../http";
-import { isEmail, isPhone, normalizeContact, normalizePhone } from "../contact";
+import { isEmail, isNigerianMobile, isPhone, normalizeContact, normalizePhone } from "../contact";
 import { notifyWelcome, sendOtpCode } from "../notify";
 import { route } from "../router";
 import {
@@ -169,7 +169,7 @@ route("PATCH", "/me", async ({ req, body }) => {
   if (body.fullName !== undefined) patch.full_name = str(body.fullName, "Name", { min: 2, max: 80 });
   if (body.phone !== undefined && body.phone !== null && body.phone !== "") {
     const phone = normalizePhone(str(body.phone, "Phone"));
-    if (!isPhone(phone)) throw badRequest("Enter a valid phone number.");
+    if (!isNigerianMobile(phone)) throw badRequest("Enter a valid Nigerian WhatsApp number, e.g. 0803 123 4567.");
     if (phone !== user.phone) {
       const taken = await findUserByContact("phone", phone);
       if (taken && taken.id !== user.id) throw badRequest("That phone number is already on another account.");
@@ -194,15 +194,23 @@ route("PATCH", "/me", async ({ req, body }) => {
 // ───────────────────────── Google sign-in ─────────────────────────
 
 const GOOGLE_NONCE_COOKIE = "dht_g_nonce";
-const redirectUri = () => `${env.appUrl}/api/v1/auth/google/callback`;
+/**
+ * Where Google should send the customer back to. In production that's
+ * APP_URL. In local dev it's whatever host you started from (e.g.
+ * localhost:3000), so a production APP_URL in .env can't hijack local sign-in.
+ */
+function baseUrl(req: Request) {
+  return env.isProd ? env.appUrl : new URL(req.url).origin;
+}
+const redirectUri = (req: Request) => `${baseUrl(req)}/api/v1/auth/google/callback`;
 
 function safeReturnTo(v: string | null | undefined) {
   return v && v.startsWith("/") && !v.startsWith("//") ? v : "/";
 }
 
-route("GET", "/auth/google/start", async ({ query }) => {
+route("GET", "/auth/google/start", async ({ req, query }) => {
   if (!env.google.clientId) {
-    return NextResponse.redirect(`${env.appUrl}/verify?error=google_unavailable`);
+    return NextResponse.redirect(`${baseUrl(req)}/verify?error=google_unavailable`);
   }
   const nonce = randomBytes(16).toString("hex");
   const state = signToken({
@@ -212,7 +220,7 @@ route("GET", "/auth/google/start", async ({ query }) => {
   });
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   url.searchParams.set("client_id", env.google.clientId);
-  url.searchParams.set("redirect_uri", redirectUri());
+  url.searchParams.set("redirect_uri", redirectUri(req));
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", "openid email profile");
   url.searchParams.set("state", state);
@@ -231,7 +239,7 @@ route("GET", "/auth/google/start", async ({ query }) => {
 route("GET", "/auth/google/callback", async ({ req, query }) => {
   const fail = (reason: string) => {
     console.warn("[google] sign-in failed:", reason);
-    return NextResponse.redirect(`${env.appUrl}/verify?error=google`);
+    return NextResponse.redirect(`${baseUrl(req)}/verify?error=google`);
   };
   const state = verifyToken<{ r: string; n: string; exp: number }>(query.get("state") ?? undefined);
   const code = query.get("code");
@@ -245,7 +253,7 @@ route("GET", "/auth/google/callback", async ({ req, query }) => {
       code,
       client_id: env.google.clientId,
       client_secret: env.google.clientSecret,
-      redirect_uri: redirectUri(),
+      redirect_uri: redirectUri(req),
       grant_type: "authorization_code",
     }),
     signal: AbortSignal.timeout(10_000),
@@ -311,7 +319,7 @@ route("GET", "/auth/google/callback", async ({ req, query }) => {
   // ONLY that one cookie. Cookies on redirects, and several Set-Cookie headers
   // on one response, can get dropped by serverless/CDN layers. The nonce
   // cookie simply expires on its own after 10 minutes.
-  const target = `${env.appUrl}${safeReturnTo(state.r)}`;
+  const target = `${baseUrl(req)}${safeReturnTo(state.r)}`;
   const safe = JSON.stringify(target).replace(/</g, "\\u003c");
   const res = new NextResponse(
     `<!doctype html><html><head><meta charset="utf-8"><meta name="robots" content="noindex">

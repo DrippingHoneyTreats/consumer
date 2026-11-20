@@ -108,7 +108,7 @@ export default function WelcomePage() {
         </Link>
         <GoogleButton returnTo="/" />
         <Link href="/" className="block">
-          <Button variant="tertiary" fullWidth>
+          <Button variant="tertiary" fullWidth className="border-deep/40 font-semibold text-deep hover:border-deep">
             Continue as guest
           </Button>
         </Link>

@@ -25,6 +25,8 @@ type CartState = {
   setOrderNote: (note: string) => void;
   addGuestItem: (line: GuestLine) => void;
   updateGuestQty: (itemId: string, variantId: string | undefined, qty: number) => void;
+  /** Swap a line for a new size/qty (merges into an existing line of that size). */
+  replaceGuestLine: (old: { itemId: string; variantId?: string }, next: GuestLine) => void;
   clearGuest: () => void;
   refreshDraft: () => Promise<Order | null>;
   mergeGuest: () => Promise<boolean>;
@@ -59,6 +61,21 @@ export const useCartStore = create<CartState>()(
             i.itemId === itemId && i.variantId === variantId ? { ...i, qty } : i,
           );
         }
+        set({ guestItems: items });
+      },
+      replaceGuestLine: (old, next) => {
+        const rest = get().guestItems.filter((i) => !(i.itemId === old.itemId && i.variantId === old.variantId));
+        const idx = rest.findIndex((i) => i.itemId === next.itemId && i.variantId === next.variantId);
+        if (idx >= 0) {
+          rest[idx] = { ...rest[idx], qty: rest[idx].qty + next.qty };
+          set({ guestItems: rest });
+          return;
+        }
+        // Keep the line where it was in the list.
+        const items = [...get().guestItems];
+        const at = items.findIndex((i) => i.itemId === old.itemId && i.variantId === old.variantId);
+        if (at >= 0) items[at] = next;
+        else items.push(next);
         set({ guestItems: items });
       },
       clearGuest: () => set({ guestItems: [], orderNote: "" }),

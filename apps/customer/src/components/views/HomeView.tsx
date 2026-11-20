@@ -16,9 +16,9 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
-import { getHomeCatalogue, searchItems } from "@/lib/catalogue";
+import { getHomeCatalogue, searchItems, needsOptions } from "@/lib/catalogue";
 import type { Banner, CatalogueCategory, CatalogueItem } from "@/lib/catalogue-types";
-import { greetingForNow, whatsappLink } from "@/lib/format";
+import { contactLink, greetingForNow } from "@/lib/format";
 import { IMAGE_PLACEHOLDER, LOGO, categoryImage, toneFor } from "@/lib/placeholders";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartActions } from "@/hooks/useCartActions";
@@ -30,6 +30,7 @@ import { PageSkeleton } from "@/components/ui/ColumnLoader";
 import { easeGentle, fadeUp, kenBurns, springSnappy, stagger } from "@/lib/motion";
 import { HeroImageCycle } from "@/components/motion/HeroImageCycle";
 import { cn } from "@/lib/cn";
+import { SwipeDeck } from "@/components/editorial/SwipeDeck";
 
 const SLIDE_MS = 4500;
 const ease = easeGentle;
@@ -222,7 +223,8 @@ export function HomeView() {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [categories, setCategories] = useState<CatalogueCategory[]>([]);
   const [popular, setPopular] = useState<CatalogueItem[]>([]);
-  const [whatsapp, setWhatsapp] = useState(process.env.NEXT_PUBLIC_WHATSAPP || "2348000000000");
+  // Number from admin settings, if set; contactLink() falls back to NEXT_PUBLIC_WHATSAPP, then email.
+  const [whatsapp, setWhatsapp] = useState<string | null>(null);
   // Time-of-day greeting from the visitor's own clock (set after mount to avoid a server/client mismatch).
   const [greeting, setGreeting] = useState("");
   const [selected, setSelected] = useState<CatalogueItem | null>(null);
@@ -359,7 +361,7 @@ export function HomeView() {
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search cakes, chinchin, meat pies…"
                   aria-label="Search treats"
-                  className="w-full bg-transparent text-sm text-deep outline-none placeholder:text-deep/40"
+                  className="w-full bg-transparent text-base text-deep outline-none placeholder:text-deep/40"
                 />
                 {query ? (
                   <button
@@ -417,7 +419,7 @@ export function HomeView() {
                     index={i}
                     layout="grid"
                     onOpen={() => openItem(item)}
-                    onAdd={() => openItem(item)}
+                    onAdd={() => (needsOptions(item) ? openItem(item) : void addItem({ item }))}
                   />
                 ))}
               </AnimatePresence>
@@ -473,7 +475,16 @@ export function HomeView() {
             <SectionTitle title="Popular this week" href="/pastries" />
             {popular.length ? (
               <>
-                <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2 no-scrollbar md:gap-4 lg:hidden">
+                <SwipeDeck
+                  tone="none"
+                  label="Popular this week"
+                  items={popular.slice(0, 8).map((item, i) => (
+                    <div key={item.id} className="mx-auto w-full max-w-[300px]">
+                      <ProductCard item={item} index={i} layout="grid" onOpen={() => openItem(item)} onAdd={() => (needsOptions(item) ? openItem(item) : void addItem({ item }))} />
+                    </div>
+                  ))}
+                />
+                <div className="-mx-1 hidden gap-3 overflow-x-auto px-1 pb-2 no-scrollbar md:flex md:gap-4 lg:hidden">
                   {popular.map((item, i) => (
                     <ProductCard
                       key={item.id}
@@ -481,7 +492,7 @@ export function HomeView() {
                       index={i}
                       layout="rail"
                       onOpen={() => openItem(item)}
-                      onAdd={() => void addItem({ item })}
+                      onAdd={() => (needsOptions(item) ? openItem(item) : void addItem({ item }))}
                     />
                   ))}
                 </div>
@@ -493,7 +504,7 @@ export function HomeView() {
                       index={i}
                       layout="grid"
                       onOpen={() => openItem(item)}
-                      onAdd={() => void addItem({ item })}
+                      onAdd={() => (needsOptions(item) ? openItem(item) : void addItem({ item }))}
                     />
                   ))}
                 </div>
@@ -533,8 +544,57 @@ export function HomeView() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, amount: 0.15 }}
             transition={{ duration: 0.75, ease }}
-            className="grid gap-3 md:grid-cols-2"
           >
+            <SwipeDeck
+              tone="none"
+              label="More from DHT"
+              items={[
+                <div key="events" className="h-full [&>div]:h-full">
+            <motion.div whileHover={{ y: -6, scale: 1.015 }} whileTap={{ scale: 0.98 }} transition={springSnappy}>
+              <Link
+                href="/events"
+                className="relative flex h-full min-h-[160px] overflow-hidden rounded-[28px] bg-deep p-5 text-white shadow-[var(--shadow-card)]"
+              >
+                <div className="relative z-10 max-w-[70%]">
+                  <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-blush">
+                    <PartyPopper size={14} /> Events
+                  </p>
+                  <p className="mt-2 font-display text-2xl leading-tight">Book a sweet table</p>
+                  <p className="mt-1 text-sm text-white/70">Birthdays, boardrooms & big Lagos days.</p>
+                  <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-honey">
+                    Explore events <ArrowRight size={13} />
+                  </span>
+                </div>
+                <div
+                  aria-hidden
+                  className="absolute -right-3 bottom-4 top-6 w-[36%] rotate-6 rounded-[22px] bg-white/10 ring-1 ring-white/15"
+                />
+              </Link>
+            </motion.div>
+                </div>,
+                <div key="whatsapp" className="flex h-full min-h-[160px] [&>a]:w-full">
+            <motion.a
+              href={contactLink("Hi DHT! I want to place an order.", whatsapp)}
+              target="_blank"
+              rel="noreferrer"
+              whileHover={{ y: -4, scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              transition={springSnappy}
+              className="flex items-center gap-4 rounded-[28px] bg-white p-5 shadow-[var(--shadow-card)]"
+            >
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-sage-soft text-deep">
+                <MessageCircle size={22} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-xl text-deep">Chat on WhatsApp</p>
+                <p className="text-sm text-deep/55">Questions, custom cakes, quick orders.</p>
+              </div>
+              <ArrowRight size={18} className="hidden text-tea md:block" />
+            </motion.a>
+                </div>,
+              ]}
+            />
+            <div className="hidden gap-3 md:grid md:grid-cols-2">
             <motion.div whileHover={{ y: -6, scale: 1.015 }} whileTap={{ scale: 0.98 }} transition={springSnappy}>
               <Link
                 href="/events"
@@ -558,7 +618,7 @@ export function HomeView() {
             </motion.div>
 
             <motion.a
-              href={whatsappLink(whatsapp, "Hi DHT! I want to place an order.")}
+              href={contactLink("Hi DHT! I want to place an order.", whatsapp)}
               target="_blank"
               rel="noreferrer"
               whileHover={{ y: -4, scale: 1.01 }}
@@ -573,8 +633,9 @@ export function HomeView() {
                 <p className="font-display text-xl text-deep">Chat on WhatsApp</p>
                 <p className="text-sm text-deep/55">Questions, custom cakes, quick orders.</p>
               </div>
-              <ArrowRight size={18} className="text-tea" />
+              <ArrowRight size={18} className="hidden text-tea md:block" />
             </motion.a>
+            </div>
           </motion.section>
         </>
       )}

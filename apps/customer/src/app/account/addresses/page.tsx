@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Briefcase, Home, Inbox, MapPin, Plus } from "lucide-react";
+import { Briefcase, Home, Inbox, MapPin, Plus, Truck } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { asArray } from "@/lib/data";
 import type { Address } from "@/lib/types";
 import { useAuthStore } from "@/store/auth-store";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { InnerPage, PageSection } from "@/components/layout/InnerPage";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function AddressesPage() {
@@ -39,8 +41,25 @@ export default function AddressesPage() {
   }
 
   return (
-    <div className="page-pad space-y-5">
-      <PageHeader title="Addresses" subtitle="Where we drop your treats." backHref="/account" />
+    <InnerPage
+      tabbed
+      title="Addresses"
+      subtitle="Where we drop your treats."
+      backHref="/account"
+      facts={[
+        { icon: MapPin, value: `${addresses.length} saved`, label: "Addresses" },
+        { icon: Truck, value: "Lagos only", label: "Where we deliver" },
+        { icon: Plus, value: "At checkout", label: "New addresses are added" },
+      ]}
+      actions={
+        <Link href="/pastries" className="block">
+          <Button fullWidth variant="dark" leftIcon={<Plus size={16} />}>
+            Start an order
+          </Button>
+        </Link>
+      }
+    >
+      <PageSection title="Saved addresses">
 
       {addresses.length === 0 ? (
         <EmptyState
@@ -51,7 +70,7 @@ export default function AddressesPage() {
           icon={<Inbox size={56} strokeWidth={1.4} />}
         />
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid gap-3 sm:grid-cols-2">
           {addresses.map((a, i) => {
             const Icon = a.label.toLowerCase() === "work" ? Briefcase : a.label.toLowerCase() === "home" ? Home : MapPin;
             return (
@@ -60,10 +79,10 @@ export default function AddressesPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="flex items-start gap-3 rounded-[24px] bg-white p-4 shadow-[var(--shadow-card)] ring-1 ring-deep/5"
+                className="flex items-start gap-3 rounded-[22px] bg-[#f7f4ef] p-4"
               >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center text-tea">
-                  <Icon size={22} strokeWidth={1.7} />
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-tea shadow-sm">
+                  <Icon size={18} strokeWidth={1.8} />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-center gap-2 font-semibold text-deep">
@@ -83,16 +102,16 @@ export default function AddressesPage() {
         </ul>
       )}
 
-      <p className="rounded-[22px] bg-off-white px-4 py-3 text-center text-xs text-deep/55">
-        New addresses are saved automatically when you check out.
-      </p>
+      </PageSection>
 
-      <Link
-        href="/pastries"
-        className="pressable flex items-center justify-center gap-2 rounded-full bg-deep py-3.5 text-sm font-semibold text-white"
-      >
-        <Plus size={16} /> Order & add address at checkout
-      </Link>
-    </div>
+      <PageSection>
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-deep/55">
+          <span>New addresses are saved automatically when you check out.</span>
+          <Link href="/pastries" className="inline-flex items-center gap-1 font-semibold text-tea md:hidden">
+            <Plus size={14} /> Start an order
+          </Link>
+        </div>
+      </PageSection>
+    </InnerPage>
   );
 }

@@ -33,7 +33,7 @@ export default function AdminLiveOrdersPage() {
       );
       setOrders(live);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Could not load orders");
+      toast.error(e instanceof Error ? e.message : "Could not load orders");
     } finally {
       setLoading(false);
     }
@@ -55,7 +55,7 @@ export default function AdminLiveOrdersPage() {
         const o = await fetchAdminOrder(selectedId);
         setDetail(o as AdminOrderRow);
       } catch {
-        toast("Could not load order");
+        toast.error("Could not load order");
       }
     })();
   }, [selectedId]);

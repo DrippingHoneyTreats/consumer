@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { CreditCard, Lock, MapPin, ShieldCheck, Trash2, Truck } from "lucide-react";
+import { CreditCard, Lock, MapPin, ShieldCheck, SlidersHorizontal, Trash2, Truck } from "lucide-react";
 import { formatNgn } from "@/lib/format";
 import { ITEM_PLACEHOLDER } from "@/lib/placeholders";
 import { QtyStepper } from "@/components/ui/QtyStepper";
@@ -21,6 +21,8 @@ type Props = {
   lines: CurrentOrderLine[];
   total: number;
   onQtyChange: (key: string, qty: number) => void;
+  /** Change a line's size/options. */
+  onEdit?: (key: string) => void;
   onPayNow: () => void;
   paying?: boolean;
   userHint?: string | null;
@@ -54,6 +56,7 @@ export function CurrentCheckoutPanel({
   lines,
   total,
   onQtyChange,
+  onEdit,
   onPayNow,
   paying,
   userHint,
@@ -96,6 +99,15 @@ export function CurrentCheckoutPanel({
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-deep md:text-base">{line.name}</p>
                   <p className="text-xs text-deep/45">{formatNgn(line.unitPrice)} each</p>
+                  {onEdit ? (
+                    <button
+                      type="button"
+                      onClick={() => onEdit(line.key)}
+                      className="mt-1 inline-flex items-center gap-1 rounded-full bg-sage-soft px-2.5 py-1 text-[11px] font-semibold text-deep transition hover:bg-sage/40"
+                    >
+                      <SlidersHorizontal size={11} /> {line.name.includes(" · ") ? "Change size" : "Edit"}
+                    </button>
+                  ) : null}
                 </div>
               </div>
 
@@ -105,7 +117,7 @@ export function CurrentCheckoutPanel({
                   type="button"
                   aria-label={`Remove ${line.name}`}
                   onClick={() => onQtyChange(line.key, 0)}
-                  className="pressable flex h-9 w-9 items-center justify-center rounded-full text-deep/30 hover:bg-blush-soft hover:text-blush-deep md:ml-1"
+                  className="pressable flex h-9 w-9 items-center justify-center rounded-full bg-danger/8 text-danger ring-1 ring-danger/20 transition hover:bg-danger/15 md:ml-1"
                 >
                   <Trash2 size={15} />
                 </button>

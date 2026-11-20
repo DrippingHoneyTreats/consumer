@@ -93,14 +93,20 @@ export function ItemCard({
           <QtyStepper size="sm" value={qty} min={0} max={item.maxQty} onChange={onQtyChange} />
         ) : (
           <motion.button
-            whileTap={{ scale: 0.85, rotate: 90 }}
+            whileTap={{ scale: 0.92 }}
             type="button"
             disabled={soldOut}
             onClick={onAdd}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-deep text-white shadow-[0_8px_18px_-8px_rgba(63,95,70,0.8)] disabled:bg-deep/30 disabled:shadow-none"
+            className="flex h-10 shrink-0 items-center justify-center gap-1 rounded-full bg-deep pl-3 pr-4 text-sm font-semibold text-white shadow-[0_8px_18px_-8px_rgba(63,95,70,0.8)] disabled:bg-deep/30 disabled:shadow-none"
             aria-label="Add to order"
           >
-            <Plus size={18} />
+            {soldOut ? (
+              "Sold out"
+            ) : (
+              <>
+                <Plus size={15} strokeWidth={2.4} /> Order
+              </>
+            )}
           </motion.button>
         )}
       </div>

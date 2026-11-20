@@ -61,3 +61,12 @@ export async function searchItems(query: string): Promise<CatalogueItem[]> {
     return [];
   }
 }
+
+/**
+ * Does this item need the details sheet before it can go in the order?
+ * Yes when there's a size/option to pick, or it's a pre-order (lead time
+ * to confirm). Simple items can be added in one tap.
+ */
+export function needsOptions(item: { variants?: unknown[] | null; status?: string; leadTimeHours?: number | null }): boolean {
+  return (item.variants?.length ?? 0) > 0 || item.status === "pre_order" || (item.leadTimeHours ?? 0) > 0;
+}

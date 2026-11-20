@@ -93,7 +93,7 @@ export default function TermsPage() {
         <p>
           Event requests are not bookings until we send you a quote and you confirm it. Deposits, payment schedules and
           cancellation terms for events are set out in your quote. Events outside Lagos (such as Ibadan) need to be
-          booked early and may carry extra travel costs.
+          booked at least 3 weeks ahead and may carry extra travel costs.
         </p>
       </Section>
 

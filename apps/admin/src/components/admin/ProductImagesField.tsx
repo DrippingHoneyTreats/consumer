@@ -39,7 +39,7 @@ export function ProductImagesField({
         next = [...next, url];
         onChange(next);
       } catch (e) {
-        toast(e instanceof Error ? e.message : "Upload failed");
+        toast.error(e instanceof Error ? e.message : "Upload failed");
       } finally {
         setUploading((n) => n - 1);
       }
@@ -51,11 +51,11 @@ export function ProductImagesField({
     const url = urlDraft.trim();
     if (!url) return;
     if (!/^https?:\/\/|^\//.test(url)) {
-      toast("Paste a full image link (https://…)");
+      toast.error("Paste a full image link (https://…)");
       return;
     }
     if (slotsLeft <= 0) {
-      toast(`Max ${MAX_PRODUCT_IMAGES} photos`);
+      toast.error(`Max ${MAX_PRODUCT_IMAGES} photos`);
       return;
     }
     onChange([...value, url]);
@@ -157,7 +157,7 @@ export function ProductImagesField({
                 }
               }}
               placeholder="…or paste an image link"
-              className="w-full bg-transparent py-1.5 text-sm outline-none placeholder:text-deep/40"
+              className="w-full bg-transparent py-1.5 text-base outline-none placeholder:text-deep/40"
             />
           </span>
           <button

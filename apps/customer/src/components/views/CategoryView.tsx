@@ -6,16 +6,19 @@ import Image from "next/image";
 import { useParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, BadgeCheck, ChevronLeft, Heart, Inbox, Leaf, ShoppingBag, Truck } from "lucide-react";
-import { getCategoryItems } from "@/lib/catalogue";
+import { getCategoryItems, needsOptions } from "@/lib/catalogue";
 import type { CatalogueItem } from "@/lib/catalogue-types";
 import { categoryImage, ITEM_PLACEHOLDER } from "@/lib/placeholders";
-import { formatNgn, titleFromSlug } from "@/lib/format";
+import { contactLink, formatNgn, titleFromSlug } from "@/lib/format";
 import { useScrolledPast } from "@/hooks/useAppScroll";
 import { ItemAddSheet } from "@/components/catalogue/ItemAddSheet";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
 import { ColumnLoader } from "@/components/ui/ColumnLoader";
 import { useCartActions } from "@/hooks/useCartActions";
 import { cn } from "@/lib/cn";
+import { ProductCard } from "@/components/catalogue/ProductCard";
+import { ArrowPill, CtaBanner, SectionIntro, TrustStrip } from "@/components/editorial/Editorial";
+import { SwipeDeck } from "@/components/editorial/SwipeDeck";
 
 const valueBar = [
   { icon: Leaf, title: "Quality Ingredients", blurb: "Whole grains & real fibre", tone: "bg-sage-soft text-tea" },
@@ -130,26 +133,38 @@ export function CategoryView() {
         />
       ) : (
         <>
-          {/* Bento featured treats */}
-          <section className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+          {/* Phones: every treat in one swipeable deck */}
+          <SwipeDeck
+            className="mb-10"
+            tone="none"
+            label={title}
+            items={items.map((item, i) => (
+              <div key={item.id} className="mx-auto w-full max-w-[300px]">
+                <ProductCard item={item} index={i} layout="grid" onOpen={() => openItem(item)} onAdd={() => (needsOptions(item) ? openItem(item) : void addItem({ item }))} />
+              </div>
+            ))}
+          />
+
+          {/* Bento featured treats (tablet/desktop) */}
+          <section className="mb-8 hidden gap-3 md:grid md:grid-cols-4 md:gap-4">
             {featA ? (
               <button
                 type="button"
                 onClick={() => openItem(featA)}
                 className="pressable group relative col-span-2 row-span-2 min-h-[260px] overflow-hidden rounded-[28px] bg-sage-soft p-5 text-left shadow-[var(--shadow-card)] md:min-h-[360px] md:p-6"
               >
-                <div className="relative z-10 max-w-[58%]">
-                  <p className="font-display text-2xl leading-tight text-deep md:text-[34px]">
+                <div className="relative z-10 max-w-[52%] md:max-w-[44%]">
+                  <p className="font-display text-[22px] leading-tight text-deep sm:text-2xl md:text-[34px]">
                     Start Your Day the{" "}
                     <span className="italic text-[#c47b62]">Sweet</span> Way
                   </p>
                   <p className="mt-2 text-sm text-deep/60">{featA.name}</p>
-                  <p className="mt-1 text-xs text-deep/45">{featA.description || tagline}</p>
+                  <p className="mt-1 line-clamp-3 text-xs text-deep/45">{featA.description || tagline}</p>
                   <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#c47b62]">
                     Explore {title} <ArrowRight size={14} />
                   </span>
                 </div>
-                <span className="absolute -bottom-4 -right-3 h-[70%] w-[56%] overflow-hidden rounded-[28px] shadow-[var(--shadow-float)] ring-4 ring-white/80 transition duration-500 group-hover:scale-[1.03] md:rounded-[32px]">
+                <span className="absolute -bottom-4 -right-3 h-[64%] w-[44%] overflow-hidden rounded-[28px] shadow-[var(--shadow-float)] ring-4 ring-white/80 transition duration-500 group-hover:scale-[1.03] md:h-[72%] md:w-[52%] md:rounded-[32px]">
                   <Image
                     src={featA.images?.[0] || ITEM_PLACEHOLDER}
                     alt=""
@@ -167,9 +182,12 @@ export function CategoryView() {
               <button
                 type="button"
                 onClick={() => openItem(featB)}
-                className="pressable group relative col-span-2 min-h-[150px] overflow-hidden rounded-[28px] bg-[#f9e2db] p-5 text-left shadow-[var(--shadow-card)] md:min-h-[170px]"
+                className={cn(
+                  "pressable group relative col-span-2 min-h-[150px] overflow-hidden rounded-[28px] bg-[#f9e2db] p-5 text-left shadow-[var(--shadow-card)] md:min-h-[170px]",
+                  !featC && "md:row-span-2",
+                )}
               >
-                <div className="relative z-10 max-w-[55%]">
+                <div className="relative z-10 max-w-[56%] md:max-w-[55%]">
                   <p className="font-display text-xl text-deep md:text-2xl">{featB.name}</p>
                   <p className="mt-1 line-clamp-2 text-xs text-deep/55 md:text-sm">
                     {featB.description || "A favourite from this collection"}
@@ -178,7 +196,7 @@ export function CategoryView() {
                     Order Now <ArrowRight size={14} />
                   </span>
                 </div>
-                <span className="absolute -bottom-2 -right-2 h-28 w-28 overflow-hidden rounded-[22px] ring-4 ring-white/80 md:h-36 md:w-36">
+                <span className="absolute -bottom-2 -right-2 h-24 w-24 overflow-hidden rounded-[22px] ring-4 ring-white/80 sm:h-28 sm:w-28 md:h-36 md:w-36">
                   <Image
                     src={featB.images?.[0] || ITEM_PLACEHOLDER}
                     alt=""
@@ -191,21 +209,22 @@ export function CategoryView() {
               </button>
             ) : null}
 
-            {[featC, featD, ...rest].filter(Boolean).map((item, i) =>
+            {[featC, featD].filter(Boolean).map((item, i) =>
               item ? (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => openItem(item)}
                   className={cn(
-                    "pressable group relative aspect-[5/4] overflow-hidden rounded-[24px] p-4 text-left shadow-[var(--shadow-card)]",
+                    "pressable group relative aspect-[4/5] overflow-hidden rounded-[24px] p-4 text-left shadow-[var(--shadow-card)] md:aspect-auto md:min-h-[170px]",
                     i % 2 === 0 ? "bg-sage-soft" : "bg-[#f7e8df]",
+                    !featD && "col-span-2 aspect-[2/1]",
                   )}
                 >
                   <span className="relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-deep shadow-sm">
                     <Heart size={14} className="text-[#c47b62]" />
                   </span>
-                  <span className="absolute inset-x-3 bottom-[38%] top-12 overflow-hidden rounded-[20px]">
+                  <span className="absolute inset-x-3 bottom-[34%] top-12 overflow-hidden rounded-[20px] md:bottom-[38%]">
                     <Image
                       src={item.images?.[0] || ITEM_PLACEHOLDER}
                       alt=""
@@ -215,7 +234,7 @@ export function CategoryView() {
                       unoptimized
                     />
                   </span>
-                  <span className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-white via-white/95 to-transparent px-4 pb-4 pt-8">
+                  <span className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-white via-white/95 to-transparent px-4 pb-4 pt-6">
                     <span className="block truncate font-display text-lg text-deep">{item.name}</span>
                     <span className="mt-0.5 text-xs font-semibold text-[#c47b62]">{formatNgn(item.basePrice)}</span>
                   </span>
@@ -224,23 +243,33 @@ export function CategoryView() {
             )}
           </section>
 
-          {/* Value bar */}
-          <ul className="grid grid-cols-2 gap-3 rounded-[24px] bg-[#f7f0ea] p-3 md:grid-cols-4 md:gap-2 md:p-4">
-            {valueBar.map((v) => {
-              const Icon = v.icon;
-              return (
-                <li key={v.title} className="flex items-start gap-3 px-1 py-2 md:flex-col md:items-center md:px-2 md:text-center">
-                  <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-full", v.tone)}>
-                    <Icon size={18} strokeWidth={1.6} />
-                  </span>
-                  <span>
-                    <span className="block text-sm font-semibold text-deep">{v.title}</span>
-                    <span className="mt-0.5 block text-[11px] leading-snug text-deep/50">{v.blurb}</span>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+          {rest.length ? (
+            <section className="mb-14 hidden md:block">
+              <SectionIntro pill="More treats" title={<>More from <span className="italic text-tea">{title}</span></>} />
+              <div className="hidden gap-3 md:grid md:grid-cols-3 md:gap-4 lg:grid-cols-4">
+                {rest.map((item, i) => (
+                  <ProductCard key={item.id} item={item} index={i} layout="grid" onOpen={() => openItem(item)} onAdd={() => (needsOptions(item) ? openItem(item) : void addItem({ item }))} />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <TrustStrip items={valueBar.map((v) => v.title)} className="mb-14" />
+
+          <CtaBanner
+            title="Can't decide? We'll help you choose"
+            text="Tell us the occasion and how many people, and we'll suggest the perfect mix."
+            actions={
+              <>
+                <ArrowPill href={contactLink(`Hi DHT, can you help me choose from ${title}?`)} external tone="light">
+                  Chat on WhatsApp
+                </ArrowPill>
+                <Link href="/pastries" className="text-sm font-semibold text-white/80 underline-offset-4 hover:underline">
+                  See all collections
+                </Link>
+              </>
+            }
+          />
         </>
       )}
 

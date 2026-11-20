@@ -34,6 +34,8 @@ const nextConfig: NextConfig = {
   // Standalone is for Docker/self-host; Netlify OpenNext handles the deploy runtime.
   ...(process.env.NETLIFY ? {} : { output: "standalone" as const }),
   outputFileTracingRoot: path.join(__dirname, "../.."),
+  // Lets a test build go to another folder (NEXT_DIST_DIR=.next-check) without disturbing a running dev server.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   transpilePackages: ["@dht/ui", "@dht/api-client", "@dht/types"],
   allowedDevOrigins: lanHosts(),
   /**
