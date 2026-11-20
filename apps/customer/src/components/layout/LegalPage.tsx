@@ -38,6 +38,14 @@ export function LegalPage({
           </p>
           <p className="mt-3">
             See also:{" "}
+            <Link href="/about" className="font-semibold text-tea">
+              About us
+            </Link>{" "}
+            ·{" "}
+            <Link href="/menu" className="font-semibold text-tea">
+              Menu & prices
+            </Link>{" "}
+            ·{" "}
             <Link href="/privacy" className="font-semibold text-tea">
               Privacy Policy
             </Link>{" "}

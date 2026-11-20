@@ -16,3 +16,4 @@ dhtcustomers-server/
 
 # Local email template previews (npm run email:preview)
 email-previews/
+.next-check
