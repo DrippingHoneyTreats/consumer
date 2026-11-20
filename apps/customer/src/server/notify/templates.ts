@@ -370,7 +370,7 @@ export function orderCompletedEmail(ctx: Ctx, d: { name?: string | null; order: 
       heading,
       body:
         para(
-          `Hi ${esc(first(d.name))}, your order <strong>${esc(o.orderNo)}</strong> is complete. Thank you for supporting a small Lagos bakery. It truly means a lot.`,
+          `Hi ${esc(first(d.name))}, your order <strong>${esc(o.orderNo)}</strong> is complete. Thank you for supporting us.`,
         ) +
         para("Loved it? Reorder in one tap, or reply to this email and tell us what you thought. We read every message.") +
         button("Order again", `${ctx.appUrl}/orders`, "honey") +

@@ -20,6 +20,7 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { StickyActions } from "@/components/layout/StickyActions";
 import { PageSkeleton } from "@/components/ui/ColumnLoader";
 import { useAuthStore } from "@/store/auth-store";
+import { useLeaveIfPaid } from "@/hooks/useLeaveIfPaid";
 
 type PlaceSuggestion = { placeId: string; description: string; mainText?: string; secondaryText?: string };
 type PlaceDetails = {
@@ -71,7 +72,9 @@ function FulfillmentForm() {
   const [sessionToken, setSessionToken] = useState(newSessionToken);
   const [saved, setSaved] = useState<Address[]>([]);
   const [loading, setLoading] = useState(false);
-  const [usingAddressId, setUsingAddressId] = useState<string | null>(null);
+  useLeaveIfPaid(orderId);
+  // A saved address the customer picked (only submitted when they press Continue).
+  const [savedChoice, setSavedChoice] = useState<string | null>(null);
   const f = useFieldErrors();
 
   useEffect(() => {
@@ -128,6 +131,7 @@ function FulfillmentForm() {
   const noMatches = Boolean(typedOption) && !searchingPlaces && suggestions.length === 0;
 
   async function choose(s: PlaceSuggestion) {
+    setSavedChoice(null);
     setSuggestions([]);
     setQuery(s.description);
     setResolving(true);
@@ -152,7 +156,7 @@ function FulfillmentForm() {
 
   const pickupEnabled = options?.pickup.enabled ?? false;
 
-  async function submit(addressId?: string) {
+  async function submit(addressId: string | undefined = savedChoice ?? undefined) {
     if (!orderId) {
       toast.error("Missing order.");
       return;
@@ -163,7 +167,9 @@ function FulfillmentForm() {
         delivery && !addressId && !selected
           ? query.trim()
             ? "Choose your address from the suggestions below the box."
-            : "Please enter your delivery address."
+            : saved.length
+              ? "Choose a saved address or type a new one."
+              : "Please enter your delivery address."
           : delivery && !addressId && selected && !selected.inLagos
             ? notInLagosMessage(selected.state)
             : null,
@@ -324,6 +330,7 @@ function FulfillmentForm() {
                 setQuery(e.target.value);
                 f.clear("address");
                 if (selected) setSelected(null);
+                if (savedChoice) setSavedChoice(null);
               }}
               error={f.errors.address ?? undefined}
               placeholder="Start typing your street or estate"
@@ -517,12 +524,18 @@ function FulfillmentForm() {
                     whileTap={{ scale: 0.98 }}
                     type="button"
                     onClick={() => {
-                      if (usingAddressId) return;
-                      setUsingAddressId(a.id);
-                      void submit(a.id).finally(() => setUsingAddressId(null));
+                      // Select only. Nothing is submitted until they press Continue.
+                      setSavedChoice((cur) => (cur === a.id ? null : a.id));
+                      setSelected(null);
+                      setQuery("");
+                      setSuggestions([]);
+                      f.clear("address");
                     }}
-                    aria-busy={usingAddressId === a.id || undefined}
-                    className="flex w-full items-center gap-3 rounded-[22px] border border-deep/5 bg-white p-3 text-left text-sm shadow-[var(--shadow-card)]"
+                    aria-pressed={savedChoice === a.id}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-[22px] border bg-white p-3 text-left text-sm shadow-[var(--shadow-card)] transition-colors",
+                      savedChoice === a.id ? "border-deep ring-2 ring-deep/10" : "border-deep/5",
+                    )}
                   >
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blush-soft text-deep">
                       {a.label.toLowerCase() === "work" ? <Briefcase size={18} /> : <Home size={18} />}
@@ -531,10 +544,12 @@ function FulfillmentForm() {
                       <span className="block font-semibold text-deep">{a.label}</span>
                       <span className="block truncate text-deep/55">{a.formattedAddress}</span>
                     </span>
-                    {usingAddressId === a.id ? (
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-tea/30 border-t-tea" aria-label="Saving" />
+                    {savedChoice === a.id ? (
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-deep text-white" aria-label="Selected">
+                        <Check size={15} strokeWidth={3} />
+                      </span>
                     ) : (
-                      <span className="text-xs font-semibold text-tea">Use</span>
+                      <span className="shrink-0 rounded-full border border-deep/15 px-3 py-1 text-xs font-semibold text-deep/70">Select</span>
                     )}
                   </motion.button>
                 ))}

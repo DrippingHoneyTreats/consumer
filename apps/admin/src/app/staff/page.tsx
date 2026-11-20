@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
 import { ColumnLoader } from "@/components/ui/ColumnLoader";
 import { Input, selectClass } from "@/components/ui/Input";
-import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
+import { PageHeader } from "@/components/admin/kit";
 import { AdminCardList, AdminTable } from "@/components/admin/AdminTable";
 import { toast } from "@/components/ui/Toast";
 import { checkEmail, useFieldErrors } from "@/lib/validate";
@@ -109,7 +109,7 @@ export default function AdminStaffPage() {
 
   return (
     <>
-      <AdminPageTitle title="Staff" />
+      <PageHeader title="Staff" subtitle="People who can sign in to this dashboard. Super admins can invite and change roles." />
       <p className="mb-4 max-w-2xl text-sm text-deep/60">
         Admins who can access this dashboard. Invite teammates by email — they’ll use email OTP to sign in.
       </p>

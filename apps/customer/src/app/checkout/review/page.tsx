@@ -24,6 +24,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Bike, Lock, MapPin, ShieldCheck, ShoppingBag, Store, Tag } from "lucide-react";
+import { useLeaveIfPaid } from "@/hooks/useLeaveIfPaid";
 
 const PAY_FALLBACK = "Cannot proceed with payment, try again.";
 
@@ -37,6 +38,7 @@ function ReviewForm() {
   const [order, setOrder] = useState<Order | null>(null);
   const [promo, setPromo] = useState("");
   const [loading, setLoading] = useState(false);
+  useLeaveIfPaid(orderId);
 
   const [failed, setFailed] = useState(false);
   const [nonce, setNonce] = useState(0);
@@ -144,6 +146,11 @@ function ReviewForm() {
         toast.error(PAY_FALLBACK);
       }
     } catch (err) {
+      if (err instanceof ApiRequestError && err.code === "ALREADY_PAID") {
+        toast.info(err.message);
+        router.replace(`/orders/${orderId}/track`);
+        return;
+      }
       // Show the exact reason; only fall back when there isn't one.
       const reason = err instanceof Error ? err.message.trim() : "";
       toast.error(reason && reason !== "Request failed" ? reason : PAY_FALLBACK);

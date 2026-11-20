@@ -68,8 +68,13 @@ export function StatusActionBar({ order, onUpdated }: Props) {
   const canCancel = ["placed", "seen", "accepted"].includes(order.status);
 
   return (
-    <div className="flex flex-col gap-3 border-t border-deep/10 pt-4">
-      <div className="flex flex-wrap gap-2">
+    <div className="mt-3 flex flex-col gap-3">
+      {["delivered", "completed", "cancelled", "payment_failed"].includes(order.status) ? (
+        <p className="rounded-xl bg-off-white px-3 py-2.5 text-sm text-deep/65">
+          {order.status === "cancelled" ? "This order was cancelled." : "This order is finished. No further steps."}
+        </p>
+      ) : null}
+      <div className="grid gap-2 [&>button]:w-full">
         {order.status === "seen" || order.status === "placed" ? (
           <Button loading={loading} onClick={() => patchStatus("accepted")}>
             Accept
@@ -110,7 +115,7 @@ export function StatusActionBar({ order, onUpdated }: Props) {
       {deliveryOpen ? (
         <div className="rounded-2xl border border-deep/10 bg-off-white/80 p-4">
           <p className="mb-3 text-sm font-semibold text-deep">Delivery details</p>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3">
             <Input label="Rider name" value={riderName} onChange={(e) => setRiderName(e.target.value)} />
             <Input label="Rider phone" value={riderPhone} onChange={(e) => setRiderPhone(e.target.value)} />
             <Input

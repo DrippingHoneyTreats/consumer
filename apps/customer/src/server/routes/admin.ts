@@ -199,6 +199,30 @@ route("DELETE", "/admin/items/:id", async ({ req, params }) => {
   return { ok: true };
 });
 
+/** Every product (including hidden ones) with its category name, for the admin table. */
+route("GET", "/admin/items", async ({ req }) => {
+  await requireStaff(req);
+  const [items, cats] = await Promise.all([
+    db().from("items").select("*").order("sort").order("name"),
+    db().from("categories").select("id, name"),
+  ]);
+  const names = new Map((must(cats, "categories") as Row[]).map((c) => [c.id as string, c.name as string]));
+  return {
+    items: (must(items, "admin items") as Row[]).map((r) => ({ ...mapItem(r), categoryName: names.get(r.category_id as string) ?? null })),
+  };
+});
+
+route("GET", "/admin/items/:id", async ({ req, params }) => {
+  await requireStaff(req);
+  const row = maybe(await db().from("items").select("*").eq("id", params.id).maybeSingle(), "admin item");
+  if (!row) throw notFound("Product not found.");
+  const sold = must(
+    await db().from("order_items").select("qty, order_id").eq("item_id", params.id).limit(1000),
+    "item sales",
+  ) as Row[];
+  return { ...mapItem(row), unitsOrdered: sold.reduce((s, r) => s + (r.qty as number), 0) };
+});
+
 route("GET", "/admin/banners", async ({ req }) => {
   await requireStaff(req);
   const rows = must(await db().from("banners").select("*").order("priority", { ascending: false }), "admin banners") as Row[];
@@ -288,6 +312,20 @@ route("GET", "/admin/orders", async ({ req, query }) => {
   const status = query.get("status");
   if (status) q = q.in("status", status.split(","));
   else q = q.not("status", "in", "(draft,pending_payment)");
+  const search = (query.get("q") ?? "").replace(/[%_,()]/g, " ").trim();
+  if (search) {
+    // Order number, or a customer's name / phone / email.
+    const users = must(
+      await db()
+        .from("users")
+        .select("id")
+        .or(`full_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`)
+        .limit(200),
+      "order search users",
+    ) as Row[];
+    const ids = users.map((u) => u.id as string);
+    q = ids.length ? q.or(`order_no.ilike.%${search}%,user_id.in.(${ids.join(",")})`) : q.ilike("order_no", `%${search}%`);
+  }
   const res = await q;
   const rows = must(res, "admin orders") as Row[];
   return { items: await withUsers(await hydrateOrders(rows)), total: res.count ?? rows.length, page: p, limit };
@@ -343,7 +381,68 @@ route("GET", "/admin/abandoned", async ({ req, query }) => {
 route("GET", "/admin/orders/:id", async ({ req, params }) => {
   await requireStaff(req);
   const [o] = await withUsers([await getOrder(params.id)]);
-  return o;
+  const payments = must(
+    await db()
+      .from("payments")
+      .select("reference, provider, amount, status, created_at, updated_at")
+      .eq("order_id", params.id)
+      .order("created_at", { ascending: false }),
+    "order payments",
+  ) as Row[];
+  return { ...o, payments: payments.map((r) => camel(r)) };
+});
+
+// ───────────────────────── Dashboard ─────────────────────────
+
+/** Numbers for the admin home page. */
+route("GET", "/admin/summary", async ({ req }) => {
+  await requireStaff(req);
+  const now = new Date();
+  // Lagos is UTC+1 all year: midnight in Lagos = Lagos date at 00:00, minus one hour in UTC.
+  const lagosNow = new Date(now.getTime() + 3_600_000);
+  const lagosMidnight = new Date(Date.UTC(lagosNow.getUTCFullYear(), lagosNow.getUTCMonth(), lagosNow.getUTCDate()) - 3_600_000);
+  const weekAgo = new Date(now.getTime() - 7 * 86_400_000);
+  const quiet = new Date(now.getTime() - 30 * 60_000).toISOString();
+
+  const [paidWeek, live, unfinished, events, customersAll, customersWeek, soldOut, recent] = await Promise.all([
+    db().from("orders").select("total, paid_at").not("paid_at", "is", null).gte("paid_at", weekAgo.toISOString()),
+    db().from("orders").select("status").in("status", ["placed", "seen", "accepted", "preparing", "ready_for_delivery", "out_for_delivery"]),
+    db().from("orders").select("total").in("status", ["draft", "pending_payment"]).gt("total", 0).lte("updated_at", quiet),
+    db().from("event_requests").select("status").in("status", ["submitted", "reviewing", "quote_sent"]),
+    db().from("users").select("id", { count: "exact", head: true }).eq("role", "CUSTOMER"),
+    db().from("users").select("id", { count: "exact", head: true }).eq("role", "CUSTOMER").gte("created_at", weekAgo.toISOString()),
+    db().from("items").select("id, name").eq("active", true).eq("status", "sold_out"),
+    db().from("orders").select("*").not("status", "in", "(draft,pending_payment)").order("created_at", { ascending: false }).limit(6),
+  ]);
+
+  const paid = (must(paidWeek, "paid week") as Row[]).map((r) => ({ total: r.total as number, at: new Date(r.paid_at as string) }));
+  const today = paid.filter((p) => p.at >= lagosMidnight);
+  const liveRows = must(live, "live") as Row[];
+  const byStatus: Record<string, number> = {};
+  for (const r of liveRows) byStatus[r.status as string] = (byStatus[r.status as string] ?? 0) + 1;
+  const unfinishedRows = must(unfinished, "unfinished") as Row[];
+  const eventRows = must(events, "events open") as Row[];
+  const eventsByStatus: Record<string, number> = {};
+  for (const r of eventRows) eventsByStatus[r.status as string] = (eventsByStatus[r.status as string] ?? 0) + 1;
+
+  // Revenue per day for the last 7 days (Lagos days).
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const start = new Date(lagosMidnight.getTime() - (6 - i) * 86_400_000);
+    const end = new Date(start.getTime() + 86_400_000);
+    const inDay = paid.filter((p) => p.at >= start && p.at < end);
+    return { date: new Date(start.getTime() + 3_600_000).toISOString().slice(0, 10), orders: inDay.length, revenue: inDay.reduce((s, p) => s + p.total, 0) };
+  });
+
+  return {
+    today: { orders: today.length, revenue: today.reduce((s, p) => s + p.total, 0) },
+    week: { orders: paid.length, revenue: paid.reduce((s, p) => s + p.total, 0), days },
+    live: { total: liveRows.length, byStatus },
+    unfinished: { count: unfinishedRows.length, value: unfinishedRows.reduce((s, r) => s + (r.total as number), 0) },
+    events: { open: eventRows.length, byStatus: eventsByStatus },
+    customers: { total: customersAll.count ?? 0, newThisWeek: customersWeek.count ?? 0 },
+    soldOut: (must(soldOut, "sold out") as Row[]).map((r) => ({ id: r.id, name: r.name })),
+    recentOrders: await withUsers(await hydrateOrders(must(recent, "recent") as Row[])),
+  };
 });
 
 const NEXT_STATUS: Record<string, string[]> = {
@@ -401,7 +500,23 @@ route("GET", "/admin/events", async ({ req, query }) => {
   const status = query.get("status");
   if (status) q = q.eq("status", status);
   const res = await q;
-  return { items: (must(res, "admin events") as Row[]).map(mapEvent), total: res.count ?? 0, page: p, limit };
+  const evs = (must(res, "admin events") as Row[]).map(mapEvent);
+  const userIds = [...new Set(evs.map((e) => e.userId))];
+  const users = userIds.length
+    ? (must(await db().from("users").select("id, full_name, phone, email").in("id", userIds), "event users") as Row[])
+    : [];
+  const byId = new Map(users.map((u) => [u.id as string, { id: u.id, fullName: u.full_name, phone: u.phone, email: u.email }]));
+  return { items: evs.map((e) => ({ ...e, user: byId.get(e.userId) })), total: res.count ?? 0, page: p, limit };
+});
+
+route("GET", "/admin/events/:id", async ({ req, params }) => {
+  await requireStaff(req);
+  if (!/^[0-9a-f-]{36}$/i.test(params.id)) throw notFound("Event not found.");
+  const row = maybe(await db().from("event_requests").select("*").eq("id", params.id).maybeSingle(), "admin event");
+  if (!row) throw notFound("Event not found.");
+  const ev = mapEvent(row);
+  const u = maybe(await db().from("users").select("id, full_name, phone, email").eq("id", ev.userId).maybeSingle(), "event user");
+  return { ...ev, user: u ? { id: u.id, fullName: u.full_name, phone: u.phone, email: u.email } : undefined };
 });
 
 route("PATCH", "/admin/events/:id", async ({ req, params, body }) => {
@@ -437,6 +552,28 @@ route("GET", "/admin/users", async ({ req, query }) => {
     total: res.count ?? 0,
     page: p,
     limit,
+  };
+});
+
+/** One customer: profile, orders, events and saved addresses. */
+route("GET", "/admin/users/:id", async ({ req, params }) => {
+  await requireStaff(req);
+  if (!/^[0-9a-f-]{36}$/i.test(params.id)) throw notFound("Customer not found.");
+  const row = maybe(await db().from("users").select("*").eq("id", params.id).maybeSingle(), "admin user");
+  if (!row) throw notFound("Customer not found.");
+  const [orders, events, addresses] = await Promise.all([
+    db().from("orders").select("*").eq("user_id", params.id).order("created_at", { ascending: false }).limit(50),
+    db().from("event_requests").select("*").eq("user_id", params.id).order("created_at", { ascending: false }).limit(50),
+    db().from("addresses").select("*").eq("user_id", params.id).order("created_at", { ascending: false }),
+  ]);
+  const orderRows = await hydrateOrders(must(orders, "user orders") as Row[]);
+  const paid = orderRows.filter((o) => !["draft", "pending_payment", "cancelled"].includes(o.status));
+  return {
+    user: { ...publicUser(camel<DbUser>(row)), createdAt: row.created_at },
+    stats: { orders: paid.length, spent: paid.reduce((s, o) => s + o.total, 0), lastOrderAt: paid[0]?.createdAt ?? null },
+    orders: orderRows,
+    events: (must(events, "user events") as Row[]).map(mapEvent),
+    addresses: (must(addresses, "user addresses") as Row[]).map((r) => camel(r)),
   };
 });
 

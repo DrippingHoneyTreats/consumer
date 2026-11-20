@@ -1,180 +1,166 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Bike, Store } from "lucide-react";
 import { apiClient } from "@/lib/api";
-import { LIVE_ORDER_STATUSES } from "@/lib/admin-nav";
-import { fetchAdminOrder, orderCustomerLabel } from "@/lib/admin-orders";
-import type { AdminListResponse, AdminOrderRow, Order } from "@/lib/types";
-import { formatNgn } from "@/lib/format";
+import { playNewOrderBeep } from "@/lib/admin-orders";
+import type { AdminListResponse } from "@/lib/types";
+import { formatNgn, statusLabel, timeAgo, orderStatusLabel } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
-import { ColumnLoader } from "@/components/ui/ColumnLoader";
-import { cn } from "@/lib/cn";
-import { OrderDetailPanel } from "@/components/admin/OrderDetailPanel";
-import { toast } from "@/components/ui/Toast";
-import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
+import { OfflineState } from "@/components/ui/EmptyState";
+import { DataTable, FilterTabs, PageHeader, SearchBox, Toolbar, type Tab } from "@/components/admin/kit";
 
-export default function AdminLiveOrdersPage() {
-  const [orders, setOrders] = useState<AdminOrderRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<AdminOrderRow | null>(null);
-  const [view, setView] = useState<"board" | "list">("board");
-  const [statusFilter, setStatusFilter] = useState<string | "all">("all");
+type Row = {
+  id: string;
+  orderNo: string;
+  status: string;
+  total: number;
+  createdAt: string;
+  fulfillment?: "delivery" | "pickup";
+  items: { qty: number }[];
+  user?: { fullName?: string | null; phone?: string | null };
+};
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await apiClient.get<AdminListResponse<AdminOrderRow>>("/admin/orders", {
-        limit: 100,
-        page: 1,
-      });
-      const live = res.items.filter((o) =>
-        (LIVE_ORDER_STATUSES as readonly string[]).includes(o.status),
-      );
-      setOrders(live);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not load orders");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+type View = "live" | "new" | "done" | "cancelled" | "all";
 
+const VIEWS: Record<View, { label: string; statuses?: string }> = {
+  live: { label: "In progress", statuses: "placed,seen,accepted,preparing,ready_for_delivery,out_for_delivery" },
+  new: { label: "New", statuses: "placed,seen" },
+  done: { label: "Delivered", statuses: "delivered,completed" },
+  cancelled: { label: "Cancelled", statuses: "cancelled,payment_failed" },
+  all: { label: "All paid" },
+};
+
+function OrdersTable() {
+  const params = useSearchParams();
+  const router = useRouter();
+  const single = params.get("status"); // from the dashboard: one exact status
+  const [view, setView] = useState<View>((params.get("view") as View) || "live");
+  const [q, setQ] = useState("");
+  const [query, setQuery] = useState("");
+  const [rows, setRows] = useState<Row[]>([]);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const seen = useRef<Set<string> | null>(null);
+
+  // Search after a short pause in typing.
   useEffect(() => {
-    void load();
-    const id = window.setInterval(() => void load(), 45_000);
-    return () => window.clearInterval(id);
-  }, [load]);
+    const t = window.setTimeout(() => setQuery(q.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [q]);
 
-  useEffect(() => {
-    if (!selectedId) {
-      setDetail(null);
-      return;
-    }
-    void (async () => {
+  const load = useCallback(
+    async (quiet = false) => {
+      if (!quiet) setState("loading");
       try {
-        const o = await fetchAdminOrder(selectedId);
-        setDetail(o as AdminOrderRow);
+        const res = await apiClient.get<AdminListResponse<Row>>("/admin/orders", {
+          limit: 200,
+          status: single ?? VIEWS[view].statuses,
+          q: query || undefined,
+        });
+        // Beep when a brand-new order arrives.
+        const newOnes = res.items.filter((o) => o.status === "placed");
+        if (seen.current && newOnes.some((o) => !seen.current!.has(o.id))) playNewOrderBeep();
+        seen.current = new Set(newOnes.map((o) => o.id));
+        setRows(res.items);
+        setState("ready");
       } catch {
-        toast.error("Could not load order");
+        if (!quiet) setState("error");
       }
-    })();
-  }, [selectedId]);
-
-  const filtered = useMemo(
-    () => (statusFilter === "all" ? orders : orders.filter((o) => o.status === statusFilter)),
-    [orders, statusFilter],
+    },
+    [view, query, single],
   );
 
-  const onOrderUpdated = (order: Order) => {
-    setDetail(order as AdminOrderRow);
-    setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, ...order } : o)));
+  useEffect(() => {
     void load();
-  };
+    const t = window.setInterval(() => void load(true), 30_000);
+    return () => window.clearInterval(t);
+  }, [load]);
 
-  const card = (order: AdminOrderRow) => (
-    <button
-      type="button"
-      key={order.id}
-      onClick={() => setSelectedId(order.id)}
-      className={cn(
-        "w-full rounded-xl border p-3 text-left transition hover:border-tea/40",
-        selectedId === order.id ? "border-tea bg-sage/10" : "border-deep/10 bg-white",
-      )}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold">{order.orderNo}</span>
-        <Badge status={order.status} />
-      </div>
-      <p className="mt-1 truncate text-sm">{orderCustomerLabel(order)}</p>
-      <p className="text-xs text-deep/55">{formatNgn(order.total)}</p>
-    </button>
+  const tabs: Tab<View>[] = useMemo(
+    () => (Object.keys(VIEWS) as View[]).map((v) => ({ value: v, label: VIEWS[v].label })),
+    [],
   );
 
   return (
     <>
-      <AdminPageTitle title="Live orders" />
-      <div className="mb-4 flex flex-wrap items-center gap-2 lg:hidden">
-        <button
-          type="button"
-          className={cn(
-            "rounded-full px-3 py-1.5 text-xs font-semibold",
-            view === "board" ? "bg-deep text-white" : "bg-white text-deep",
-          )}
-          onClick={() => setView("board")}
-        >
-          Board
-        </button>
-        <button
-          type="button"
-          className={cn(
-            "rounded-full px-3 py-1.5 text-xs font-semibold",
-            view === "list" ? "bg-deep text-white" : "bg-white text-deep",
-          )}
-          onClick={() => setView("list")}
-        >
-          List
-        </button>
-        {LIVE_ORDER_STATUSES.map((s) => (
-          <button
-            key={s}
-            type="button"
-            className={cn(
-              "rounded-full px-3 py-1.5 text-xs font-medium capitalize",
-              statusFilter === s ? "bg-blush text-deep" : "bg-white text-deep/70",
-            )}
-            onClick={() => setStatusFilter((f) => (f === s ? "all" : s))}
-          >
-            {s.replaceAll("_", " ")}
-          </button>
-        ))}
-      </div>
+      <PageHeader
+        title="Orders"
+        subtitle={single ? `Showing "${statusLabel(single)}" orders.` : "Paid orders. Click an order to see details, update its status or contact the customer."}
+      />
+      <Toolbar>
+        <FilterTabs
+          tabs={tabs}
+          value={single ? ("" as View) : view}
+          onChange={(v) => {
+            setView(v);
+            if (single) router.replace("/orders");
+          }}
+        />
+        <SearchBox value={q} onChange={setQ} placeholder="Order no., name, phone or email" />
+      </Toolbar>
 
-      <div className="flex gap-6">
-        <div className="min-w-0 flex-1">
-          {loading && !orders.length ? (
-            <ColumnLoader columns={1} count={6} aspect="h-20 aspect-auto" className="sm:grid-cols-2 xl:grid-cols-3" />
-          ) : view === "list" || statusFilter !== "all" ? (
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{filtered.map(card)}</div>
-          ) : (
-            <>
-              <div className="hidden gap-3 lg:grid lg:grid-cols-3 xl:grid-cols-6">
-                {LIVE_ORDER_STATUSES.map((status) => (
-                  <div key={status}>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-deep/50">
-                      {status.replaceAll("_", " ")}
-                    </p>
-                    <div className="flex flex-col gap-2">
-                      {orders.filter((o) => o.status === status).map(card)}
-                    </div>
-                  </div>
-                ))}
+      {state === "error" ? (
+        <OfflineState onRetry={() => void load()} />
+      ) : (
+        <DataTable
+          loading={state === "loading"}
+          rows={rows}
+          rowKey={(o) => o.id}
+          href={(o) => `/orders/${o.id}`}
+          empty={query ? `No orders match "${query}".` : "No orders here yet."}
+          columns={[
+            { key: "no", label: "Order", render: (o) => <span className="font-semibold text-deep">{o.orderNo}</span> },
+            {
+              key: "customer",
+              label: "Customer",
+              render: (o) => (
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-deep">{o.user?.fullName || "Customer"}</p>
+                  {o.user?.phone ? <p className="text-xs text-deep/50">{o.user.phone}</p> : null}
+                </div>
+              ),
+            },
+            {
+              key: "type",
+              label: "Type",
+              render: (o) => (
+                <span className="inline-flex items-center gap-1.5 text-deep/70">
+                  {o.fulfillment === "pickup" ? <Store size={14} /> : <Bike size={14} />}
+                  {o.fulfillment === "pickup" ? "Pickup" : "Delivery"}
+                </span>
+              ),
+            },
+            { key: "items", label: "Items", render: (o) => o.items.reduce((s, i) => s + i.qty, 0) },
+            { key: "status", label: "Status", render: (o) => <Badge status={o.status}>{orderStatusLabel(o.status, o.fulfillment)}</Badge> },
+            { key: "when", label: "Placed", render: (o) => <span className="whitespace-nowrap text-deep/60">{timeAgo(o.createdAt)}</span> },
+            { key: "total", label: "Total", align: "right", render: (o) => <span className="font-semibold">{formatNgn(o.total)}</span> },
+          ]}
+          mobile={(o) => (
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-semibold text-deep">{o.orderNo}</p>
+                <p className="truncate text-sm text-deep/70">{o.user?.fullName || "Customer"}</p>
+                <p className="text-xs text-deep/50">
+                  {o.fulfillment === "pickup" ? "Pickup" : "Delivery"} · {timeAgo(o.createdAt)}
+                </p>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2 lg:hidden">{orders.map(card)}</div>
-            </>
+              <div className="shrink-0 text-right">
+                <Badge status={o.status}>{orderStatusLabel(o.status, o.fulfillment)}</Badge>
+                <p className="mt-1.5 text-sm font-semibold">{formatNgn(o.total)}</p>
+              </div>
+            </div>
           )}
-        </div>
-
-        {detail ? (
-          <aside className="hidden w-full max-w-md shrink-0 rounded-2xl border border-deep/10 bg-white p-4 lg:block">
-            <OrderDetailPanel
-              order={detail}
-              onUpdated={onOrderUpdated}
-              onClose={() => setSelectedId(null)}
-            />
-          </aside>
-        ) : null}
-      </div>
-
-      {detail && selectedId ? (
-        <div className="fixed inset-0 z-[60] bg-deep/40 p-4 lg:hidden" onClick={() => setSelectedId(null)}>
-          <div
-            className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-auto rounded-t-3xl bg-white p-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <OrderDetailPanel order={detail} onUpdated={onOrderUpdated} onClose={() => setSelectedId(null)} />
-          </div>
-        </div>
-      ) : null}
+        />
+      )}
     </>
+  );
+}
+
+export default function OrdersPage() {
+  return (
+    <Suspense fallback={null}>
+      <OrdersTable />
+    </Suspense>
   );
 }

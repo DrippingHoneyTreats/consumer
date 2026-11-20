@@ -46,7 +46,7 @@ export function trackingSteps(fulfillment?: Fulfillment) {
 export function orderStatusLabel(order: Pick<Order, "status" | "fulfillment">): string {
   if (order.fulfillment === "pickup") {
     if (order.status === "ready_for_delivery") return "Ready for pickup";
-    if (order.status === "delivered") return "Picked up";
+    if (order.status === "delivered" || order.status === "completed") return "Picked up";
   }
   return statusLabel(order.status);
 }

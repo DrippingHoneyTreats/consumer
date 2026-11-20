@@ -34,7 +34,7 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!checked) return;
     if (!isStaff(user) && !isLogin) router.replace("/login");
-    if (isStaff(user) && isLogin) router.replace("/orders");
+    if (isStaff(user) && isLogin) router.replace("/");
   }, [checked, user, isLogin, router]);
 
   if (isLogin) return <>{children}</>;

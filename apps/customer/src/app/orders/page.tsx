@@ -68,7 +68,7 @@ export default function OrdersPage() {
       setState("ready");
       return;
     }
-    setState("loading");
+    setState((st) => (st === "ready" ? st : "loading"));
     void Promise.all([
       apiClient.get<Order[] | { data: Order[] }>("/orders", { tab: "ongoing" }),
       apiClient.get<Order[] | { data: Order[] }>("/orders", { tab: "completed" }),
@@ -99,6 +99,24 @@ export default function OrdersPage() {
   }, [user]);
 
   const buckets = useMemo(() => splitOrders(orders), [orders]);
+
+  // Keep statuses fresh: refresh when they come back to the tab, and every
+  // 30s while something is in progress (so a delivered order moves to Completed).
+  const hasOngoing = buckets.ongoing.length > 0;
+  useEffect(() => {
+    if (!user) return;
+    const refresh = () => {
+      if (document.visibilityState === "visible") setNonce((n) => n + 1);
+    };
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    const t = hasOngoing ? window.setInterval(refresh, 30_000) : undefined;
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+      if (t) window.clearInterval(t);
+    };
+  }, [user, hasOngoing]);
 
   const guestTotal = guestItems.reduce((s, i) => s + i.unitPrice * i.qty, 0);
   const showGuestCart = guestItems.length > 0;

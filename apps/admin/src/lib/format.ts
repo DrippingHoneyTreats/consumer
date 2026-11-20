@@ -12,10 +12,9 @@ export function formatNgn(kobo: number): string {
 
 export function greetingForNow(name?: string | null): string {
   const hour = new Date().getHours();
-  const part =
-    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const part = hour < 12 ? "Morning" : hour < 17 ? "Afternoon" : "Evening";
   const first = name?.trim().split(/\s+/)[0];
-  return first ? `${part}, ${first}` : part;
+  return first ? `${part} ${first}` : `Good ${part.toLowerCase()}`;
 }
 
 export function titleFromSlug(slug: string): string {
@@ -65,4 +64,53 @@ export function whatsappLink(phone: string, text?: string): string {
   const digits = phone.replace(/\D/g, "");
   const q = text ? `?text=${encodeURIComponent(text)}` : "";
   return `https://wa.me/${digits}${q}`;
+}
+
+/** "12 Nov 2026, 3:40 pm" (Lagos time). */
+export function formatDateTime(iso?: string | null): string {
+  if (!iso) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-NG", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: "Africa/Lagos",
+    }).format(new Date(iso));
+  } catch {
+    return "—";
+  }
+}
+
+/** "12 Nov 2026" */
+export function formatDate(iso?: string | null): string {
+  if (!iso) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-NG", { day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Lagos" }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
+
+/** "5 min ago", "3 hours ago", "2 days ago" */
+export function timeAgo(iso?: string | null): string {
+  if (!iso) return "—";
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.round(hours / 24);
+  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
+  return formatDate(iso);
+}
+
+/** Status wording that matches the order type: pickup orders are "Ready for pickup" / "Picked up". */
+export function orderStatusLabel(status: string, fulfillment?: string | null): string {
+  if (fulfillment === "pickup") {
+    if (status === "ready_for_delivery") return "Ready for pickup";
+    if (status === "delivered" || status === "completed") return "Picked up";
+  }
+  return statusLabel(status);
 }

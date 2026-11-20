@@ -1,180 +1,101 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiClient } from "@/lib/api";
-import type { AdminListResponse, EventRequest } from "@/lib/types";
-import { formatNgn } from "@/lib/format";
+import type { AdminListResponse } from "@/lib/types";
+import { formatNgn, statusLabel, timeAgo } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { Input, selectClass } from "@/components/ui/Input";
-import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
-import { AdminTable } from "@/components/admin/AdminTable";
-import { toast } from "@/components/ui/Toast";
-import { cn } from "@/lib/cn";
-import { checkLink, useFieldErrors } from "@/lib/validate";
+import { OfflineState } from "@/components/ui/EmptyState";
+import { DataTable, FilterTabs, PageHeader, SearchBox, Toolbar, type Tab } from "@/components/admin/kit";
+import { EVENT_STATUSES, type AdminEvent } from "@/lib/admin-events";
 
-const STATUSES = ["submitted", "reviewing", "quote_sent", "confirmed", "completed", "cancelled"];
+type View = "open" | (typeof EVENT_STATUSES)[number] | "all";
 
-export default function AdminEventsPage() {
-  const f = useFieldErrors();
-  const [events, setEvents] = useState<EventRequest[]>([]);
-  const [statusFilter, setStatusFilter] = useState("");
-  const [selected, setSelected] = useState<EventRequest | null>(null);
-  const [quoteAmount, setQuoteAmount] = useState("");
-  const [quoteNote, setQuoteNote] = useState("");
-  const [quoteLink, setQuoteLink] = useState("");
-  const [newStatus, setNewStatus] = useState("");
+export default function EventsPage() {
+  const [rows, setRows] = useState<AdminEvent[]>([]);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [view, setView] = useState<View>("open");
+  const [q, setQ] = useState("");
 
   const load = useCallback(async () => {
+    setState("loading");
     try {
-      const res = await apiClient.get<AdminListResponse<EventRequest>>("/admin/events", {
-        page: 1,
-        limit: 50,
-        ...(statusFilter ? { status: statusFilter } : {}),
-      });
-      setEvents(res.items);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Load failed");
+      const res = await apiClient.get<AdminListResponse<AdminEvent>>("/admin/events", { limit: 200 });
+      setRows(res.items);
+      setState("ready");
+    } catch {
+      setState("error");
     }
-  }, [statusFilter]);
+  }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const saveQuote = async () => {
-    if (!selected) return;
-    const amount = quoteAmount.trim();
-    const ok = f.validate({
-      quoteAmount: amount && (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) ? "Enter the quote in naira, e.g. 150000." : null,
-      quoteLink: checkLink(quoteLink),
-    });
-    if (!ok) {
-      toast.error("Please fix the highlighted fields.");
-      return;
-    }
-    try {
-      await apiClient.patch(`/admin/events/${selected.id}`, {
-        status: newStatus || undefined,
-        quoteAmount: quoteAmount ? Math.round(Number(quoteAmount) * 100) : undefined,
-        quoteNote: quoteNote.trim() || undefined,
-        quoteLink: quoteLink.trim() || undefined,
-      });
-      toast.success("Event updated");
-      setSelected(null);
-      void load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Update failed");
-    }
-  };
+  const count = (s: string) => rows.filter((r) => r.status === s).length;
+  const tabs: Tab<View>[] = [
+    { value: "open", label: "Open", count: rows.filter((r) => ["submitted", "reviewing", "quote_sent"].includes(r.status)).length },
+    ...EVENT_STATUSES.map((s) => ({ value: s as View, label: statusLabel(s), count: count(s) })),
+    { value: "all", label: "All", count: rows.length },
+  ];
+
+  const shown = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return rows.filter(
+      (r) =>
+        (view === "all" || (view === "open" ? ["submitted", "reviewing", "quote_sent"].includes(r.status) : r.status === view)) &&
+        (!term || [r.refNo, r.type, r.title, r.city, r.user?.fullName, r.user?.phone].some((v) => v?.toLowerCase().includes(term))),
+    );
+  }, [rows, view, q]);
 
   return (
     <>
-      <AdminPageTitle title="Events" />
-      <select
-        className={cn(selectClass, "mb-4 max-w-xs")}
-        value={statusFilter}
-        onChange={(e) => setStatusFilter(e.target.value)}
-      >
-        <option value="">All statuses</option>
-        {STATUSES.map((s) => (
-          <option key={s} value={s}>
-            {s.replaceAll("_", " ")}
-          </option>
-        ))}
-      </select>
-
-      <AdminTable
-        columns={[
-          { key: "ref", label: "Ref" },
-          { key: "type", label: "Type" },
-          { key: "city", label: "City" },
-          { key: "date", label: "Date" },
-          { key: "status", label: "Status" },
-          { key: "actions", label: "" },
-        ]}
-        rows={events.map((ev) => ({
-          id: ev.id,
-          cells: [
-            ev.refNo,
-            ev.type,
-            ev.city,
-            `${ev.date} ${ev.time}`,
-            <Badge key="st" status={ev.status} />,
-            <Button
-              key="open"
-              variant="ghost"
-              onClick={() => {
-                setSelected(ev);
-                setNewStatus(ev.status);
-                setQuoteAmount(ev.quoteAmount ? String(ev.quoteAmount / 100) : "");
-                setQuoteNote(ev.quoteNote ?? "");
-                setQuoteLink(ev.quoteLink ?? "");
-              }}
-            >
-              Manage
-            </Button>,
-          ],
-        }))}
-      />
-
-      {selected ? (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-deep/40 p-4 sm:items-center">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-5">
-            <p className="font-display text-lg font-semibold">{selected.refNo}</p>
-            <p className="text-sm text-deep/60">
-              {selected.guests} guests · {selected.venueAddress}
-            </p>
-            {selected.quoteAmount ? (
-              <p className="mt-2 text-sm">Current quote: {formatNgn(selected.quoteAmount)}</p>
-            ) : null}
-            <label className="mt-4 block text-sm">
-              <span className="font-medium">Status</span>
-              <select
-                className={cn(selectClass, "mt-1")}
-                value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value)}
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="mt-3 grid gap-2">
-              <Input
-                label="Quote (₦)"
-                type="number"
-                min={0}
-                value={quoteAmount}
-                onChange={(e) => {
-                  setQuoteAmount(e.target.value);
-                  f.clear("quoteAmount");
-                }}
-                error={f.errors.quoteAmount ?? undefined}
-              />
-              <Input label="Quote note" value={quoteNote} onChange={(e) => setQuoteNote(e.target.value)} />
-              <Input
-                label="Quote link"
-                placeholder="https://…"
-                value={quoteLink}
-                onChange={(e) => {
-                  setQuoteLink(e.target.value);
-                  f.clear("quoteLink");
-                }}
-                error={f.errors.quoteLink ?? undefined}
-              />
+      <PageHeader title="Events" subtitle="Dessert table and catering requests. Click one to send a quote or update its status." />
+      <Toolbar>
+        <FilterTabs tabs={tabs} value={view} onChange={setView} />
+        <SearchBox value={q} onChange={setQ} placeholder="Ref, type, city or customer" />
+      </Toolbar>
+      {state === "error" ? (
+        <OfflineState onRetry={() => void load()} />
+      ) : (
+        <DataTable
+          loading={state === "loading"}
+          rows={shown}
+          rowKey={(e) => e.id}
+          href={(e) => `/events/${e.id}`}
+          empty="No event requests here."
+          columns={[
+            { key: "ref", label: "Ref", render: (e) => <span className="font-semibold text-deep">{e.refNo}</span> },
+            {
+              key: "event",
+              label: "Event",
+              render: (e) => (
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-deep">{e.title || e.type}</p>
+                  <p className="text-xs text-deep/50">{e.user?.fullName || "Customer"}</p>
+                </div>
+              ),
+            },
+            { key: "date", label: "Date", render: (e) => <span className="whitespace-nowrap">{e.date}{e.time ? ` · ${e.time}` : ""}</span> },
+            { key: "where", label: "City", render: (e) => e.city },
+            { key: "guests", label: "Guests", render: (e) => e.guests },
+            { key: "status", label: "Status", render: (e) => <Badge status={e.status} /> },
+            { key: "quote", label: "Quote", align: "right", render: (e) => (e.quoteAmount ? <span className="font-semibold">{formatNgn(e.quoteAmount)}</span> : <span className="text-deep/40">—</span>) },
+          ]}
+          mobile={(e) => (
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-deep">{e.title || e.type}</p>
+                <p className="truncate text-xs text-deep/55">
+                  {e.refNo} · {e.date} · {e.city} · {e.guests} guests
+                </p>
+                <p className="text-xs text-deep/45">Requested {timeAgo(e.createdAt)}</p>
+              </div>
+              <Badge status={e.status} />
             </div>
-            <div className="mt-4 flex gap-2">
-              <Button onClick={() => saveQuote()}>Save</Button>
-              <Button variant="ghost" onClick={() => setSelected(null)}>
-                Close
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+          )}
+        />
+      )}
     </>
   );
 }

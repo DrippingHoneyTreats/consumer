@@ -1,198 +1,109 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, Users } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { BadgeCheck } from "lucide-react";
 import { apiClient } from "@/lib/api";
-import type { Role, User } from "@/lib/types";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
-import { ColumnLoader } from "@/components/ui/ColumnLoader";
-import { Input } from "@/components/ui/Input";
-import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
-import { AdminCardList, AdminTable } from "@/components/admin/AdminTable";
-import { toast } from "@/components/ui/Toast";
+import type { AdminListResponse, User } from "@/lib/types";
+import { formatDate, timeAgo } from "@/lib/format";
+import { OfflineState } from "@/components/ui/EmptyState";
+import { Avatar, DataTable, PageHeader, SearchBox, Toolbar } from "@/components/admin/kit";
 
-type AdminUser = User & {
-  createdAt?: string;
-  consentAt?: string | null;
-};
+type Row = User & { createdAt?: string };
 
-function formatJoined(iso?: string) {
-  if (!iso) return "—";
-  try {
-    return new Intl.DateTimeFormat("en-NG", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }).format(new Date(iso));
-  } catch {
-    return "—";
-  }
-}
-
-function roleLabel(role: Role) {
-  if (role === "SUPER_ADMIN") return "Super admin";
-  if (role === "STAFF") return "Admin";
-  return "Customer";
-}
-
-function contactLine(user: AdminUser) {
-  return user.email || user.phone || "No contact";
-}
-
-export default function AdminUsersPage() {
-  const [users, setUsers] = useState<AdminUser[]>([]);
+export default function CustomersPage() {
+  const [rows, setRows] = useState<Row[]>([]);
+  const [total, setTotal] = useState(0);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
-  const [appliedQuery, setAppliedQuery] = useState("");
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setQuery(q.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [q]);
 
   const load = useCallback(async () => {
     setState("loading");
     try {
-      const res = await apiClient.get<{ items: AdminUser[]; total: number } | AdminUser[]>(
-        "/admin/users",
-        {
-          role: "CUSTOMER",
-          q: appliedQuery || undefined,
-          limit: 200,
-        },
-      );
-      const items = Array.isArray(res) ? res : res.items ?? [];
-      setUsers(items);
+      const res = await apiClient.get<AdminListResponse<Row>>("/admin/users", { role: "CUSTOMER", q: query || undefined, limit: 200 });
+      setRows(res.items);
+      setTotal(res.total);
       setState("ready");
-    } catch (e) {
-      setUsers([]);
+    } catch {
       setState("error");
-      toast.error(e instanceof Error ? e.message : "Could not load users");
     }
-  }, [appliedQuery]);
+  }, [query]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const rows = useMemo(
-    () =>
-      users.map((u) => ({
-        id: u.id,
-        cells: [
-          <div key="name">
-            <p className="font-semibold text-deep">{u.fullName || "Unnamed"}</p>
-            <p className="text-xs text-deep/50">{contactLine(u)}</p>
-          </div>,
-          <span key="role" className="text-deep/80">
-            {roleLabel(u.role)}
-          </span>,
-          <div key="verify" className="flex flex-wrap gap-1">
-            {u.emailVerified ? (
-              <span className="rounded-full bg-tea/15 px-2 py-0.5 text-[10px] font-semibold text-deep">
-                Email ✓
-              </span>
-            ) : null}
-            {u.phoneVerified ? (
-              <span className="rounded-full bg-sage/35 px-2 py-0.5 text-[10px] font-semibold text-deep">
-                Phone ✓
-              </span>
-            ) : null}
-            {!u.emailVerified && !u.phoneVerified ? (
-              <span className="text-xs text-deep/40">Unverified</span>
-            ) : null}
-          </div>,
-          <span key="joined" className="whitespace-nowrap text-deep/70">
-            {formatJoined(u.createdAt)}
-          </span>,
-        ],
-      })),
-    [users],
-  );
-
   return (
     <>
-      <AdminPageTitle title="Users" />
-      <p className="mb-4 max-w-2xl text-sm text-deep/60">
-        Customers who signed up on the app. Team access lives under Staff.
-      </p>
-
-      <form
-        className="mb-4 flex w-full max-w-md items-end gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setAppliedQuery(query.trim());
-        }}
-      >
-        <div className="min-w-0 flex-1">
-          <Input
-            label="Search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Name, email, phone…"
-          />
-        </div>
-        <Button type="submit" className="shrink-0">
-          <Search size={16} />
-        </Button>
-      </form>
+      <PageHeader title="Customers" subtitle={`${total} customer${total === 1 ? "" : "s"}. Click one to see their orders, events and saved addresses.`} />
+      <Toolbar>
+        <p className="text-sm text-deep/55">{query ? `${rows.length} match${rows.length === 1 ? "" : "es"} for “${query}”` : "Newest first"}</p>
+        <SearchBox value={q} onChange={setQ} placeholder="Name, phone or email" />
+      </Toolbar>
 
       {state === "error" ? (
-        <div className="mb-4">
-          <OfflineState compact onRetry={() => void load()} />
-        </div>
-      ) : null}
-
-      {state === "loading" ? (
-        <ColumnLoader columns={1} count={6} aspect="aspect-[6/1]" />
-      ) : state === "ready" && users.length === 0 ? (
-        <EmptyState
-          icon={<Users size={48} strokeWidth={1.4} />}
-          title="No sign-ups yet"
-          message={
-            appliedQuery
-              ? `Nothing matched “${appliedQuery}”.`
-              : "When customers create accounts, they’ll show up here."
-          }
-        />
+        <OfflineState onRetry={() => void load()} />
       ) : (
-        <>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-deep/45">
-            {users.length} {users.length === 1 ? "person" : "people"}
-          </p>
-
-          <div className="hidden md:block">
-            <AdminTable
-              columns={[
-                { key: "user", label: "User" },
-                { key: "role", label: "Role" },
-                { key: "verified", label: "Verified" },
-                { key: "joined", label: "Joined" },
-              ]}
-              rows={rows}
-              empty="No users."
-            />
-          </div>
-
-          <div className="md:hidden">
-            <AdminCardList
-              items={users.map((u) => ({
-                id: u.id,
-                content: (
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-semibold text-deep">{u.fullName || "Unnamed"}</p>
-                        <p className="truncate text-sm text-deep/55">{contactLine(u)}</p>
-                      </div>
-                      <Badge status={u.role === "CUSTOMER" ? "available" : "pre_order"}>
-                        {roleLabel(u.role)}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-deep/45">Joined {formatJoined(u.createdAt)}</p>
-                  </div>
+        <DataTable
+          loading={state === "loading"}
+          rows={rows}
+          rowKey={(u) => u.id}
+          href={(u) => `/users/${u.id}`}
+          empty={query ? `No customers match “${query}”.` : "No customers yet."}
+          columns={[
+            {
+              key: "name",
+              label: "Customer",
+              render: (u) => (
+                <div className="flex items-center gap-3">
+                  <Avatar name={u.fullName} size={34} />
+                  <span className="font-medium text-deep">{u.fullName || "No name"}</span>
+                </div>
+              ),
+            },
+            {
+              key: "phone",
+              label: "WhatsApp",
+              render: (u) =>
+                u.phone ? (
+                  <span className="inline-flex items-center gap-1">
+                    {u.phone}
+                    {u.phoneVerified ? <BadgeCheck size={13} className="text-tea" /> : null}
+                  </span>
+                ) : (
+                  <span className="text-deep/40">—</span>
                 ),
-              }))}
-            />
-          </div>
-        </>
+            },
+            {
+              key: "email",
+              label: "Email",
+              render: (u) =>
+                u.email ? (
+                  <span className="inline-flex items-center gap-1">
+                    {u.email}
+                    {u.emailVerified ? <BadgeCheck size={13} className="text-tea" /> : null}
+                  </span>
+                ) : (
+                  <span className="text-deep/40">—</span>
+                ),
+            },
+            { key: "joined", label: "Joined", render: (u) => <span className="whitespace-nowrap text-deep/60">{formatDate(u.createdAt)}</span> },
+          ]}
+          mobile={(u) => (
+            <div className="flex items-center gap-3">
+              <Avatar name={u.fullName} size={36} />
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-deep">{u.fullName || "No name"}</p>
+                <p className="truncate text-xs text-deep/55">{u.phone || u.email || "No contact"} · joined {timeAgo(u.createdAt)}</p>
+              </div>
+            </div>
+          )}
+        />
       )}
     </>
   );

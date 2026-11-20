@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { camel, db, maybe, must } from "../db";
 import { env } from "../env";
-import { badRequest, notFound, optStr, str } from "../http";
+import { HttpError, badRequest, notFound, optStr, str } from "../http";
 import { notifyOrderPlaced, notifyPaymentIssue } from "../notify";
 import { activeProvider, providerByName } from "../payments";
 import type { VerifyHints } from "../payments/types";
@@ -128,7 +128,9 @@ async function settle(
 route("POST", "/payments/initiate", async ({ req, body }) => {
   const user = await requireUser(req);
   const order = await getOwnOrder(str(body.orderId, "Order"), user);
-  if (!DRAFT_STATUSES.includes(order.status)) throw badRequest("This order has already been paid.");
+  if (!DRAFT_STATUSES.includes(order.status)) {
+    throw new HttpError(409, "ALREADY_PAID", "This order has already been paid.");
+  }
   if (!order.items.length) throw badRequest("Your order is empty.");
   if (!order.addressSnapshot) throw badRequest("Choose pickup or delivery first.");
   if (order.fulfillment === "delivery" && !order.deliveryFeeAgreed) {

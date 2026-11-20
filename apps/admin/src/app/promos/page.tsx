@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Input, textareaClass } from "@/components/ui/Input";
 import { EmptyState, OfflineState } from "@/components/ui/EmptyState";
 import { ColumnLoader } from "@/components/ui/ColumnLoader";
-import { AdminPageTitle } from "@/components/admin/AdminPageTitle";
+import { PageHeader } from "@/components/admin/kit";
 import { ImageField } from "@/components/admin/ImageField";
 import { AdminTable } from "@/components/admin/AdminTable";
 import { toast } from "@/components/ui/Toast";
@@ -91,7 +91,7 @@ export default function AdminPromosPage() {
 
   return (
     <>
-      <AdminPageTitle title="Promos" />
+      <PageHeader title="Promos" subtitle="Banners shown on the customer home page. Higher priority shows first." />
       <p className="mb-4 max-w-2xl text-sm text-deep/60">
         Upload promo banners for the customer home. The customer app shows an empty slot until an active promo exists.
       </p>

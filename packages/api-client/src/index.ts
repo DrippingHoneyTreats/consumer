@@ -79,10 +79,12 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     if (res.status === 204) return undefined as T;
-    data = await res.json().catch(() => ({
-      code: "INVALID_JSON",
-      message: res.statusText || "Unexpected response",
-    }));
+    data = await res.json().catch(() =>
+      // No JSON back: usually the server isn't running or a proxy couldn't reach it.
+      res.status >= 500
+        ? { code: "SERVER_UNREACHABLE", message: "The DHT server isn't responding right now. Please try again in a moment." }
+        : { code: "INVALID_JSON", message: res.statusText || "Unexpected response" },
+    );
   } catch (err) {
     if (controller.signal.aborted && !signal?.aborted) {
       throw new ApiRequestError(0, {
