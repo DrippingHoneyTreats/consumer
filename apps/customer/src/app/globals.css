@@ -288,3 +288,115 @@ a[aria-disabled="true"],
     animation: none;
   }
 }
+
+/* ───────────── Frosted-glass intro (pure CSS, no JS needed) ─────────────
+   Two frosted panes cover the page, a soft sheen drifts across, then they
+   glide apart left and right. Plays on its own schedule even while the app
+   is still loading, so it can never get stuck. Skipped on repeat visits in
+   the same session (html.dht-intro-seen) and for reduced-motion users. */
+#dht-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  overflow: hidden;
+  animation: dht-intro-hide 0s linear 2.2s forwards;
+}
+
+.dht-pane {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(247, 243, 238, 0.5) 55%, rgba(246, 213, 208, 0.35) 100%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  animation-duration: 1.4s;
+  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+  animation-delay: 0.7s;
+  animation-fill-mode: forwards;
+  will-change: transform;
+}
+
+.dht-pane-left {
+  left: 0;
+  animation-name: dht-pane-left;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.9);
+}
+
+.dht-pane-right {
+  right: 0;
+  animation-name: dht-pane-right;
+  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Soft sheen sliding across each pane */
+.dht-pane::after {
+  content: "";
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  left: 0;
+  width: 35%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  transform: translateX(-130%);
+  animation: dht-sheen 1.6s ease-in-out 0.1s forwards;
+}
+
+.dht-pane-right::after {
+  animation-delay: 0.3s;
+}
+
+@keyframes dht-pane-left {
+  to {
+    transform: translateX(-102%);
+  }
+}
+
+@keyframes dht-pane-right {
+  to {
+    transform: translateX(102%);
+  }
+}
+
+@keyframes dht-sheen {
+  to {
+    transform: translateX(400%);
+  }
+}
+
+@keyframes dht-intro-hide {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* The page settles gently into focus as the glass parts.
+   fill-mode "backwards" leaves no transform behind afterwards (keeps fixed bars fixed). */
+.app-shell {
+  animation: dht-settle 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.7s backwards;
+}
+
+@keyframes dht-settle {
+  from {
+    transform: scale(1.02);
+  }
+}
+
+html.dht-intro-seen #dht-intro {
+  display: none;
+}
+
+html.dht-intro-seen .app-shell {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #dht-intro {
+    display: none;
+  }
+  .app-shell {
+    animation: none;
+  }
+}

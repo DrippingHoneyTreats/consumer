@@ -49,10 +49,21 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+const INTRO_ONCE_SCRIPT = `try{var k="dht-app-splash-seen";if(sessionStorage.getItem(k)==="1"){document.documentElement.classList.add("dht-intro-seen")}else{sessionStorage.setItem(k,"1")}}catch(e){}`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-NG" suppressHydrationWarning>
+      <head>
+        {/* Runs before first paint: skip the intro if it already played this session. */}
+        <script dangerouslySetInnerHTML={{ __html: INTRO_ONCE_SCRIPT }} />
+      </head>
       <body className={`${playfair.variable} ${montserrat.variable} antialiased`} suppressHydrationWarning>
+        {/* Frosted-glass intro. Pure CSS (see globals.css): it opens on schedule even before JS loads. */}
+        <div id="dht-intro" aria-hidden="true">
+          <div className="dht-pane dht-pane-left" />
+          <div className="dht-pane dht-pane-right" />
+        </div>
         <AppProviders>{children}</AppProviders>
       </body>
     </html>
