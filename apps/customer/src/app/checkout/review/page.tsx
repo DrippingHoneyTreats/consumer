@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { loadFlutterwave, payWithFlutterwave, type InlineCheckout, type InlineOutcome } from "@/lib/flutterwave";
+import { loadPaystack, payWithPaystack } from "@/lib/paystack";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ApiRequestError, apiClient } from "@/lib/api";
 import { unwrapData } from "@/lib/data";
@@ -28,6 +29,12 @@ import { useLeaveIfPaid } from "@/hooks/useLeaveIfPaid";
 
 const PAY_FALLBACK = "Cannot proceed with payment, try again.";
 
+/** On-page popups by gateway name (the server says which one is active). */
+const INLINE: Record<string, { load: () => Promise<void>; pay: (cfg: InlineCheckout) => Promise<InlineOutcome> }> = {
+  flutterwave: { load: () => loadFlutterwave(), pay: payWithFlutterwave },
+  paystack: { load: () => loadPaystack(), pay: payWithPaystack },
+};
+
 function ReviewForm() {
   const params = useSearchParams();
   const orderId = params.get("orderId");
@@ -42,11 +49,6 @@ function ReviewForm() {
 
   const [failed, setFailed] = useState(false);
   const [nonce, setNonce] = useState(0);
-
-  // Warm up Flutterwave's script so the popup opens instantly when they tap Pay.
-  useEffect(() => {
-    void loadFlutterwave().catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (!orderId) return;
@@ -104,14 +106,16 @@ function ReviewForm() {
       const url = res.authorizationUrl ?? res.url;
       const ref = res.reference;
 
-      // Preferred: Flutterwave's popup right here on the page.
-      if (res.inline?.provider === "flutterwave" && ref) {
+      // Preferred: the gateway's popup right here on the page.
+      const popup = res.inline && ref ? INLINE[res.inline.provider] : undefined;
+      if (popup && res.inline && ref) {
         let outcome: InlineOutcome | null = null;
         try {
+          await popup.load(); // keep the spinner while the gateway's script loads
           setLoading(false);
-          outcome = await payWithFlutterwave(res.inline);
+          outcome = await popup.pay(res.inline);
         } catch (e) {
-          // Popup couldn't load (ad blocker, slow network): use Flutterwave's own page instead.
+          // Popup couldn't load (ad blocker, slow network): use the gateway's own page instead.
           console.warn("[pay] inline unavailable, redirecting", e);
           if (url) {
             window.location.href = url;

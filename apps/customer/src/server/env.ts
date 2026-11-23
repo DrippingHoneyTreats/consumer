@@ -103,6 +103,9 @@ export const env = {
       secretHash: str("FLW_SECRET_HASH"),
     },
     paystack: {
+      /** pk_test_… / pk_live_… — safe to send to the browser (inline popup). */
+      publicKey: str("PAYSTACK_PUBLIC_KEY"),
+      /** sk_test_… / sk_live_… — server only. Also signs webhooks. */
       secretKey: str("PAYSTACK_SECRET_KEY"),
     },
     kora: {

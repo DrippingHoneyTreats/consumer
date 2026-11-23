@@ -46,7 +46,7 @@ export default function TermsPage() {
 
       <Section n={3} title="Payment">
         <p>
-          Online payments are processed securely by Flutterwave (card, bank transfer or USSD). We don&apos;t store your
+          Online payments are processed securely by our payment partners, Paystack and Flutterwave (card, bank transfer or USSD). We don&apos;t store your
           card details. If a payment fails or is cancelled, your order is not placed and you can try again.
         </p>
       </Section>

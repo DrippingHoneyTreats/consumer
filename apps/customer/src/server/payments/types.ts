@@ -30,6 +30,8 @@ export type InitializeResult = {
 export type InlineCheckout = {
   provider: string;
   publicKey: string;
+  /** Paystack: the server-initialized transaction the popup resumes. */
+  accessCode?: string;
   reference: string;
   /** Naira (the popup takes major units). */
   amount: number;

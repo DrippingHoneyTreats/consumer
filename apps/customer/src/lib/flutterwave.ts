@@ -14,6 +14,8 @@ const SCRIPT_URL = "https://checkout.flutterwave.com/v3.js";
 export type InlineCheckout = {
   provider: string;
   publicKey: string;
+  /** Paystack: the server-initialized transaction the popup resumes. */
+  accessCode?: string;
   reference: string;
   amount: number;
   currency: "NGN";

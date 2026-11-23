@@ -114,7 +114,7 @@ export default function PrivacyPage() {
               <strong>Supabase</strong>: secure storage for accounts, orders and addresses;
             </>,
             <>
-              <strong>Flutterwave</strong>: payment processing (receives your name, email, phone and order amount);
+              <strong>Paystack and Flutterwave</strong>: payment processing (receives your name, email, phone and order amount);
             </>,
             <>
               <strong>Google</strong>: only if you sign in with Google;

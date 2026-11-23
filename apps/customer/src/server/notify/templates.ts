@@ -591,9 +591,9 @@ export function adminPaymentIssueEmail(ctx: Ctx, d: { orderNo: string; reference
           ["Payment reference", d.reference],
           ["What happened", d.message],
         ]) +
-        para("Check this transaction in your Flutterwave dashboard before preparing the order.") +
+        para("Check this transaction in your payment gateway dashboard (Paystack / Flutterwave) before preparing the order.") +
         button("Open orders", `${ctx.adminUrl}/orders`),
     }),
-    text: `Check payment ${d.reference} for order ${d.orderNo}: ${d.message}\nVerify it in the Flutterwave dashboard.`,
+    text: `Check payment ${d.reference} for order ${d.orderNo}: ${d.message}\nVerify it in the payment gateway dashboard.`,
   };
 }

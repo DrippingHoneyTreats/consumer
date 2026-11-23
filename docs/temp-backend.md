@@ -140,11 +140,19 @@ enough for hundreds of thousands of orders.
 The server always re-verifies with Flutterwave (amount + currency) before marking
 an order paid. The redirect, page polling and webhook can arrive in any order.
 
-**Paystack / Kora:** the providers are already built in `apps/customer/src/server/payments/`
-(not yet tested against live accounts). When the keys arrive, set `PAYSTACK_SECRET_KEY`
-or `KORA_SECRET_KEY`, set `PAYMENT_PROVIDER=paystack|kora`, and add the webhook URL
-`…/api/v1/payments/webhook/paystack` (or `/kora`). Payments that are already pending
-keep verifying with the gateway that created them.
+**Paystack** (popup on our page, hosted page as fallback):
+1. Paystack → Settings → API Keys & Webhooks: copy `PAYSTACK_PUBLIC_KEY` (pk_…) and
+   `PAYSTACK_SECRET_KEY` (sk_…). Use both test or both live keys.
+2. Same page: Webhook URL `{APP_URL}/api/v1/payments/webhook/paystack`,
+   Callback URL `{APP_URL}/payment/callback`. Webhooks are signed with the secret key
+   (no separate hash).
+3. `PAYMENT_PROVIDER=paystack`.
+
+**Kora:** built in `apps/customer/src/server/payments/` but not yet tested against a live
+account. Set `KORA_SECRET_KEY`, `PAYMENT_PROVIDER=kora`, webhook `…/api/v1/payments/webhook/kora`.
+
+Switching gateways is safe: payments that are already pending keep verifying with the
+gateway that created them.
 
 ## 5. Google sign-in
 
